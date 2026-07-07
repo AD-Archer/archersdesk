@@ -1,0 +1,1002 @@
+/* ── archer's desk · ambient editorial night surface ─────────────────────
+   primary target: 5" echo show (960×480). everything scales on vmin/vw/vh
+   so it reads from across a room on the small panel and still holds up on
+   a desktop browser. */
+
+:root {
+  --bg: #0a0908;
+  --bg-2: #14100a;
+  --cream: #f2ecdf;
+  --cream-dim: #b5ac9a;
+  --dim: #7d766a;
+  --faint: #4a453c;
+  --amber: #e8a13c;
+  --amber-soft: rgba(232, 161, 60, 0.14);
+  --ember: #c96f2e;
+  --blue: #8fa9bd;
+  --line: rgba(242, 236, 223, 0.1);
+  --line-strong: rgba(242, 236, 223, 0.18);
+  --panel-a: rgba(255, 246, 232, 0.055);
+  --panel-b: rgba(255, 246, 232, 0.012);
+  --serif: var(--font-serif), "Georgia", serif;
+  --sans: var(--font-sans), "Helvetica Neue", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(120vw 90vh at 50% 118%, rgba(201, 111, 46, 0.13), transparent 60%),
+    radial-gradient(80vw 60vh at 85% -20%, rgba(143, 169, 189, 0.05), transparent 65%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  color: var(--cream);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* film grain */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* ── stage + pager ─────────────────────────────────────────────────── */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.pager-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.pager-track.animate {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.3, 1);
+}
+
+.page {
+  flex: 0 0 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(2.5vmin, env(safe-area-inset-top)) 3vmin;
+}
+
+.dots {
+  position: fixed;
+  bottom: max(1.6vmin, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1.4vmin;
+  z-index: 20;
+}
+
+.dots i {
+  width: 1.1vmin;
+  height: 1.1vmin;
+  min-width: 5px;
+  min-height: 5px;
+  border-radius: 50%;
+  background: var(--faint);
+  transition: background 0.3s, transform 0.3s;
+}
+
+.dots i.on {
+  background: var(--amber);
+  transform: scale(1.25);
+}
+
+.gear {
+  position: fixed;
+  top: max(1.2vmin, env(safe-area-inset-top));
+  right: 1.6vmin;
+  z-index: 30;
+  padding: 1.6vmin;
+  opacity: 0.32;
+  transition: opacity 0.25s, transform 0.4s;
+}
+
+.gear:hover,
+.gear:active {
+  opacity: 0.9;
+  transform: rotate(40deg);
+}
+
+.gear svg {
+  width: clamp(17px, 3.4vmin, 26px);
+  height: clamp(17px, 3.4vmin, 26px);
+  display: block;
+}
+
+/* ── main view panels ──────────────────────────────────────────────── */
+
+.main-view {
+  --ps: min(74vh, 43vw);
+  display: flex;
+  gap: 3.2vmin;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+@supports (height: 1dvh) {
+  .main-view {
+    --ps: min(74dvh, 43vw);
+  }
+}
+
+/* phones in portrait: stack the squares instead of shrinking them */
+@media (orientation: portrait) {
+  .main-view {
+    flex-direction: column;
+    --ps: min(42vh, 82vw);
+  }
+
+  .panel.wide {
+    width: min(92vw, calc(var(--ps) * 1.6));
+    height: var(--ps);
+  }
+}
+
+.panel {
+  position: relative;
+  width: var(--ps);
+  height: var(--ps);
+  flex: 0 0 auto;
+  border-radius: clamp(18px, 5vmin, 40px);
+  border: 1px solid var(--line);
+  background: linear-gradient(158deg, var(--panel-a), var(--panel-b) 70%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 240, 0.06),
+    0 18px 50px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel.wide {
+  width: calc(var(--ps) * 2 + 3.2vmin);
+}
+
+.w-label {
+  position: absolute;
+  top: 3.4vmin;
+  left: 4vmin;
+  right: 4vmin;
+  font-size: clamp(8px, 1.75vmin, 13px);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  gap: 1.2vmin;
+  z-index: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.w-label::before {
+  content: "";
+  width: 0.9vmin;
+  height: 0.9vmin;
+  min-width: 4px;
+  min-height: 4px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 1.6vmin rgba(232, 161, 60, 0.8);
+  flex: 0 0 auto;
+}
+
+.w-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4vmin;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── clock / date widgets ──────────────────────────────────────────── */
+
+.clock-time {
+  font-family: var(--serif);
+  font-size: calc(var(--ps) * 0.3);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+}
+
+.panel.wide .clock-time {
+  font-size: calc(var(--ps) * 0.52);
+}
+
+.clock-ampm {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.22em;
+  color: var(--amber);
+  margin-left: 0.35em;
+}
+
+.clock-date {
+  margin-top: 2.6vmin;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: calc(var(--ps) * 0.062);
+  color: var(--cream-dim);
+}
+
+.clock-seconds-bar {
+  margin-top: 3vmin;
+  width: calc(var(--ps) * 0.34);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.clock-seconds-bar b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ember), var(--amber));
+  transition: width 1s linear;
+}
+
+.date-weekday {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: calc(var(--ps) * 0.085);
+  color: var(--amber);
+}
+
+.date-num {
+  font-family: var(--serif);
+  font-size: calc(var(--ps) * 0.42);
+  line-height: 1;
+  margin: 0.5vmin 0 1vmin;
+}
+
+.date-month {
+  font-size: calc(var(--ps) * 0.045);
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ── calendar widget ───────────────────────────────────────────────── */
+
+.cal {
+  width: 100%;
+  max-width: calc(var(--ps) * 0.84);
+}
+
+.cal-head {
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: calc(var(--ps) * 0.07);
+  color: var(--cream);
+  margin-bottom: calc(var(--ps) * 0.045);
+}
+
+.cal-head span {
+  color: var(--amber);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: calc(var(--ps) * 0.018);
+  text-align: center;
+}
+
+.cal-dow {
+  font-size: calc(var(--ps) * 0.033);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  padding-bottom: calc(var(--ps) * 0.02);
+}
+
+.cal-day {
+  font-size: calc(var(--ps) * 0.045);
+  font-weight: 500;
+  color: var(--cream-dim);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  max-height: calc(var(--ps) * 0.09);
+}
+
+.cal-day.out {
+  color: var(--faint);
+  opacity: 0.5;
+}
+
+.cal-day.today {
+  background: var(--amber);
+  color: #241703;
+  font-weight: 700;
+  box-shadow: 0 0 3vmin rgba(232, 161, 60, 0.45);
+}
+
+/* ── weather widget ────────────────────────────────────────────────── */
+
+.wx-icon svg {
+  width: calc(var(--ps) * 0.17);
+  height: calc(var(--ps) * 0.17);
+  color: var(--blue);
+}
+
+.wx-temp {
+  font-family: var(--serif);
+  font-size: calc(var(--ps) * 0.3);
+  line-height: 1;
+  margin-top: 0.5vmin;
+}
+
+.wx-temp sup {
+  font-size: 0.45em;
+  color: var(--amber);
+}
+
+.wx-cond {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: calc(var(--ps) * 0.07);
+  color: var(--cream-dim);
+  margin-top: 1vmin;
+}
+
+.wx-meta {
+  display: flex;
+  gap: 3vmin;
+  margin-top: 2.8vmin;
+  font-size: calc(var(--ps) * 0.042);
+  color: var(--dim);
+  letter-spacing: 0.06em;
+}
+
+.wx-meta b {
+  color: var(--cream-dim);
+  font-weight: 600;
+}
+
+.panel.wide .wx-row {
+  display: flex;
+  align-items: center;
+  gap: 6vmin;
+}
+
+/* ── now playing widget ────────────────────────────────────────────── */
+
+.np {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.4vmin;
+  position: relative;
+}
+
+.np-ambient {
+  position: absolute;
+  inset: -22%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(46px) saturate(1.5) brightness(0.62);
+  opacity: 0.55;
+  z-index: 0;
+}
+
+.np > *:not(.np-ambient) {
+  z-index: 1;
+}
+
+.np-art {
+  width: calc(var(--ps) * 0.44);
+  height: calc(var(--ps) * 0.44);
+  border-radius: clamp(10px, 2.4vmin, 18px);
+  object-fit: cover;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  background: var(--bg-2);
+}
+
+.np.paused .np-art {
+  filter: saturate(0.35) brightness(0.75);
+}
+
+.np-title {
+  font-weight: 700;
+  font-size: calc(var(--ps) * 0.062);
+  text-align: center;
+  max-width: 88%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.np-artist {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: calc(var(--ps) * 0.052);
+  color: var(--cream-dim);
+  max-width: 85%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.np-idle {
+  color: var(--dim);
+  font-size: calc(var(--ps) * 0.045);
+  text-align: center;
+  line-height: 1.55;
+  max-width: 80%;
+}
+
+.panel.wide .np {
+  flex-direction: row;
+  gap: 5vmin;
+  padding: 0 6vmin;
+}
+
+.panel.wide .np-art {
+  width: calc(var(--ps) * 0.62);
+  height: calc(var(--ps) * 0.62);
+}
+
+.panel.wide .np-text {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.panel.wide .np-title,
+.panel.wide .np-artist {
+  text-align: left;
+  max-width: calc(var(--ps) * 1.05);
+}
+
+.np-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1vmin;
+  min-width: 0;
+}
+
+.eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.55vmin;
+  height: calc(var(--ps) * 0.045);
+  margin-top: 0.8vmin;
+}
+
+.eq i {
+  width: 0.75vmin;
+  min-width: 3px;
+  border-radius: 2px;
+  background: var(--amber);
+  animation: eq 1.1s ease-in-out infinite;
+  height: 30%;
+}
+
+.eq i:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.eq i:nth-child(3) {
+  animation-delay: 0.36s;
+}
+.eq i:nth-child(4) {
+  animation-delay: 0.5s;
+}
+
+@keyframes eq {
+  0%, 100% { height: 26%; }
+  40% { height: 100%; }
+  70% { height: 48%; }
+}
+
+.np-last {
+  font-size: calc(var(--ps) * 0.034);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ── alarms widget ─────────────────────────────────────────────────── */
+
+.al-next-time {
+  font-family: var(--serif);
+  font-size: calc(var(--ps) * 0.2);
+  line-height: 1;
+}
+
+.al-next-time em {
+  font-size: 0.35em;
+  color: var(--amber);
+  margin-left: 0.2em;
+}
+
+.al-in {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: calc(var(--ps) * 0.06);
+  color: var(--amber);
+  margin-top: 1.4vmin;
+}
+
+.al-label {
+  font-size: calc(var(--ps) * 0.048);
+  color: var(--cream-dim);
+  margin-top: 0.8vmin;
+}
+
+.al-list {
+  margin-top: 3.4vmin;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4vmin;
+  width: min(78%, calc(var(--ps) * 0.8));
+}
+
+.al-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: calc(var(--ps) * 0.042);
+  color: var(--dim);
+  border-top: 1px solid var(--line);
+  padding-top: 1.3vmin;
+}
+
+.al-row.off {
+  opacity: 0.4;
+}
+
+.al-row b {
+  color: var(--cream-dim);
+  font-weight: 600;
+}
+
+.al-none {
+  color: var(--dim);
+  font-size: calc(var(--ps) * 0.048);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── standby page ──────────────────────────────────────────────────── */
+
+.standby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1vmin;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.standby-glow {
+  position: absolute;
+  width: 70vw;
+  height: 44vh;
+  top: 22%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(232, 161, 60, 0.07), transparent);
+  pointer-events: none;
+}
+
+.standby-date {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: min(4.6vw, 7.5vh);
+  color: var(--amber);
+}
+
+.standby-time {
+  font-family: var(--serif);
+  font-size: min(30vw, 56vh);
+  line-height: 0.92;
+  letter-spacing: -0.015em;
+  display: flex;
+  align-items: baseline;
+  text-shadow: 0 0 8vmin rgba(242, 236, 223, 0.12);
+}
+
+.standby-ampm {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.16em;
+  color: var(--dim);
+  margin-left: 0.4em;
+}
+
+.standby-chips {
+  display: flex;
+  gap: 2.4vmin;
+  margin-top: 3vmin;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 1.6vmin;
+  border: 1px solid var(--line);
+  background: rgba(255, 246, 232, 0.04);
+  border-radius: 100px;
+  padding: 1.4vmin 3vmin;
+  font-size: min(2.6vw, 4.4vh);
+  color: var(--cream-dim);
+}
+
+.chip svg {
+  width: 1.1em;
+  height: 1.1em;
+  color: var(--amber);
+}
+
+.chip b {
+  color: var(--cream);
+  font-weight: 600;
+}
+
+/* ── settings sheet ────────────────────────────────────────────────── */
+
+.sheet-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 4, 3, 0.6);
+  backdrop-filter: blur(6px);
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.sheet-scrim.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sheet {
+  position: fixed;
+  inset: 3vmin;
+  margin: auto;
+  max-width: 860px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  border-radius: clamp(16px, 4vmin, 28px);
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(165deg, #171310, #0d0b09);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7);
+  transform: translateY(105%);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.3, 1);
+}
+
+.sheet.open {
+  transform: translateY(0);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: baseline;
+  gap: 2vmin;
+  padding: 2.6vmin 3.4vmin 1.8vmin;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(18px, 4.4vmin, 30px);
+}
+
+.sheet-user {
+  font-size: clamp(10px, 2.2vmin, 13px);
+  color: var(--dim);
+  letter-spacing: 0.08em;
+}
+
+.sheet-close {
+  margin-left: auto;
+  font-size: clamp(18px, 4vmin, 26px);
+  color: var(--dim);
+  padding: 0 1vmin;
+}
+
+.sheet-close:active {
+  color: var(--cream);
+}
+
+.yaml-box {
+  flex: 1;
+  margin: 2vmin 3.4vmin 0;
+  min-height: 0;
+  display: flex;
+}
+
+.yaml-box textarea {
+  flex: 1;
+  resize: none;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--cream);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: clamp(11px, 2.4vmin, 14px);
+  line-height: 1.55;
+  padding: 2vmin;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.yaml-box textarea:focus {
+  border-color: rgba(232, 161, 60, 0.4);
+}
+
+.sheet-errors {
+  margin: 1.4vmin 3.4vmin 0;
+  color: #e07856;
+  font-size: clamp(10px, 2.3vmin, 13px);
+  line-height: 1.5;
+  max-height: 18vh;
+  overflow-y: auto;
+}
+
+.sheet-hint {
+  margin: 1.2vmin 3.4vmin 0;
+  color: var(--faint);
+  font-size: clamp(9px, 2vmin, 12px);
+  letter-spacing: 0.04em;
+}
+
+.sheet-hint b {
+  color: var(--dim);
+  font-weight: 600;
+}
+
+.sheet-foot {
+  display: flex;
+  align-items: center;
+  gap: 2vmin;
+  padding: 2vmin 3.4vmin 2.6vmin;
+}
+
+.btn-amber {
+  background: linear-gradient(180deg, var(--amber), #d18a28);
+  color: #241703;
+  font-weight: 700;
+  font-size: clamp(12px, 2.6vmin, 15px);
+  letter-spacing: 0.04em;
+  border-radius: 100px;
+  padding: 1.8vmin 4.6vmin;
+  min-height: 40px;
+  box-shadow: 0 6px 20px rgba(232, 161, 60, 0.25);
+}
+
+.btn-amber:active {
+  transform: translateY(1px);
+}
+
+.btn-amber:disabled {
+  opacity: 0.5;
+}
+
+.btn-ghost {
+  color: var(--dim);
+  font-size: clamp(11px, 2.4vmin, 14px);
+  padding: 1.8vmin 2vmin;
+  min-height: 40px;
+}
+
+.btn-ghost:active {
+  color: var(--cream);
+}
+
+.sheet-saved {
+  color: #9dc08a;
+  font-size: clamp(10px, 2.3vmin, 13px);
+}
+
+/* ── alarm overlay ─────────────────────────────────────────────────── */
+
+.alarm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vmin;
+  background:
+    radial-gradient(90vw 70vh at 50% 45%, rgba(201, 111, 46, 0.2), transparent 70%),
+    rgba(8, 6, 4, 0.94);
+  animation: alarm-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes alarm-pulse {
+  0%, 100% { background-color: rgba(8, 6, 4, 0.94); }
+  50% { background-color: rgba(26, 14, 5, 0.94); }
+}
+
+.alarm-time {
+  font-family: var(--serif);
+  font-size: min(24vw, 40vh);
+  line-height: 1;
+}
+
+.alarm-label {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: min(5.5vw, 9vh);
+  color: var(--amber);
+}
+
+.alarm-actions {
+  display: flex;
+  gap: 3vmin;
+  margin-top: 4vmin;
+}
+
+.btn-snooze {
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 2.2vmin 5.4vmin;
+  font-size: clamp(13px, 3vmin, 17px);
+  color: var(--cream-dim);
+  min-height: 44px;
+}
+
+.btn-dismiss {
+  background: var(--amber);
+  color: #241703;
+  font-weight: 700;
+  border-radius: 100px;
+  padding: 2.2vmin 5.4vmin;
+  font-size: clamp(13px, 3vmin, 17px);
+  min-height: 44px;
+}
+
+/* ── login ─────────────────────────────────────────────────────────── */
+
+.login-stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vmin;
+}
+
+.login-card {
+  width: min(420px, 92vw);
+  text-align: center;
+}
+
+.login-eyebrow {
+  font-size: clamp(10px, 2.4vmin, 13px);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 1vmin;
+}
+
+.login-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(34px, 9vmin, 56px);
+  margin-bottom: 4.5vmin;
+}
+
+.login-title em {
+  color: var(--amber);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.8vmin;
+}
+
+.login-form input {
+  background: rgba(255, 246, 232, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--cream);
+  font-family: var(--sans);
+  font-size: 15px;
+  outline: none;
+  text-align: center;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.login-form input:focus {
+  border-color: rgba(232, 161, 60, 0.5);
+}
+
+.login-form .btn-amber {
+  margin-top: 1vmin;
+  padding: 14px;
+}
+
+.login-error {
+  color: #e07856;
+  font-size: 13px;
+  min-height: 1.2em;
+}
+
+.login-switch {
+  color: var(--dim);
+  font-size: 13px;
+  margin-top: 2.4vmin;
+}
+
+.login-switch button {
+  color: var(--amber);
+  font-size: 13px;
+  margin-left: 6px;
+}
+
+/* widget error / loading states */
+.w-empty {
+  color: var(--dim);
+  font-size: calc(var(--ps) * 0.046);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 82%;
+}

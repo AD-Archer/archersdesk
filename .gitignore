@@ -1,0 +1,18 @@
+node_modules/
+.next/
+out/
+
+# runtime data (sqlite db, secrets)
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
