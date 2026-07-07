@@ -12,6 +12,13 @@ import { useWakeLock } from "./hooks";
 
 const PAGES = 2; // 0 = widget rows, 1 = standby
 type PaneSide = "left" | "right";
+type FullscreenElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+};
+type FullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void> | void;
+};
 
 export default function Dashboard({
   username,
@@ -24,11 +31,15 @@ export default function Dashboard({
   const [page, setPage] = useState(0);
   const [leftRow, setLeftRow] = useState(0);
   const [rightRow, setRightRow] = useState(0);
+  const [activeDualRow, setActiveDualRow] = useState<number | null>(
+    initialSettings.layout.rows[0]?.type === "dual" ? 0 : null
+  );
   const [drag, setDrag] = useState<number | null>(null); // horizontal px
   const [dragY, setDragY] = useState<{ side: PaneSide; dy: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [saved, setSaved] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [canFullscreen, setCanFullscreen] = useState(false);
   const [ringing, setRinging] = useState<Alarm | null>(null);
 
   const start = useRef<{
@@ -41,6 +52,7 @@ export default function Dashboard({
   const settingsRef = useRef<Settings>(settings);
   const leftRowRef = useRef(leftRow);
   const rightRowRef = useRef(rightRow);
+  const activeDualRowRef = useRef(activeDualRow);
   const ringingRef = useRef<Alarm | null>(null);
   const fired = useRef<Set<string>>(new Set());
   const snooze = useRef<{ at: number; alarm: Alarm } | null>(null);
@@ -50,10 +62,11 @@ export default function Dashboard({
   settingsRef.current = settings;
   leftRowRef.current = leftRow;
   rightRowRef.current = rightRow;
+  activeDualRowRef.current = activeDualRow;
   ringingRef.current = ringing;
 
   const rows = settings.layout.rows;
-  const activeDual = leftRow === rightRow && rows[leftRow]?.type === "dual";
+  const activeDual = activeDualRow !== null && rows[activeDualRow]?.type === "dual";
   const leftLayout = rows[leftRow];
   const rightLayout = rows[rightRow];
 
@@ -64,17 +77,19 @@ export default function Dashboard({
     const max = Math.max(0, rows.length - 1);
     const nextLeft = Math.min(leftRow, max);
     const nextRight = Math.min(rightRow, max);
-    const dualIndex =
-      rows[nextLeft]?.type === "dual" ? nextLeft : rows[nextRight]?.type === "dual" ? nextRight : null;
+    const nextDual =
+      activeDualRow !== null && activeDualRow <= max && rows[activeDualRow]?.type === "dual"
+        ? activeDualRow
+        : rows[nextLeft]?.type === "dual"
+          ? nextLeft
+          : rows[nextRight]?.type === "dual"
+            ? nextRight
+            : null;
 
-    if (dualIndex !== null) {
-      if (leftRow !== dualIndex) setLeftRow(dualIndex);
-      if (rightRow !== dualIndex) setRightRow(dualIndex);
-      return;
-    }
+    if (activeDualRow !== nextDual) setActiveDualRow(nextDual);
     if (leftRow !== nextLeft) setLeftRow(nextLeft);
     if (rightRow !== nextRight) setRightRow(nextRight);
-  }, [rows, leftRow, rightRow]);
+  }, [rows, leftRow, rightRow, activeDualRow]);
 
   // theme is a document-level attribute so every layer (body glow, sheet,
   // overlays) swaps palette together — applied live while tapping
@@ -84,17 +99,32 @@ export default function Dashboard({
 
   // track fullscreen state (echo show / browser chrome)
   useEffect(() => {
-    const onFs = () => setFullscreen(Boolean(document.fullscreenElement));
+    const doc = document as FullscreenDocument;
+    const el = document.documentElement as FullscreenElement;
+    setCanFullscreen(Boolean(el.requestFullscreen || el.webkitRequestFullscreen));
+    const onFs = () => setFullscreen(Boolean(document.fullscreenElement || doc.webkitFullscreenElement));
     document.addEventListener("fullscreenchange", onFs);
-    return () => document.removeEventListener("fullscreenchange", onFs);
+    document.addEventListener("webkitfullscreenchange", onFs);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFs);
+      document.removeEventListener("webkitfullscreenchange", onFs);
+    };
   }, []);
 
   function toggleFullscreen() {
     unlockAudio();
-    if (document.fullscreenElement) {
+    const doc = document as FullscreenDocument;
+    const el = document.documentElement as FullscreenElement;
+    if (document.fullscreenElement || doc.webkitFullscreenElement) {
       document.exitFullscreen().catch(() => {});
+      doc.webkitExitFullscreen?.();
     } else {
-      document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+      const request = el.requestFullscreen
+        ? () => el.requestFullscreen({ navigationUI: "hide" })
+        : el.webkitRequestFullscreen
+          ? () => el.webkitRequestFullscreen?.()
+          : null;
+      request?.()?.catch?.(() => {});
     }
     // re-request inside the gesture — some browsers only grant it here
     (navigator as Navigator & { wakeLock?: { request(t: "screen"): Promise<unknown> } }).wakeLock
@@ -165,30 +195,38 @@ export default function Dashboard({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function clampRowIndex(index: number, sourceRows = rows) {
-    return Math.max(0, Math.min(sourceRows.length - 1, index));
+  function wrapRowIndex(index: number, sourceRows = rows) {
+    if (sourceRows.length === 0) return 0;
+    return (index + sourceRows.length) % sourceRows.length;
   }
 
   function moveBothRows(delta: number) {
     const sourceRows = settingsRef.current.layout.rows;
     const current =
-      leftRowRef.current === rightRowRef.current
+      activeDualRowRef.current ??
+      (leftRowRef.current === rightRowRef.current
         ? leftRowRef.current
-        : Math.max(leftRowRef.current, rightRowRef.current);
-    const next = Math.max(0, Math.min(sourceRows.length - 1, current + delta));
-    setLeftRow(next);
-    setRightRow(next);
+        : Math.max(leftRowRef.current, rightRowRef.current));
+    const next = wrapRowIndex(current + delta, sourceRows);
+    if (sourceRows[next]?.type === "dual") {
+      setActiveDualRow(next);
+    } else {
+      setActiveDualRow(null);
+      setLeftRow(next);
+      setRightRow(next);
+    }
   }
 
   function movePaneRow(side: PaneSide, delta: number) {
-    const current = activeDual ? leftRow : side === "left" ? leftRow : rightRow;
-    const next = clampRowIndex(current + delta);
-    if (activeDual || rows[next]?.type === "dual") {
-      setLeftRow(next);
-      setRightRow(next);
+    const current = activeDualRow ?? (side === "left" ? leftRow : rightRow);
+    const next = wrapRowIndex(current + delta);
+    if (rows[next]?.type === "dual") {
+      setActiveDualRow(next);
     } else if (side === "left") {
+      setActiveDualRow(null);
       setLeftRow(next);
     } else {
+      setActiveDualRow(null);
       setRightRow(next);
     }
   }
@@ -196,7 +234,7 @@ export default function Dashboard({
   function onPointerDown(e: React.PointerEvent) {
     if ((e.target as HTMLElement).closest("button, input, textarea, a, label")) return;
     const slot = (e.target as HTMLElement).closest<HTMLElement>("[data-slot]")?.dataset.slot;
-    const side = slot === "right" ? "right" : "left";
+    const side = slot === "right" || (!slot && activeDual && e.clientX > window.innerWidth / 2) ? "right" : "left";
     start.current = { x: e.clientX, y: e.clientY, id: e.pointerId, axis: null, side };
   }
   function onPointerMove(e: React.PointerEvent) {
@@ -257,7 +295,7 @@ export default function Dashboard({
           <section className="page">
             <div className="vrow">
               {activeDual ? (
-                <MainRow row={rows[leftRow]!} settings={settings} />
+                <MainRow row={rows[activeDualRow!]!} settings={settings} />
               ) : (
                 <div className="main-view">
                   {renderSplitPane("left")}
@@ -272,17 +310,19 @@ export default function Dashboard({
         </div>
       </div>
 
-      <button className="fsbtn" onClick={toggleFullscreen} aria-label="fullscreen">
-        {fullscreen ? (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-          </svg>
-        )}
-      </button>
+      {canFullscreen && (
+        <button className="fsbtn" onClick={toggleFullscreen} aria-label="fullscreen">
+          {fullscreen ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+            </svg>
+          )}
+        </button>
+      )}
 
       <button className="gear" onClick={() => setSettingsOpen(true)} aria-label="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
@@ -300,7 +340,7 @@ export default function Dashboard({
       {page === 0 && rows.length > 1 && (
         <div className="vdots">
           {rows.map((_, i) => (
-            <i key={i} className={i === leftRow || i === rightRow ? "on" : ""} />
+            <i key={i} className={i === activeDualRow || i === leftRow || i === rightRow ? "on" : ""} />
           ))}
         </div>
       )}

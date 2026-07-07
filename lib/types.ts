@@ -16,6 +16,11 @@ export const WIDGETS = [
   "alarms",
   "timer",
   "quote",
+  "dnd",
+  "please_disturb",
+  "lunch",
+  "away_until",
+  "vibe",
 ] as const;
 
 export type WidgetName = (typeof WIDGETS)[number];
@@ -35,6 +40,11 @@ export const WIDGET_INFO: Record<WidgetName, { label: string; blurb: string }> =
   alarms: { label: "alarms", blurb: "what's ringing next" },
   timer: { label: "timer", blurb: "tap-to-start countdown" },
   quote: { label: "quote", blurb: "a line a day" },
+  dnd: { label: "do not disturb", blurb: "quiet status sign" },
+  please_disturb: { label: "please disturb", blurb: "interruptions welcome" },
+  lunch: { label: "at lunch", blurb: "back after a bite" },
+  away_until: { label: "away until", blurb: "editable return time" },
+  vibe: { label: "vibe check", blurb: "general fun status" },
 };
 
 export const THEMES = ["ember", "moonlight", "meadow", "rose", "paper"] as const;

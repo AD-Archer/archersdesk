@@ -11,6 +11,13 @@ import { NowPlayingWidget } from "./NowPlaying";
 import { AlarmsWidget } from "./Alarms";
 import { TimerWidget } from "./Timer";
 import { QuoteWidget } from "./Quote";
+import {
+  AwayUntilWidget,
+  DoNotDisturbWidget,
+  LunchWidget,
+  PleaseDisturbWidget,
+  VibeWidget,
+} from "./Status";
 
 export interface WidgetProps {
   settings: Settings;
@@ -34,6 +41,11 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   alarms: AlarmsWidget,
   timer: TimerWidget,
   quote: QuoteWidget,
+  dnd: DoNotDisturbWidget,
+  please_disturb: PleaseDisturbWidget,
+  lunch: LunchWidget,
+  away_until: AwayUntilWidget,
+  vibe: VibeWidget,
 };
 
 export function MainRow({ row, settings }: { row: LayoutRow; settings: Settings }) {

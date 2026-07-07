@@ -357,7 +357,7 @@ input {
   width: var(--ps);
   height: var(--ps);
   flex: 0 0 auto;
-  border-radius: clamp(18px, 5vmin, 40px);
+  border-radius: clamp(22px, 6vmin, 48px);
   border: 1px solid var(--line);
   background: linear-gradient(158deg, var(--panel-a), var(--panel-b) 70%);
   box-shadow:
@@ -366,6 +366,12 @@ input {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .panel {
+    border-radius: clamp(26px, 7vmin, 54px);
+  }
 }
 
 @media (orientation: landscape) {
@@ -866,6 +872,188 @@ input {
   color: var(--dim);
 }
 
+/* ── status signs ──────────────────────────────────────────────────── */
+
+.status {
+  width: 100%;
+  border: 0;
+  text-align: center;
+  gap: 2vmin;
+}
+
+button.status {
+  cursor: pointer;
+}
+
+.status-mark {
+  width: calc(var(--ps) * 0.18);
+  height: calc(var(--ps) * 0.18);
+  border-radius: 50%;
+  border: calc(var(--ps) * 0.018) solid var(--amber);
+  box-shadow: 0 0 4vmin var(--accent-glow);
+  position: relative;
+}
+
+.status-mark::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 50%;
+  height: calc(var(--ps) * 0.018);
+  border-radius: 100px;
+  background: var(--amber);
+  transform: translateY(-50%);
+}
+
+.status-open .status-mark::after {
+  left: 49%;
+  right: auto;
+  top: 20%;
+  width: calc(var(--ps) * 0.018);
+  height: 60%;
+  transform: none;
+}
+
+.status-lunch .status-mark::before,
+.status-away .status-mark::before,
+.status-vibe .status-mark::before {
+  content: "";
+  position: absolute;
+  inset: 24%;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+.status-lunch .status-mark::after {
+  display: none;
+}
+
+.status-away .status-mark {
+  border-color: var(--blue);
+  box-shadow: 0 0 4vmin var(--glow-2);
+}
+
+.status-away .status-mark::before,
+.status-away .status-mark::after {
+  background: var(--blue);
+}
+
+.status-away.expired .status-mark {
+  opacity: 0.45;
+}
+
+.status-title {
+  font-family: var(--serif);
+  font-size: calc(var(--ps) * 0.112);
+  line-height: 1.05;
+  max-width: 90%;
+}
+
+.panel.wide .status-title {
+  font-size: calc(var(--ps) * 0.15);
+}
+
+.status-note {
+  font-size: calc(var(--ps) * 0.042);
+  font-weight: 650;
+  letter-spacing: 0.18em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  color: var(--dim);
+  max-width: 82%;
+}
+
+.status-open .status-note {
+  color: var(--amber);
+}
+
+.status-away .status-note {
+  color: var(--blue);
+}
+
+.status-vibe .status-mark {
+  border-color: var(--blue);
+  box-shadow:
+    0 0 3vmin var(--accent-glow),
+    0 0 5vmin var(--glow-2);
+}
+
+.status-vibe .status-mark::before {
+  inset: 18%;
+  background: radial-gradient(circle at 35% 35%, var(--cream), var(--amber) 48%, var(--accent-2));
+}
+
+.status-vibe .status-mark::after {
+  left: 50%;
+  right: auto;
+  top: 50%;
+  width: calc(var(--ps) * 0.11);
+  height: calc(var(--ps) * 0.018);
+  transform: translate(-50%, -50%) rotate(-22deg);
+}
+
+.status-vibe.mood-sad .status-mark,
+.status-vibe.mood-calm .status-mark {
+  border-color: var(--blue);
+}
+
+.status-vibe.mood-stressed .status-mark,
+.status-vibe.mood-busy .status-mark {
+  border-color: var(--amber);
+}
+
+.status-vibe.mood-mysterious .status-mark {
+  border-color: var(--cream-dim);
+}
+
+.status-vibe.mood-sad .status-note,
+.status-vibe.mood-calm .status-note {
+  color: var(--blue);
+}
+
+.status-vibe.mood-stressed .status-note,
+.status-vibe.mood-busy .status-note {
+  color: var(--amber);
+}
+
+.mood-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 1.2vmin;
+}
+
+.mood-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.8vmin;
+  text-align: left;
+  background: var(--panel-a);
+  min-height: 78px;
+}
+
+.mood-card.on {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 1px var(--amber) inset;
+}
+
+.mood-card b {
+  display: block;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(15px, 3.1vmin, 19px);
+  font-weight: 400;
+  color: var(--cream);
+}
+
+.mood-card small {
+  display: block;
+  color: var(--dim);
+  font-size: clamp(9px, 2vmin, 11px);
+  line-height: 1.35;
+  margin-top: 0.6vmin;
+}
+
 /* ── now playing widget ────────────────────────────────────────────── */
 
 .np {
@@ -1149,6 +1337,132 @@ input {
   font-weight: 600;
 }
 
+/* ── reusable editable popup ───────────────────────────────────────── */
+
+.edit-pop-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vmin;
+}
+
+.edit-pop-scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(5, 4, 3, 0.64);
+  backdrop-filter: blur(8px);
+}
+
+.edit-pop {
+  position: relative;
+  width: min(92vw, 420px);
+  border: 1px solid var(--line-strong);
+  border-radius: clamp(16px, 3.2vmin, 24px);
+  background: linear-gradient(165deg, var(--sheet-a), var(--sheet-b));
+  box-shadow: 0 30px 90px var(--shadow);
+  overflow: hidden;
+}
+
+.edit-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 2vmin;
+  padding: 2.6vmin 3vmin 1.8vmin;
+  border-bottom: 1px solid var(--line);
+}
+
+.edit-pop-head b {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(18px, 4vmin, 24px);
+  font-weight: 400;
+}
+
+.edit-pop-close {
+  margin-left: auto;
+  color: var(--dim);
+  font-size: clamp(20px, 4vmin, 28px);
+  line-height: 1;
+}
+
+.edit-pop-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2vmin;
+  padding: 3vmin;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 1vmin;
+}
+
+.edit-field span {
+  font-size: clamp(10px, 2.2vmin, 12px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.edit-field input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--panel-a);
+  color: var(--cream);
+  font-size: clamp(14px, 2.8vmin, 16px);
+  padding: 0 14px;
+  color-scheme: inherit;
+}
+
+.edit-quick {
+  display: flex;
+  gap: 1vmin;
+}
+
+.edit-quick button {
+  flex: 1;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  color: var(--cream-dim);
+  font-size: clamp(12px, 2.5vmin, 14px);
+}
+
+.edit-pop-foot {
+  display: flex;
+  align-items: center;
+  gap: 1.6vmin;
+  padding: 2vmin 3vmin;
+  border-top: 1px solid var(--line);
+}
+
+.edit-pop-muted,
+.edit-pop-primary {
+  min-height: 40px;
+  border-radius: 100px;
+  padding: 1.2vmin 3.4vmin;
+  font-size: clamp(12px, 2.5vmin, 14px);
+  font-weight: 700;
+}
+
+.edit-pop-muted {
+  color: var(--dim);
+}
+
+.edit-pop-primary {
+  background: var(--amber);
+  color: var(--on-accent);
+}
+
 /* ── settings sheet (tap-first) ────────────────────────────────────── */
 
 .sheet-scrim {
@@ -1374,6 +1688,42 @@ input {
 }
 
 /* layout row cards */
+.preset-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+  gap: 1.2vmin;
+  margin-bottom: 2vmin;
+}
+
+.preset-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.8vmin;
+  text-align: left;
+  background: var(--panel-a);
+  min-height: 74px;
+}
+
+.preset-card:active {
+  border-color: var(--amber);
+}
+
+.preset-card b {
+  display: block;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(15px, 3.2vmin, 19px);
+  font-weight: 400;
+}
+
+.preset-card small {
+  display: block;
+  color: var(--dim);
+  font-size: clamp(9px, 2vmin, 11px);
+  line-height: 1.35;
+  margin-top: 0.6vmin;
+}
+
 .lrow-card {
   border: 1px solid var(--line);
   border-radius: 14px;

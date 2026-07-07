@@ -17,6 +17,49 @@ const SWATCH: Record<ThemeName, { bg: string; accent: string }> = {
   paper: { bg: "#f2ecdf", accent: "#bc5b22" },
 };
 
+const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
+  {
+    name: "bedside",
+    blurb: "clock, weather, alarms",
+    rows: [
+      { type: "split", left: "clock", right: "weather" },
+      { type: "dual", widget: "datetime" },
+      { type: "split", left: "alarms", right: "moon" },
+    ],
+  },
+  {
+    name: "workday",
+    blurb: "calendar, music, status",
+    rows: [
+      { type: "split", left: "calendar", right: "nowplaying" },
+      { type: "dual", widget: "please_disturb" },
+      { type: "dual", widget: "away_until" },
+      { type: "split", left: "timer", right: "dnd" },
+      { type: "split", left: "vibe", right: "lunch" },
+    ],
+  },
+  {
+    name: "ambient",
+    blurb: "sky, quotes, forecast",
+    rows: [
+      { type: "split", left: "sun", right: "moon" },
+      { type: "dual", widget: "quote" },
+      { type: "dual", widget: "forecast" },
+      { type: "split", left: "analog", right: "vibe" },
+    ],
+  },
+  {
+    name: "focus",
+    blurb: "status-first and quiet",
+    rows: [
+      { type: "dual", widget: "dnd" },
+      { type: "dual", widget: "please_disturb" },
+      { type: "split", left: "timer", right: "calendar" },
+      { type: "dual", widget: "away_until" },
+    ],
+  },
+];
+
 export default function SettingsSheet({
   open,
   settings,
@@ -92,6 +135,10 @@ function LayoutSection({ settings, onChange }: SectionProps) {
     onChange({ ...settings, layout: { rows: next } });
   }
 
+  function applyPreset(nextRows: LayoutRow[]) {
+    setRows(nextRows.map((r) => ({ ...r })));
+  }
+
   function patchRow(i: number, next: LayoutRow) {
     setRows(rows.map((r, j) => (j === i ? next : r)));
   }
@@ -150,6 +197,14 @@ function LayoutSection({ settings, onChange }: SectionProps) {
         rows stack vertically — swipe <b>up / down</b> on the dashboard to move between them.
         dual rows give one widget the whole width.
       </p>
+      <div className="preset-row">
+        {LAYOUT_PRESETS.map((preset) => (
+          <button key={preset.name} className="preset-card" onClick={() => applyPreset(preset.rows)}>
+            <b>{preset.name}</b>
+            <small>{preset.blurb}</small>
+          </button>
+        ))}
+      </div>
       {rows.map((r, i) => (
         <div key={i} className="lrow-card">
           <div className="lrow-head">
