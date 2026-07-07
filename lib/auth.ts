@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { getDb } from "./db";
-import { DEFAULT_YAML } from "./config";
+import { DEFAULT_SETTINGS } from "./settings";
 import { env } from "./env";
 
 export const SESSION_COOKIE = "desk_session";
@@ -25,9 +25,9 @@ function seedEnvUser() {
     const info = db
       .prepare("INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)")
       .run(username, bcrypt.hashSync(password, 10), Date.now());
-    db.prepare("INSERT INTO configs (user_id, yaml, updated_at) VALUES (?, ?, ?)").run(
+    db.prepare("INSERT INTO settings (user_id, data, updated_at) VALUES (?, ?, ?)").run(
       Number(info.lastInsertRowid),
-      DEFAULT_YAML,
+      JSON.stringify(DEFAULT_SETTINGS),
       Date.now()
     );
     console.log(`[archersdesk] seeded account "${username}" from env`);
@@ -68,9 +68,9 @@ export async function registerUser(username: string, password: string): Promise<
       .prepare("INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)")
       .run(username, hash, Date.now());
     const id = Number(info.lastInsertRowid);
-    db.prepare("INSERT INTO configs (user_id, yaml, updated_at) VALUES (?, ?, ?)").run(
+    db.prepare("INSERT INTO settings (user_id, data, updated_at) VALUES (?, ?, ?)").run(
       id,
-      DEFAULT_YAML,
+      JSON.stringify(DEFAULT_SETTINGS),
       Date.now()
     );
     return { id, username };

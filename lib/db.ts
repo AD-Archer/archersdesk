@@ -22,11 +22,12 @@ export function getDb(): Database.Database {
         expires_at INTEGER NOT NULL,
         created_at INTEGER NOT NULL
       );
-      CREATE TABLE IF NOT EXISTS configs (
+      CREATE TABLE IF NOT EXISTS settings (
         user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-        yaml       TEXT NOT NULL,
+        data       TEXT NOT NULL,
         updated_at INTEGER NOT NULL
       );
+      DROP TABLE IF EXISTS configs;
       CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     `);
     g.__deskDb = db;

@@ -4,14 +4,14 @@ import type { NowPlayingData } from "@/lib/types";
 import { usePoll } from "../hooks";
 import type { WidgetProps } from "./registry";
 
-export function NowPlayingWidget({ config }: WidgetProps) {
-  const np = usePoll<NowPlayingData>("/api/nowplaying", 15_000, [config.lastfm.username]);
+export function NowPlayingWidget({ settings }: WidgetProps) {
+  const np = usePoll<NowPlayingData>("/api/nowplaying", 15_000, [settings.lastfm.username]);
 
   let body: React.ReactNode;
   if (!np) {
     body = <div className="np-idle">tuning in…</div>;
   } else if (!np.configured) {
-    body = <div className="np-idle">{np.reason ?? "set lastfm.username in your config"}</div>;
+    body = <div className="np-idle">{np.reason ?? "set your last.fm username in settings → music"}</div>;
   } else if (!np.track) {
     body = <div className="np-idle">nothing scrobbled yet — spin something on navidrome</div>;
   } else {

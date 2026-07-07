@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { Alarm, DeskConfig } from "@/lib/types";
-import { MainView } from "./widgets/registry";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { Alarm, Settings } from "@/lib/types";
+import { MainRow, WidgetPanel } from "./widgets/registry";
 import Standby from "./Standby";
 import SettingsSheet from "./SettingsSheet";
 import AlarmOverlay from "./AlarmOverlay";
@@ -10,37 +10,119 @@ import { alarmMatches } from "./alarmUtil";
 import { unlockAudio } from "./audio";
 import { useWakeLock } from "./hooks";
 
-const PAGES = 2; // 0 = widgets, 1 = standby
+const PAGES = 2; // 0 = widget rows, 1 = standby
+type PaneSide = "left" | "right";
 
-export default function Dashboard({ username }: { username: string }) {
-  const [config, setConfig] = useState<DeskConfig | null>(null);
-  const [yaml, setYaml] = useState("");
+export default function Dashboard({
+  username,
+  initialSettings,
+}: {
+  username: string;
+  initialSettings: Settings;
+}) {
+  const [settings, setSettings] = useState<Settings>(initialSettings);
   const [page, setPage] = useState(0);
-  const [drag, setDrag] = useState<number | null>(null);
+  const [leftRow, setLeftRow] = useState(0);
+  const [rightRow, setRightRow] = useState(0);
+  const [drag, setDrag] = useState<number | null>(null); // horizontal px
+  const [dragY, setDragY] = useState<{ side: PaneSide; dy: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const [ringing, setRinging] = useState<Alarm | null>(null);
 
-  const start = useRef<{ x: number; id: number } | null>(null);
-  const cfgRef = useRef<DeskConfig | null>(null);
+  const start = useRef<{
+    x: number;
+    y: number;
+    id: number;
+    axis: "h" | "v" | null;
+    side: PaneSide;
+  } | null>(null);
+  const settingsRef = useRef<Settings>(settings);
+  const leftRowRef = useRef(leftRow);
+  const rightRowRef = useRef(rightRow);
   const ringingRef = useRef<Alarm | null>(null);
   const fired = useRef<Set<string>>(new Set());
   const snooze = useRef<{ at: number; alarm: Alarm } | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  cfgRef.current = config;
+  settingsRef.current = settings;
+  leftRowRef.current = leftRow;
+  rightRowRef.current = rightRow;
   ringingRef.current = ringing;
+
+  const rows = settings.layout.rows;
+  const activeDual = leftRow === rightRow && rows[leftRow]?.type === "dual";
+  const leftLayout = rows[leftRow];
+  const rightLayout = rows[rightRow];
 
   useWakeLock();
 
-  // load the user's yaml config
+  // keep pane row indices valid when rows are removed in settings
   useEffect(() => {
-    fetch("/api/config")
-      .then((r) => r.json())
-      .then((d) => {
-        setConfig(d.config);
-        setYaml(d.yaml);
-      })
-      .catch(() => {});
+    const max = Math.max(0, rows.length - 1);
+    const nextLeft = Math.min(leftRow, max);
+    const nextRight = Math.min(rightRow, max);
+    const dualIndex =
+      rows[nextLeft]?.type === "dual" ? nextLeft : rows[nextRight]?.type === "dual" ? nextRight : null;
+
+    if (dualIndex !== null) {
+      if (leftRow !== dualIndex) setLeftRow(dualIndex);
+      if (rightRow !== dualIndex) setRightRow(dualIndex);
+      return;
+    }
+    if (leftRow !== nextLeft) setLeftRow(nextLeft);
+    if (rightRow !== nextRight) setRightRow(nextRight);
+  }, [rows, leftRow, rightRow]);
+
+  // theme is a document-level attribute so every layer (body glow, sheet,
+  // overlays) swaps palette together — applied live while tapping
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = settings.theme;
+  }, [settings.theme]);
+
+  // track fullscreen state (echo show / browser chrome)
+  useEffect(() => {
+    const onFs = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
+
+  function toggleFullscreen() {
+    unlockAudio();
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+    }
+    // re-request inside the gesture — some browsers only grant it here
+    (navigator as Navigator & { wakeLock?: { request(t: "screen"): Promise<unknown> } }).wakeLock
+      ?.request("screen")
+      .catch(() => {});
+  }
+
+  // every settings change autosaves (debounced) — no save button anywhere
+  function updateSettings(next: Settings) {
+    setSettings(next);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ settings: settingsRef.current }),
+        });
+        if (res.ok) {
+          setSaved(true);
+          if (savedTimer.current) clearTimeout(savedTimer.current);
+          savedTimer.current = setTimeout(() => setSaved(false), 1800);
+        }
+      } catch {
+        // offline — settings still live locally, next change retries
+      }
+    }, 600);
+  }
 
   // browsers gate audio behind a gesture — unlock on the first touch
   useEffect(() => {
@@ -58,9 +140,7 @@ export default function Dashboard({ username }: { username: string }) {
         snooze.current = null;
         return;
       }
-      const cfg = cfgRef.current;
-      if (!cfg) return;
-      for (const a of cfg.alarms) {
+      for (const a of settingsRef.current.alarms) {
         if (!alarmMatches(a, now)) continue;
         const key = `${now.toDateString()}|${a.time}|${a.label}`;
         if (fired.current.has(key)) continue;
@@ -72,43 +152,93 @@ export default function Dashboard({ username }: { username: string }) {
     return () => clearInterval(id);
   }, []);
 
-  // arrow keys page too (handy on desktop)
+  // arrow keys on desktop: ←→ pages, ↑↓ rows
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.tagName === "INPUT") return;
       if (e.key === "ArrowRight") setPage((p) => Math.min(PAGES - 1, p + 1));
       if (e.key === "ArrowLeft") setPage((p) => Math.max(0, p - 1));
+      if (e.key === "ArrowDown") moveBothRows(1);
+      if (e.key === "ArrowUp") moveBothRows(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function onPointerDown(e: React.PointerEvent) {
-    if ((e.target as HTMLElement).closest("button, input, textarea, a")) return;
-    start.current = { x: e.clientX, id: e.pointerId };
-    setDrag(0);
-  }
-  function onPointerMove(e: React.PointerEvent) {
-    if (!start.current || e.pointerId !== start.current.id) return;
-    setDrag(e.clientX - start.current.x);
-  }
-  function onPointerUp(e: React.PointerEvent) {
-    if (!start.current || e.pointerId !== start.current.id) return;
-    const dx = e.clientX - start.current.x;
-    start.current = null;
-    setDrag(null);
-    const threshold = Math.min(80, window.innerWidth * 0.1);
-    if (dx < -threshold) setPage((p) => Math.min(PAGES - 1, p + 1));
-    else if (dx > threshold) setPage((p) => Math.max(0, p - 1));
+  function clampRowIndex(index: number, sourceRows = rows) {
+    return Math.max(0, Math.min(sourceRows.length - 1, index));
   }
 
-  if (!config) {
-    return (
-      <main className="stage" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "var(--dim)", fontFamily: "var(--serif)", fontStyle: "italic", fontSize: 20 }}>
-          warming up…
-        </span>
-      </main>
-    );
+  function moveBothRows(delta: number) {
+    const sourceRows = settingsRef.current.layout.rows;
+    const current =
+      leftRowRef.current === rightRowRef.current
+        ? leftRowRef.current
+        : Math.max(leftRowRef.current, rightRowRef.current);
+    const next = Math.max(0, Math.min(sourceRows.length - 1, current + delta));
+    setLeftRow(next);
+    setRightRow(next);
+  }
+
+  function movePaneRow(side: PaneSide, delta: number) {
+    const current = activeDual ? leftRow : side === "left" ? leftRow : rightRow;
+    const next = clampRowIndex(current + delta);
+    if (activeDual || rows[next]?.type === "dual") {
+      setLeftRow(next);
+      setRightRow(next);
+    } else if (side === "left") {
+      setLeftRow(next);
+    } else {
+      setRightRow(next);
+    }
+  }
+
+  function onPointerDown(e: React.PointerEvent) {
+    if ((e.target as HTMLElement).closest("button, input, textarea, a, label")) return;
+    const slot = (e.target as HTMLElement).closest<HTMLElement>("[data-slot]")?.dataset.slot;
+    const side = slot === "right" ? "right" : "left";
+    start.current = { x: e.clientX, y: e.clientY, id: e.pointerId, axis: null, side };
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    const s = start.current;
+    if (!s || e.pointerId !== s.id) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (!s.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 12) {
+      s.axis = Math.abs(dx) >= Math.abs(dy) ? "h" : "v";
+    }
+    if (s.axis === "h") setDrag(dx);
+    else if (s.axis === "v" && page === 0 && rows.length > 1) setDragY({ side: s.side, dy });
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    const s = start.current;
+    if (!s || e.pointerId !== s.id) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    const axis = s.axis;
+    start.current = null;
+    setDrag(null);
+    setDragY(null);
+    if (axis === "h") {
+      const threshold = Math.min(80, window.innerWidth * 0.1);
+      if (dx < -threshold) setPage((p) => Math.min(PAGES - 1, p + 1));
+      else if (dx > threshold) setPage((p) => Math.max(0, p - 1));
+    } else if (axis === "v" && page === 0) {
+      const threshold = Math.min(70, window.innerHeight * 0.12);
+      if (dy < -threshold) movePaneRow(s.side, 1);
+      else if (dy > threshold) movePaneRow(s.side, -1);
+    }
+  }
+
+  function paneStyle(side: PaneSide) {
+    if (!dragY || dragY.side !== side) return undefined;
+    return { transform: `translateY(${dragY.dy}px)` };
+  }
+
+  function renderSplitPane(side: PaneSide) {
+    const layout = side === "left" ? leftLayout : rightLayout;
+    if (!layout || layout.type === "dual") return null;
+    return <WidgetPanel widget={layout[side]} settings={settings} slot={side} style={paneStyle(side)} />;
   }
 
   return (
@@ -125,13 +255,34 @@ export default function Dashboard({ username }: { username: string }) {
           style={{ transform: `translateX(calc(${-page * 100}% + ${drag ?? 0}px))` }}
         >
           <section className="page">
-            <MainView config={config} />
+            <div className="vrow">
+              {activeDual ? (
+                <MainRow row={rows[leftRow]!} settings={settings} />
+              ) : (
+                <div className="main-view">
+                  {renderSplitPane("left")}
+                  {renderSplitPane("right")}
+                </div>
+              )}
+            </div>
           </section>
           <section className="page">
-            <Standby config={config} />
+            <Standby settings={settings} />
           </section>
         </div>
       </div>
+
+      <button className="fsbtn" onClick={toggleFullscreen} aria-label="fullscreen">
+        {fullscreen ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+          </svg>
+        )}
+      </button>
 
       <button className="gear" onClick={() => setSettingsOpen(true)} aria-label="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
@@ -146,15 +297,21 @@ export default function Dashboard({ username }: { username: string }) {
         ))}
       </div>
 
+      {page === 0 && rows.length > 1 && (
+        <div className="vdots">
+          {rows.map((_, i) => (
+            <i key={i} className={i === leftRow || i === rightRow ? "on" : ""} />
+          ))}
+        </div>
+      )}
+
       <SettingsSheet
         open={settingsOpen}
-        yaml={yaml}
+        settings={settings}
         username={username}
+        saved={saved}
         onClose={() => setSettingsOpen(false)}
-        onSaved={(y, c) => {
-          setYaml(y);
-          setConfig(c);
-        }}
+        onChange={updateSettings}
       />
 
       {ringing && (

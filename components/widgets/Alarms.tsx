@@ -4,9 +4,9 @@ import { useNow } from "../hooks";
 import { dayChips, fmt12, nextAlarm, untilText } from "../alarmUtil";
 import type { WidgetProps } from "./registry";
 
-export function AlarmsWidget({ config }: WidgetProps) {
+export function AlarmsWidget({ settings }: WidgetProps) {
   const now = useNow(10_000);
-  const next = nextAlarm(config.alarms, now);
+  const next = nextAlarm(settings.alarms, now);
 
   return (
     <>
@@ -24,12 +24,12 @@ export function AlarmsWidget({ config }: WidgetProps) {
         ) : (
           <div className="al-none">
             no alarms set —<br />
-            add them in your yaml config
+            add one in settings → alarms
           </div>
         )}
-        {config.alarms.length > 0 && (
+        {settings.alarms.length > 0 && (
           <div className="al-list">
-            {config.alarms.slice(0, 3).map((a, i) => (
+            {settings.alarms.slice(0, 3).map((a, i) => (
               <div key={i} className={`al-row${a.enabled ? "" : " off"}`}>
                 <b>
                   {fmt12(a.time).time} {fmt12(a.time).ampm}

@@ -1,28 +1,30 @@
 "use client";
 
-import type { DeskConfig, WeatherData } from "@/lib/types";
-import { useNow, usePoll } from "./hooks";
+import type { Settings } from "@/lib/types";
+import { useNow } from "./hooks";
 import { clock12, fmt12, nextAlarm } from "./alarmUtil";
-import { WxIcon } from "./widgets/Weather";
+import { WxIcon, useWeather } from "./widgets/Weather";
 
 const DATE_FMT = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" });
 
-export default function Standby({ config }: { config: DeskConfig }) {
+export default function Standby({ settings }: { settings: Settings }) {
   const now = useNow(1000);
   const { time, ampm } = clock12(now);
-  const wx = usePoll<WeatherData>("/api/weather", 10 * 60 * 1000, [config.city, config.units]);
-  const next = nextAlarm(config.alarms, now);
+  const wx = useWeather(settings);
+  const next = nextAlarm(settings.alarms, now);
 
   return (
     <div className="standby">
       <div className="standby-glow" />
-      <div className="standby-date">{DATE_FMT.format(now)}</div>
-      <div className="standby-time">
+      <div className="standby-date" suppressHydrationWarning>
+        {DATE_FMT.format(now)}
+      </div>
+      <div className="standby-time" suppressHydrationWarning>
         {time}
         <span className="standby-ampm">{ampm}</span>
       </div>
       <div className="standby-chips">
-        {config.standby.show_temp && wx && !wx.error && (
+        {settings.standby.showTemp && wx && !wx.error && (
           <div className="chip">
             <WxIcon kind={wx.kind} />
             <span>
@@ -30,7 +32,7 @@ export default function Standby({ config }: { config: DeskConfig }) {
             </span>
           </div>
         )}
-        {config.standby.show_alarm && (
+        {settings.standby.showAlarm && (
           <div className="chip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M12 5a6.5 6.5 0 0 1 6.5 6.5c0 3.2.9 4.4 1.7 5.5H3.8c.8-1.1 1.7-2.3 1.7-5.5A6.5 6.5 0 0 1 12 5z" />

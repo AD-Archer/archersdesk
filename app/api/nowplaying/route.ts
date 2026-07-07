@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isUser, requireUser } from "@/lib/api";
-import { getUserConfig } from "@/lib/config";
+import { getUserSettings } from "@/lib/settings";
 import { env } from "@/lib/env";
 
 // Last.fm recent tracks — Navidrome scrobbles land here. The API key comes
@@ -21,9 +21,9 @@ export async function GET(req: NextRequest) {
   if (hit && Date.now() - hit.at < TTL)
     return NextResponse.json(hit.body as object, { status: hit.status });
 
-  const { config } = getUserConfig(user.id);
-  const username = config.lastfm.username;
-  const apiKey = config.lastfm.api_key || env.lastfmApiKey;
+  const settings = getUserSettings(user.id);
+  const username = settings.lastfm.username;
+  const apiKey = settings.lastfm.apiKey || env.lastfmApiKey;
 
   const respond = (body: object, status = 200) => {
     cache.set(user.id, { at: Date.now(), body, status });
@@ -31,11 +31,11 @@ export async function GET(req: NextRequest) {
   };
 
   if (!username)
-    return respond({ configured: false, reason: "set lastfm.username in your config" });
+    return respond({ configured: false, reason: "set your last.fm username in settings → music" });
   if (!apiKey)
     return respond({
       configured: false,
-      reason: "no last.fm api key — set lastfm.api_key in your config or LASTFM_API_KEY on the server",
+      reason: "no last.fm api key — add one in settings → music, or set LASTFM_API_KEY on the server",
     });
 
   try {

@@ -67,8 +67,16 @@ export function WxIcon({ kind }: { kind: string }) {
   }
 }
 
-export function WeatherWidget({ config, wide }: WidgetProps) {
-  const wx = usePoll<WeatherData>("/api/weather", 10 * 60 * 1000, [config.city, config.units]);
+export function useWeather(settings: WidgetProps["settings"]): WeatherData | null {
+  return usePoll<WeatherData>("/api/weather", 10 * 60 * 1000, [
+    settings.location.latitude,
+    settings.location.longitude,
+    settings.units,
+  ]);
+}
+
+export function WeatherWidget({ settings, wide }: WidgetProps) {
+  const wx = useWeather(settings);
 
   const body = !wx ? (
     <div className="w-empty">reading the sky…</div>
@@ -109,9 +117,37 @@ export function WeatherWidget({ config, wide }: WidgetProps) {
 
   return (
     <>
-      <span className="w-label">{wx && !wx.error ? wx.city : config.city}</span>
+      <span className="w-label">{wx && !wx.error ? wx.city : settings.location.name}</span>
       <div className="w-body" style={{ gap: "0.5vmin" }}>
         {body}
+      </div>
+    </>
+  );
+}
+
+export function ForecastWidget({ settings }: WidgetProps) {
+  const wx = useWeather(settings);
+
+  return (
+    <>
+      <span className="w-label">forecast · {settings.location.name}</span>
+      <div className="w-body">
+        {!wx ? (
+          <div className="w-empty">reading the sky…</div>
+        ) : wx.error ? (
+          <div className="w-empty">{wx.error}</div>
+        ) : (
+          <div className="fc">
+            {wx.days.map((d) => (
+              <div key={d.date} className="fc-day">
+                <span className="fc-dow">{d.dow}</span>
+                <WxIcon kind={d.kind} />
+                <span className="fc-hi">{d.hi}°</span>
+                <span className="fc-lo">{d.lo}°</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

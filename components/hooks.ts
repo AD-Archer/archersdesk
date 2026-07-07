@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from "react";
 
+/** False during SSR + hydration, true after mount — gate second-precision
+ *  output on this so server and client markup can't disagree. */
+export function useMounted(): boolean {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted;
+}
+
 export function useNow(ms = 1000): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
