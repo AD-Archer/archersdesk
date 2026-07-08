@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Alarm, GeocodeResult, LayoutRow, Settings, ThemeName, WidgetName } from "@/lib/types";
-import { MAX_ROWS, THEME_INFO, THEMES, WIDGET_INFO, WIDGETS } from "@/lib/types";
+import { MAX_ROWS, THEME_INFO, THEMES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS } from "@/lib/types";
 import { dayChips, fmt12 } from "./alarmUtil";
 
-type Tab = "layout" | "theme" | "alarms" | "location" | "music";
-const TABS: Tab[] = ["layout", "theme", "alarms", "location", "music"];
+type Tab = "layout" | "theme" | "alarms" | "location" | "accounts";
+const TABS: Tab[] = ["layout", "theme", "alarms", "location", "accounts"];
 
 // swatch previews for the theme cards (mirrors globals.css palettes)
 const SWATCH: Record<ThemeName, { bg: string; accent: string }> = {
@@ -106,7 +106,7 @@ export default function SettingsSheet({
             {tab === "theme" && <ThemeSection settings={settings} onChange={onChange} />}
             {tab === "alarms" && <AlarmsSection settings={settings} onChange={onChange} />}
             {tab === "location" && <LocationSection settings={settings} onChange={onChange} />}
-            {tab === "music" && <MusicSection settings={settings} onChange={onChange} />}
+            {tab === "accounts" && <AccountsSection settings={settings} onChange={onChange} />}
           </div>
         )}
         <div className="sheet-foot">
@@ -179,14 +179,28 @@ function LayoutSection({ settings, onChange }: SectionProps) {
           row {picking.row + 1} · pick a widget for the{" "}
           <b>{picking.slot === "widget" ? "wide panel" : `${picking.slot} square`}</b>
         </p>
-        <div className="wgrid">
-          {WIDGETS.map((w) => (
-            <button key={w} className={`wcard${current === w ? " on" : ""}`} onClick={() => pick(w)}>
-              <b>{WIDGET_INFO[w].label}</b>
-              <small>{WIDGET_INFO[w].blurb}</small>
-            </button>
-          ))}
-        </div>
+        {WIDGET_CATEGORIES.map((cat) => (
+          <div key={cat.key} className="wgroup">
+            <div className="wgroup-title">{cat.label}</div>
+            <div className="wgrid">
+              {WIDGETS.filter((w) => WIDGET_INFO[w].category === cat.key).map((w) => (
+                <button
+                  key={w}
+                  className={`wcard${current === w ? " on" : ""}`}
+                  onClick={() => pick(w)}
+                >
+                  <b>
+                    <span className="mi wcard-mi" aria-hidden>
+                      {WIDGET_INFO[w].icon}
+                    </span>
+                    {WIDGET_INFO[w].label}
+                  </b>
+                  <small>{WIDGET_INFO[w].blurb}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </>
     );
   }
@@ -508,39 +522,195 @@ function LocationSection({ settings, onChange }: SectionProps) {
   );
 }
 
-/* ── music (the only text-entry config left: secret overrides) ───── */
+/* ── accounts (the only text-entry config left: usernames + keys) ── */
 
-function MusicSection({ settings, onChange }: SectionProps) {
+function AccountField({
+  label,
+  value,
+  onValue,
+  placeholder,
+  secret,
+}: {
+  label: string;
+  value: string | undefined; // stale client state can predate new fields
+  onValue: (v: string) => void;
+  placeholder?: string;
+  secret?: boolean;
+}) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <input
+        value={value ?? ""}
+        maxLength={120}
+        placeholder={placeholder}
+        type={secret ? "password" : "text"}
+        onChange={(e) => onValue(e.target.value)}
+        autoCapitalize="off"
+        autoCorrect="off"
+        autoComplete="off"
+      />
+    </label>
+  );
+}
+
+function AccountGroup({ title, blurb, children }: { title: string; blurb: string; children: React.ReactNode }) {
+  return (
+    <div className="acct-group">
+      <div className="acct-head">
+        <b>{title}</b>
+        <small>{blurb}</small>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function AccountsSection({ settings, onChange }: SectionProps) {
+  const ig = settings.integrations;
+  const patch = (next: Partial<Settings["integrations"]>) =>
+    onChange({ ...settings, integrations: { ...ig, ...next } });
+  const [symbolsDraft, setSymbolsDraft] = useState(ig.stocks.symbols.join(", "));
+
   return (
     <>
       <p className="sec-note">
-        navidrome scrobbles to last.fm; the now-playing widget reads it back. the api key is
-        optional — leave it empty to use the server&rsquo;s <b>LASTFM_API_KEY</b>.
+        usernames and keys for the widgets that talk to the outside world. keys live in your
+        account&rsquo;s settings, never in the page.
       </p>
-      <label className="field">
-        <span>last.fm username</span>
-        <input
+
+      <AccountGroup title="last.fm" blurb="now playing — navidrome scrobbles land here">
+        <AccountField
+          label="username"
           value={settings.lastfm.username}
-          maxLength={64}
-          onChange={(e) =>
-            onChange({ ...settings, lastfm: { ...settings.lastfm, username: e.target.value } })
-          }
-          autoCapitalize="off"
-          autoCorrect="off"
+          onValue={(v) => onChange({ ...settings, lastfm: { ...settings.lastfm, username: v } })}
         />
-      </label>
-      <label className="field">
-        <span>api key override (optional)</span>
-        <input
+        <AccountField
+          label="api key (optional — falls back to the server's LASTFM_API_KEY)"
           value={settings.lastfm.apiKey}
-          maxLength={64}
-          onChange={(e) =>
-            onChange({ ...settings, lastfm: { ...settings.lastfm, apiKey: e.target.value } })
-          }
-          autoCapitalize="off"
-          autoCorrect="off"
+          secret
+          onValue={(v) => onChange({ ...settings, lastfm: { ...settings.lastfm, apiKey: v } })}
         />
-      </label>
+      </AccountGroup>
+
+      <AccountGroup title="github" blurb="recent commits and activity">
+        <AccountField
+          label="username"
+          value={ig.github.username}
+          onValue={(v) => patch({ github: { ...ig.github, username: v } })}
+        />
+        <AccountField
+          label="token (optional — higher rate limit)"
+          value={ig.github.token}
+          secret
+          onValue={(v) => patch({ github: { ...ig.github, token: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="chess.com" blurb="blitz · rapid · bullet ratings">
+        <AccountField
+          label="username"
+          value={ig.chess.username}
+          onValue={(v) => patch({ chess: { username: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="stocks" blurb="tickers, comma separated (^GSPC works too)">
+        <label className="field">
+          <span>symbols</span>
+          <input
+            value={symbolsDraft}
+            placeholder="AAPL, SPY, ^GSPC"
+            onChange={(e) => {
+              setSymbolsDraft(e.target.value);
+              patch({
+                stocks: {
+                  symbols: e.target.value
+                    .split(",")
+                    .map((s) => s.trim().toUpperCase())
+                    .filter(Boolean)
+                    .slice(0, 6),
+                },
+              });
+            }}
+            autoCapitalize="characters"
+            autoCorrect="off"
+          />
+        </label>
+      </AccountGroup>
+
+      <AccountGroup title="septa" blurb="regional rail arrivals from api.septa.org">
+        <AccountField
+          label="station"
+          value={ig.septa?.station}
+          placeholder="30th Street Station"
+          onValue={(v) => patch({ septa: { station: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="jellyfin" blurb="api key, or username + password">
+        <AccountField
+          label="server url"
+          value={ig.jellyfin?.url}
+          placeholder="https://jellyfin.example.com"
+          onValue={(v) => patch({ jellyfin: { ...ig.jellyfin, url: v } })}
+        />
+        <AccountField
+          label="api key (dashboard → api keys)"
+          value={ig.jellyfin?.apiKey}
+          secret
+          onValue={(v) => patch({ jellyfin: { ...ig.jellyfin, apiKey: v } })}
+        />
+        <AccountField
+          label="username (optional if api key is set)"
+          value={ig.jellyfin?.username}
+          onValue={(v) => patch({ jellyfin: { ...ig.jellyfin, username: v } })}
+        />
+        <AccountField
+          label="password (optional if api key is set)"
+          value={ig.jellyfin?.password}
+          secret
+          onValue={(v) => patch({ jellyfin: { ...ig.jellyfin, password: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="plex" blurb="what's streaming on your server">
+        <AccountField
+          label="server url"
+          value={ig.plex?.url}
+          placeholder="http://192.168.1.10:32400"
+          onValue={(v) => patch({ plex: { ...ig.plex, url: v } })}
+        />
+        <AccountField
+          label="x-plex-token"
+          value={ig.plex?.token}
+          secret
+          onValue={(v) => patch({ plex: { ...ig.plex, token: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="anilist" blurb="anime days watched + stats">
+        <AccountField
+          label="username"
+          value={ig.anilist.username}
+          onValue={(v) => patch({ anilist: { username: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="wakatime" blurb="today's coding time — also works with wakapi / hackatime">
+        <AccountField
+          label="api key"
+          value={ig.wakatime.apiKey}
+          secret
+          onValue={(v) => patch({ wakatime: { ...ig.wakatime, apiKey: v } })}
+        />
+        <AccountField
+          label="api url (optional — e.g. https://hackatime.hackclub.com/api/hackatime/v1)"
+          value={ig.wakatime.apiUrl}
+          placeholder="https://api.wakatime.com/api/v1"
+          onValue={(v) => patch({ wakatime: { ...ig.wakatime, apiUrl: v } })}
+        />
+      </AccountGroup>
     </>
   );
 }

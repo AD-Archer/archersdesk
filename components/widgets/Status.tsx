@@ -12,14 +12,14 @@ type VibeMood = "joyful" | "sad" | "stressed" | "calm" | "busy" | "mysterious";
 const STATUS_COPY = {
   dnd: {
     label: "status",
-    title: "Do not disturb",
-    note: "Deep focus",
+    title: "DO NOT DISTURB",
+    note: "go away · headphones mean no",
     tone: "quiet",
   },
   please: {
     label: "status",
-    title: "Please disturb",
-    note: "Interruptions welcome",
+    title: "PLEASE DISTURB",
+    note: "yes, really — come talk to me",
     tone: "open",
   },
   lunch: {

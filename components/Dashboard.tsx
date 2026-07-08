@@ -28,6 +28,7 @@ export default function Dashboard({
   initialSettings: Settings;
 }) {
   const [settings, setSettings] = useState<Settings>(initialSettings);
+  const [savedSettings, setSavedSettings] = useState<Settings>(initialSettings);
   const [page, setPage] = useState(0);
   const [leftRow, setLeftRow] = useState(0);
   const [rightRow, setRightRow] = useState(0);
@@ -134,6 +135,7 @@ export default function Dashboard({
 
   // every settings change autosaves (debounced) — no save button anywhere
   function updateSettings(next: Settings) {
+    settingsRef.current = next;
     setSettings(next);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
@@ -144,6 +146,7 @@ export default function Dashboard({
           body: JSON.stringify({ settings: settingsRef.current }),
         });
         if (res.ok) {
+          setSavedSettings(settingsRef.current);
           setSaved(true);
           if (savedTimer.current) clearTimeout(savedTimer.current);
           savedTimer.current = setTimeout(() => setSaved(false), 1800);
@@ -233,8 +236,15 @@ export default function Dashboard({
 
   function onPointerDown(e: React.PointerEvent) {
     if ((e.target as HTMLElement).closest("button, input, textarea, a, label")) return;
+    // swipes starting on a panel steer that panel's stack; swipes starting on
+    // the background (screen edges included) steer whichever half they're in
     const slot = (e.target as HTMLElement).closest<HTMLElement>("[data-slot]")?.dataset.slot;
-    const side = slot === "right" || (!slot && activeDual && e.clientX > window.innerWidth / 2) ? "right" : "left";
+    const side: PaneSide =
+      slot === "right" || slot === "left"
+        ? (slot as PaneSide)
+        : e.clientX > window.innerWidth / 2
+          ? "right"
+          : "left";
     start.current = { x: e.clientX, y: e.clientY, id: e.pointerId, axis: null, side };
   }
   function onPointerMove(e: React.PointerEvent) {
@@ -276,7 +286,15 @@ export default function Dashboard({
   function renderSplitPane(side: PaneSide) {
     const layout = side === "left" ? leftLayout : rightLayout;
     if (!layout || layout.type === "dual") return null;
-    return <WidgetPanel widget={layout[side]} settings={settings} slot={side} style={paneStyle(side)} />;
+    return (
+      <WidgetPanel
+        widget={layout[side]}
+        settings={settings}
+        integrationSettings={savedSettings}
+        slot={side}
+        style={paneStyle(side)}
+      />
+    );
   }
 
   return (
@@ -295,7 +313,7 @@ export default function Dashboard({
           <section className="page">
             <div className="vrow">
               {activeDual ? (
-                <MainRow row={rows[activeDualRow!]!} settings={settings} />
+                <MainRow row={rows[activeDualRow!]!} settings={settings} integrationSettings={savedSettings} />
               ) : (
                 <div className="main-view">
                   {renderSplitPane("left")}

@@ -180,6 +180,33 @@ input {
   font-family: inherit;
 }
 
+/* material symbols (self-hosted subset) — rendered via ligature names */
+.mi {
+  font-family: var(--font-icons), sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.w-label .mi {
+  font-size: 1.75em;
+  color: var(--amber);
+  filter: drop-shadow(0 0 1.2vmin var(--accent-glow));
+}
+
+/* when a label leads with an icon, it replaces the amber dot */
+.w-label.has-icon::before {
+  display: none;
+}
+
 /* ── stage + pager ─────────────────────────────────────────────────── */
 
 .stage {
@@ -872,6 +899,270 @@ input {
   color: var(--dim);
 }
 
+/* ── picture feeds (critter cams) ──────────────────────────────────── */
+
+.pic {
+  position: absolute;
+  inset: 0;
+}
+
+.pic-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: pic-fade 0.9s ease;
+}
+
+@keyframes pic-fade {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.pic-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4vmin 4vmin 2.6vmin;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.72));
+  color: #f2ecdf;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: calc(var(--ps) * 0.06);
+  text-align: left;
+}
+
+.pic ~ .w-label,
+.panel:has(.pic) .w-label {
+  color: rgba(242, 236, 223, 0.85);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
+}
+
+/* ── headlines (space news etc.) ───────────────────────────────────── */
+
+.headlines {
+  width: 100%;
+  max-width: calc(var(--ps) * 0.88);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel.wide .headlines {
+  max-width: calc(var(--ps) * 1.7);
+}
+
+.headline {
+  padding: calc(var(--ps) * 0.024) 0;
+  border-top: 1px solid var(--line);
+}
+
+.headline:first-child {
+  border-top: none;
+}
+
+.headline-title {
+  font-size: calc(var(--ps) * 0.046);
+  font-weight: 500;
+  color: var(--cream);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.headline-site {
+  margin-top: 0.6vmin;
+  font-size: calc(var(--ps) * 0.032);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ── widget kit (Shell / BigStat / MiniList / StatRow / Delta) ─────── */
+
+.kstat {
+  text-align: center;
+}
+
+.kstat-value {
+  font-family: var(--serif);
+  font-size: calc(var(--ps) * 0.17);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.kstat-value em {
+  font-style: italic;
+  font-size: 0.38em;
+  color: var(--amber);
+  margin-left: 0.25em;
+}
+
+.kstat-cap {
+  margin-top: 1.4vmin;
+  font-size: calc(var(--ps) * 0.036);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.krow-strip {
+  display: flex;
+  gap: 3vmin;
+  margin-top: 2.4vmin;
+  font-size: calc(var(--ps) * 0.042);
+  color: var(--dim);
+  letter-spacing: 0.06em;
+}
+
+.krow-strip b {
+  color: var(--cream-dim);
+  font-weight: 600;
+}
+
+.klist {
+  margin-top: 2.6vmin;
+  display: flex;
+  flex-direction: column;
+  width: min(82%, calc(var(--ps) * 0.82));
+}
+
+.panel.wide .klist {
+  width: min(70%, calc(var(--ps) * 1.3));
+}
+
+.klist-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2vmin;
+  font-size: calc(var(--ps) * 0.042);
+  color: var(--dim);
+  border-top: 1px solid var(--line);
+  padding: 1.2vmin 0;
+}
+
+.klist-row:first-child {
+  border-top: none;
+}
+
+.klist-left {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.klist-right {
+  white-space: nowrap;
+}
+
+.klist-right b {
+  color: var(--cream-dim);
+  font-weight: 600;
+}
+
+.klist-right small {
+  color: var(--faint);
+  margin-left: 0.6em;
+}
+
+.kdelta {
+  font-weight: 600;
+}
+
+.kdelta.up {
+  color: #68b06a;
+}
+
+.kdelta.down {
+  color: #d76f5a;
+}
+
+/* chess hero: tap the rating to choose which mode leads */
+.chess-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6vmin;
+  padding: 0;
+}
+
+.chess-hero:active {
+  opacity: 0.75;
+}
+
+.chess-hero-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: calc(var(--ps) * 0.15);
+  height: calc(var(--ps) * 0.13);
+}
+
+.chess-hero-mi {
+  font-size: calc(var(--ps) * 0.11);
+  color: var(--amber);
+  filter: drop-shadow(0 0 2vmin var(--accent-glow));
+}
+
+.chess-hero-caret {
+  position: absolute;
+  right: 0.7vmin;
+  bottom: 0.2vmin;
+  width: 1.7vmin;
+  height: 1.7vmin;
+  border-right: 0.36vmin solid var(--dim);
+  border-bottom: 0.36vmin solid var(--dim);
+  transform: rotate(45deg);
+}
+
+/* github streak flame */
+.gh-streak {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.gh-fire {
+  font-size: 0.5em;
+  color: var(--amber);
+  margin-right: 0.12em;
+  align-self: center;
+  filter: drop-shadow(0 0 1.6vmin var(--accent-glow));
+}
+
+/* wakatime hero: tap to choose the metric shown first */
+.waka-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6vmin;
+  max-width: 88%;
+  padding: 0;
+}
+
+.waka-hero:active {
+  opacity: 0.75;
+}
+
+.waka-hero-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: calc(var(--ps) * 0.13);
+  height: calc(var(--ps) * 0.115);
+}
+
+.waka-hero-mi {
+  font-size: calc(var(--ps) * 0.095);
+  color: var(--amber);
+  filter: drop-shadow(0 0 2vmin var(--accent-glow));
+}
+
+.waka-hero .kstat-value {
+  font-size: calc(var(--ps) * 0.12);
+}
+
 /* ── status signs ──────────────────────────────────────────────────── */
 
 .status {
@@ -906,6 +1197,88 @@ button.status {
   transform: translateY(-50%);
 }
 
+/* ── DO NOT DISTURB: hazard sign energy ── */
+.status-quiet {
+  --danger: #e5484d;
+  position: relative;
+  isolation: isolate;
+}
+
+.status-quiet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(229, 72, 77, 0.14) 0,
+    rgba(229, 72, 77, 0.14) 3.2vmin,
+    transparent 3.2vmin,
+    transparent 6.4vmin
+  );
+  mask: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+  -webkit-mask: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+  animation: hazard-crawl 14s linear infinite;
+}
+
+@keyframes hazard-crawl {
+  to { background-position: 9.05vmin 0; }
+}
+
+.status-quiet .status-mark {
+  border-color: var(--danger);
+  box-shadow: 0 0 5vmin rgba(229, 72, 77, 0.55);
+  animation: dnd-throb 1.6s ease-in-out infinite;
+}
+
+.status-quiet .status-mark::after {
+  background: var(--danger);
+}
+
+@keyframes dnd-throb {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 4vmin rgba(229, 72, 77, 0.45); }
+  50% { transform: scale(1.08); box-shadow: 0 0 7vmin rgba(229, 72, 77, 0.8); }
+}
+
+.status-quiet .status-title {
+  font-family: var(--sans);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--danger);
+  text-shadow: 0 0 6vmin rgba(229, 72, 77, 0.5);
+}
+
+.status-quiet .status-note {
+  color: var(--danger);
+  opacity: 0.85;
+}
+
+/* ── PLEASE DISTURB: doors wide open ── */
+.status-open {
+  --ok: #58c26a;
+  position: relative;
+  isolation: isolate;
+}
+
+.status-open::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgba(88, 194, 106, 0.22), transparent 72%);
+  animation: open-breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes open-breathe {
+  0%, 100% { transform: scale(0.92); opacity: 0.7; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+.status-open .status-mark {
+  border-color: var(--ok);
+  box-shadow: 0 0 5vmin rgba(88, 194, 106, 0.55);
+}
+
 .status-open .status-mark::after {
   left: 49%;
   right: auto;
@@ -913,6 +1286,15 @@ button.status {
   width: calc(var(--ps) * 0.018);
   height: 60%;
   transform: none;
+  background: var(--ok);
+}
+
+.status-open .status-title {
+  font-family: var(--sans);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--ok);
+  text-shadow: 0 0 6vmin rgba(88, 194, 106, 0.5);
 }
 
 .status-lunch .status-mark::before,
@@ -965,7 +1347,8 @@ button.status {
 }
 
 .status-open .status-note {
-  color: var(--amber);
+  color: var(--ok);
+  opacity: 0.85;
 }
 
 .status-away .status-note {
@@ -1812,6 +2195,40 @@ button.status {
 }
 
 /* widget picker grid */
+.wgroup {
+  margin-bottom: 2.6vmin;
+}
+
+.wgroup-title {
+  display: flex;
+  align-items: center;
+  gap: 1.2vmin;
+  font-size: clamp(9px, 2.1vmin, 12px);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 2vmin 0 0.4vmin;
+}
+
+.wgroup-title::before {
+  content: "";
+  width: 0.9vmin;
+  height: 0.9vmin;
+  min-width: 4px;
+  min-height: 4px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 1.6vmin var(--accent-glow);
+}
+
+.wgroup-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
 .wgrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
@@ -1837,6 +2254,13 @@ button.status {
   color: var(--dim);
   font-size: clamp(9px, 2vmin, 11px);
   margin-top: 0.5vmin;
+}
+
+.wcard b .wcard-mi {
+  font-size: 1.5em;
+  color: var(--amber);
+  vertical-align: -0.28em;
+  margin-right: 0.45em;
 }
 
 .wcard.on {
@@ -2010,6 +2434,34 @@ input[type="time"]:focus {
   font-size: clamp(11px, 2.4vmin, 13px);
   padding: 1vmin 0;
   align-self: flex-start;
+}
+
+/* accounts tab */
+.acct-group {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 2vmin 2.2vmin 0.8vmin;
+  margin-bottom: 1.8vmin;
+}
+
+.acct-head {
+  display: flex;
+  align-items: baseline;
+  gap: 1.6vmin;
+  margin-bottom: 1.6vmin;
+}
+
+.acct-head b {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(15px, 3.4vmin, 19px);
+  color: var(--amber);
+}
+
+.acct-head small {
+  color: var(--dim);
+  font-size: clamp(9px, 2vmin, 11px);
 }
 
 /* text fields */

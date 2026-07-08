@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+const pollCache = new Map<string, { at: number; data: unknown }>();
+const pollInflight = new Map<string, Promise<unknown>>();
+
 /** False during SSR + hydration, true after mount — gate second-precision
  *  output on this so server and client markup can't disagree. */
 export function useMounted(): boolean {
@@ -24,19 +27,40 @@ export function usePoll<T>(url: string, ms: number, deps: unknown[] = []): T | n
   const [data, setData] = useState<T | null>(null);
   useEffect(() => {
     let dead = false;
-    const go = () =>
-      fetch(url)
-        .then((r) => r.json())
+    const key = `${url}|${JSON.stringify(deps)}`;
+    const cached = pollCache.get(key);
+    if (cached) setData(cached.data as T);
+
+    const go = () => {
+      const fresh = pollCache.get(key);
+      if (fresh && Date.now() - fresh.at < Math.min(ms, 15_000)) {
+        if (!dead) setData(fresh.data as T);
+        return;
+      }
+      const existing = pollInflight.get(key);
+      const req =
+        existing ??
+        fetch(url)
+          .then((r) => r.json())
+          .then((d) => {
+            pollCache.set(key, { at: Date.now(), data: d });
+            return d;
+          })
+          .finally(() => pollInflight.delete(key));
+      pollInflight.set(key, req);
+      req
         .then((d) => {
-          if (!dead) setData(d);
+          if (!dead) setData(d as T);
         })
         .catch(() => {});
-    go();
+    };
+    const initial = setTimeout(go, cached ? 1200 : 250);
     const id = setInterval(go, ms);
     const onVis = () => document.visibilityState === "visible" && go();
     document.addEventListener("visibilitychange", onVis);
     return () => {
       dead = true;
+      clearTimeout(initial);
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };

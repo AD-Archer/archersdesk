@@ -1,16 +1,16 @@
 # archer's desk
 
 An ambient, StandBy-style dashboard for small screens — built for a 5" Echo Show
-(960×480) sitting on a desk, but happy in any browser. Widgets are configured
-per-account in YAML, pages swipe like Apple StandBy, and it installs as a PWA.
+(960×480) on a desk, happy in any browser, installable as a PWA. Everything is
+configured by tapping; the only typing left is usernames and API keys.
 
 ## stack
 
 - **Next.js** (app router) — dev runs raw, no containers
-- **SQLite** (better-sqlite3) — users, sessions, and each user's YAML config
-- **Infisical** — secrets manager; every run script auto-detects it and falls
-  back to plain env vars when it's not around
-- **Docker** — production only
+- **SQLite** (better-sqlite3) — users, sessions, per-user settings JSON
+- **Infisical** — secrets manager; run scripts auto-detect it and fall back to
+  plain env vars when absent
+- **Docker** — production only, with CI pushing images to GHCR
 
 ## dev
 
@@ -21,103 +21,111 @@ pnpm dev          # → http://localhost:3000
 
 `pnpm dev` goes through `scripts/with-env.sh`: if the `infisical` CLI and an
 `.infisical.json` (or `INFISICAL_TOKEN`) are present it wraps the command in
-`infisical run`, otherwise it just runs `next dev`. To wire up Infisical:
+`infisical run`, otherwise it just runs `next dev`.
+
+### env / secrets
+
+| var                    | purpose                                              | default |
+| ---------------------- | ---------------------------------------------------- | ------- |
+| `LASTFM_API_KEY`       | server-wide last.fm key for now-playing              | none    |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | account bootstrapped from env on boot   | none    |
+| `DISABLE_REGISTRATION` | `true` = env accounts only                           | `false` |
+| `DATA_DIR`             | sqlite location                                      | `./data`|
+| `COOKIE_SECURE`        | `true` only behind https                             | `false` |
+
+## using it
+
+Two pages, swiped **left/right**: the widget board and a standby page (big
+clock · date · temperature · next alarm). The board is made of **rows** you
+swipe **up/down** — each row is either two square panels (each side swipes
+independently) or one wide `dual` panel:
+
+```
+clock     | nowplaying
+calendar  | weather
+     forecast (dual)
+github    | chess
+```
+
+Buttons: top-left = fullscreen (also grabs a screen wake lock so the display
+stays awake), top-right gear = settings. Everything in settings is tap-first
+and autosaves: layout rows (add/remove/reorder, pick widgets from a grid),
+themes, alarms (time picker + day chips + toggles), location (search a city,
+tap a result), and accounts.
+
+### widgets
+
+time & date: `clock` · `analog` · `date` · `datetime` · `worldclock`
+sky: `weather` · `forecast` · `sun` · `moon`
+tools: `calendar` · `alarms` · `timer` · `quote`
+status signs: `dnd` · `please_disturb` · `lunch` · `away_until` · `vibe`
+accounts: `nowplaying` (last.fm/navidrome) · `github` · `chess` (chess.com) ·
+`stocks` · `anilist` · `wakatime` · `jellyfin` · `plex`
+keyless feeds: `dog` · `cat` · `fox` · `duck` · `shibe` (rotating critter
+cams) · `catfact` · `dogfact` · `spacenews` · `f1` (next race + standings) ·
+`citybikes` (nearest stations to your location) · `flights` (aircraft
+overhead via OpenSky) · `septa` (regional rail arrivals via api.septa.org)
+
+Account widgets need a username/key in **settings → accounts**; feeds need
+nothing. Weather/forecast/sun use Open-Meteo (no key). Stocks come from
+Yahoo's public chart endpoint. GitHub works keyless (60 req/hr) and pulls
+GitHub Streak Stats JSON when available — add a token for headroom. WakaTime
+defaults to `https://api.wakatime.com/api/v1` and accepts an **api url**
+override so self-hosted wakapi or hackatime work
+(`https://hackatime.hackclub.com/api/hackatime/v1`).
+
+### themes
+
+`ember` (warm black/amber) · `moonlight` (ice blue) · `meadow` (sage) ·
+`rose` (blush) · `paper` (light). Themes are CSS variable sets on
+`[data-theme]` in `app/globals.css` — every widget reads tokens, so new
+widgets and new themes compose for free.
+
+### icons
+
+Widget icons are Material Symbols (rounded), self-hosted as a subset font at
+`app/fonts/material-symbols.woff2` and rendered by ligature name via the
+kit's `<MI name="chess" />`. To add icons, append the new names to the
+`icon_names` list in this curl and replace the font file:
 
 ```sh
-brew install infisical/get-cli/infisical
-infisical init                      # link the project → creates .infisical.json
-infisical secrets set LASTFM_API_KEY=<key>
+curl -A "Mozilla/5.0" -o subset.css "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=<comma-separated,sorted,names>&display=block"
+curl -o app/fonts/material-symbols.woff2 "$(sed -n 's/.*src: url(\([^)]*\)).*/\1/p' subset.css | head -1)"
 ```
 
-### secrets / env
+(names must be sorted alphabetically; a name missing from the font renders
+as literal text, so eyeball new icons once)
 
-| var                    | purpose                                                  | default        |
-| ---------------------- | -------------------------------------------------------- | -------------- |
-| `LASTFM_API_KEY`       | server-wide Last.fm key for the now-playing widget       | none           |
-| `ADMIN_USERNAME`       | account bootstrapped from the env on boot                | none           |
-| `ADMIN_PASSWORD`       | its password — changing it re-syncs (and logs out) the account | none     |
-| `DISABLE_REGISTRATION` | `true` = no public signups, env accounts only            | `false`        |
-| `DATA_DIR`             | where the sqlite db lives                                | `./data`       |
-| `DATABASE_PATH`        | exact db file path                                       | `DATA_DIR/archersdesk.db` |
-| `COOKIE_SECURE`        | `true` only behind https (breaks plain-http LAN use)     | `false`        |
-| `INFISICAL_ENV`        | infisical environment slug for `infisical run`           | `dev` (`prod` in docker) |
+## adding a widget
 
-Get a Last.fm API key at <https://www.last.fm/api/account/create>. Users can
-also set `lastfm.api_key` in their own YAML instead of the server-wide secret.
+1. add the name to `WIDGETS` + `WIDGET_INFO` in `lib/types.ts` (label, blurb,
+   category, icon)
+2. build the component in `components/widgets/` from the kit
+   (`kit.tsx`: `Shell`, `BigStat`, `MiniList`, `StatRow`, `Delta`, `Empty`)
+3. register it in `components/widgets/registry.tsx`
 
-## the yaml config
+If it needs an external API, add a fetcher to `lib/integrations.ts` (one
+object: ttl + fetch), a credentials field in `Settings.integrations`
+(+ sanitize in `lib/settings.ts`), a field group in settings → accounts, and
+use `useIntegration("<service>", settings)` in the widget. Caching, error
+envelopes, and refetch-on-credential-change are handled for you.
 
-Each account gets its own document (gear icon → config). The default:
+## echo show
 
-```yaml
-city: New York
-units: fahrenheit        # fahrenheit | celsius
-
-layout:
-  mode: split            # split = two squares · dual = one wide panel
-  left: calendar
-  right: nowplaying
-  dual: clock            # the widget shown when mode is dual
-
-standby:                 # the swipe-left page
-  show_temp: true
-  show_alarm: true
-
-lastfm:
-  username: ""           # navidrome scrobbles land here
-  api_key: ""            # optional — falls back to LASTFM_API_KEY
-
-alarms:
-  - time: "07:30"        # 24h HH:MM
-    label: wake up
-    days: [mon, tue, wed, thu, fri]   # omit or [] = every day
-    enabled: false
-```
-
-Widgets: `clock` · `date` · `datetime` · `calendar` · `weather` ·
-`nowplaying` · `alarms`. Saving validates the YAML and reports line-level
-errors; nothing is applied until it parses clean.
-
-New widgets: add the name to `WIDGETS` in `lib/types.ts`, drop a component in
-`components/widgets/`, and register it in `components/widgets/registry.tsx`.
-
-## pages
-
-- **main** — the two squares (or one wide panel in `dual` mode)
-- **standby** — swipe left: big clock, date, city temperature, next alarm
-- alarms ring full-screen with a chime; snooze or dismiss
-
-## echo show setup
-
-Open Silk on the Echo Show, browse to `http://<your-machine>:3000`, sign in,
-and use Silk's menu → *Add to Home Screen*. The app requests a screen wake
-lock so it stays awake as an always-on desk clock. On a phone/desktop Chrome
-you'll get the normal PWA install prompt.
+Open Silk → `http://<your-machine>:3000`, sign in, tap the fullscreen button
+(or Silk menu → *Add to Home Screen*). The wake lock keeps the screen on.
+Keep `COOKIE_SECURE=false` while serving plain http on the LAN.
 
 ## production (docker)
-
-Dev never builds containers; prod is:
 
 ```sh
 docker compose up -d --build
 ```
 
 Set `ADMIN_USERNAME` / `ADMIN_PASSWORD` in the compose file — the account is
-created on first boot and its password follows the env value, so whoever
-deploys the compose just types their password there. Leave
-`DISABLE_REGISTRATION: "true"` unless you want open signups.
-
-CI (`.github/workflows/docker.yml`) builds a multi-arch image on every push
-to `main` and publishes it to GitHub Container Registry as
-`ghcr.io/<owner>/archersdesk:latest` — once the repo is on GitHub you can swap
-`build: .` in the compose file for that image.
-
-Secrets in prod, pick one:
-
-- **Infisical machine identity**: set `INFISICAL_TOKEN` + `INFISICAL_PROJECT_ID`
-  (and optionally `INFISICAL_ENV`, default `prod`) — the entrypoint wraps the
-  server in `infisical run`
-- **plain env**: just set `LASTFM_API_KEY` etc. on the service
-
-The sqlite db persists in the `desk-data` volume. Set `COOKIE_SECURE=true` if
-you put it behind an https reverse proxy.
+created on boot and its password follows the env value. Leave
+`DISABLE_REGISTRATION: "true"` unless you want open signups. CI
+(`.github/workflows/docker.yml`) publishes multi-arch images to
+`ghcr.io/<owner>/archersdesk` on pushes to `main`; swap `build: .` for that
+image once the repo is on GitHub. Secrets come from an Infisical machine
+identity (`INFISICAL_TOKEN` + `INFISICAL_PROJECT_ID`) or plain container env.

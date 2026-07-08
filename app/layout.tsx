@@ -18,6 +18,13 @@ const sans = localFont({
   display: "swap",
 });
 
+// Material Symbols subset (see README to regenerate with more icon names)
+const icons = localFont({
+  src: [{ path: "./fonts/material-symbols.woff2", weight: "100 700", style: "normal" }],
+  variable: "--font-icons",
+  display: "block",
+});
+
 export const metadata: Metadata = {
   title: "archer's desk",
   description: "An ambient standby dashboard for small screens.",
@@ -35,7 +42,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${serif.variable} ${sans.variable}`}>
+    <html lang="en" className={`${serif.variable} ${sans.variable} ${icons.variable}`}>
       <body>
         {children}
         <RegisterSW />

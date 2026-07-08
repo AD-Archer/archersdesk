@@ -28,6 +28,16 @@ export const DEFAULT_SETTINGS: Settings = {
   layout: { rows: [{ type: "split", left: "clock", right: "nowplaying" }] },
   standby: { showTemp: true, showAlarm: true },
   lastfm: { username: "", apiKey: "" },
+  integrations: {
+    github: { username: "", token: "" },
+    chess: { username: "" },
+    stocks: { symbols: ["AAPL", "SPY"] },
+    anilist: { username: "" },
+    wakatime: { apiKey: "", apiUrl: "" },
+    septa: { station: "" },
+    jellyfin: { url: "", apiKey: "", username: "", password: "" },
+    plex: { url: "", token: "" },
+  },
   alarms: [],
   worldclock: [
     { label: "london", tz: "Europe/London" },
@@ -49,6 +59,10 @@ function widget(v: unknown, fallback: WidgetName): WidgetName {
 
 function str(v: unknown, fallback: string, max = 120): string {
   return typeof v === "string" ? v.slice(0, max) : fallback;
+}
+
+function trimmed(v: unknown, fallback: string, max = 120): string {
+  return str(v, fallback, max).trim();
 }
 
 function num(v: unknown, fallback: number, min: number, max: number): number {
@@ -123,6 +137,51 @@ function sanitizeRows(layout: Record<string, unknown>): LayoutRow[] {
   return rows.length ? rows : DEFAULT_SETTINGS.layout.rows;
 }
 
+function sanitizeIntegrations(v: unknown): Settings["integrations"] {
+  const s = isRecord(v) ? v : {};
+  const github = isRecord(s.github) ? s.github : {};
+  const chess = isRecord(s.chess) ? s.chess : {};
+  const stocks = isRecord(s.stocks) ? s.stocks : {};
+  const anilist = isRecord(s.anilist) ? s.anilist : {};
+  const wakatime = isRecord(s.wakatime) ? s.wakatime : {};
+  const septa = isRecord(s.septa) ? s.septa : {};
+  const jellyfin = isRecord(s.jellyfin) ? s.jellyfin : {};
+  const plex = isRecord(s.plex) ? s.plex : {};
+  const symbols = Array.isArray(stocks.symbols)
+    ? stocks.symbols
+        .map((x) => String(x).toUpperCase().replace(/[^A-Z0-9.^=-]/g, "").slice(0, 12))
+        .filter(Boolean)
+        .slice(0, 6)
+    : DEFAULT_SETTINGS.integrations.stocks.symbols;
+  return {
+    github: { username: trimmed(github.username, "", 60), token: trimmed(github.token, "", 120) },
+    chess: { username: trimmed(chess.username, "", 60) },
+    stocks: { symbols },
+    anilist: { username: trimmed(anilist.username, "", 60) },
+    wakatime: {
+      apiKey: trimmed(wakatime.apiKey, "", 120),
+      apiUrl: sanitizeUrl(str(wakatime.apiUrl, "", 200)),
+    },
+    septa: { station: trimmed(septa.station, "", 60) },
+    jellyfin: {
+      url: sanitizeUrl(str(jellyfin.url, "", 200)),
+      apiKey: trimmed(jellyfin.apiKey, "", 120),
+      username: trimmed(jellyfin.username, "", 80),
+      password: str(jellyfin.password, "", 160),
+    },
+    plex: {
+      url: sanitizeUrl(str(plex.url, "", 200)),
+      token: trimmed(plex.token, "", 120),
+    },
+  };
+}
+
+function sanitizeUrl(v: string): string {
+  const trimmed = v.trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  return /^https?:\/\/[^\s]+$/.test(trimmed) ? trimmed : "";
+}
+
 export function sanitizeSettings(input: unknown): Settings {
   const d = DEFAULT_SETTINGS;
   const s = isRecord(input) ? input : {};
@@ -151,6 +210,7 @@ export function sanitizeSettings(input: unknown): Settings {
       username: str(lastfm.username, "", 64),
       apiKey: str(lastfm.apiKey, "", 64),
     },
+    integrations: sanitizeIntegrations(s.integrations),
     alarms: sanitizeAlarms(s.alarms),
     worldclock: sanitizeZones(s.worldclock),
   };

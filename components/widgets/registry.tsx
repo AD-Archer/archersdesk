@@ -18,9 +18,33 @@ import {
   PleaseDisturbWidget,
   VibeWidget,
 } from "./Status";
+import {
+  AnilistWidget,
+  ChessWidget,
+  GithubWidget,
+  JellyfinWidget,
+  PlexWidget,
+  SeptaWidget,
+  StocksWidget,
+  WakatimeWidget,
+} from "./Integrations";
+import {
+  CatFactWidget,
+  CatWidget,
+  CityBikesWidget,
+  DogFactWidget,
+  DogWidget,
+  DuckWidget,
+  F1Widget,
+  FlightsWidget,
+  FoxWidget,
+  ShibeWidget,
+  SpaceNewsWidget,
+} from "./Feeds";
 
 export interface WidgetProps {
   settings: Settings;
+  integrationSettings?: Settings;
   wide?: boolean;
 }
 
@@ -46,15 +70,42 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   lunch: LunchWidget,
   away_until: AwayUntilWidget,
   vibe: VibeWidget,
+  github: GithubWidget,
+  chess: ChessWidget,
+  stocks: StocksWidget,
+  anilist: AnilistWidget,
+  wakatime: WakatimeWidget,
+  dog: DogWidget,
+  cat: CatWidget,
+  fox: FoxWidget,
+  duck: DuckWidget,
+  shibe: ShibeWidget,
+  catfact: CatFactWidget,
+  dogfact: DogFactWidget,
+  spacenews: SpaceNewsWidget,
+  f1: F1Widget,
+  citybikes: CityBikesWidget,
+  flights: FlightsWidget,
+  septa: SeptaWidget,
+  jellyfin: JellyfinWidget,
+  plex: PlexWidget,
 };
 
-export function MainRow({ row, settings }: { row: LayoutRow; settings: Settings }) {
+export function MainRow({
+  row,
+  settings,
+  integrationSettings,
+}: {
+  row: LayoutRow;
+  settings: Settings;
+  integrationSettings?: Settings;
+}) {
   if (row.type === "dual") {
     const Widget = REGISTRY[row.widget] ?? ClockWidget;
     return (
       <div className="main-view">
         <section className="panel wide">
-          <Widget settings={settings} wide />
+          <Widget settings={settings} integrationSettings={integrationSettings} wide />
         </section>
       </div>
     );
@@ -62,8 +113,8 @@ export function MainRow({ row, settings }: { row: LayoutRow; settings: Settings 
 
   return (
     <div className="main-view">
-      <WidgetPanel widget={row.left} settings={settings} slot="left" />
-      <WidgetPanel widget={row.right} settings={settings} slot="right" />
+      <WidgetPanel widget={row.left} settings={settings} integrationSettings={integrationSettings} slot="left" />
+      <WidgetPanel widget={row.right} settings={settings} integrationSettings={integrationSettings} slot="right" />
     </div>
   );
 }
@@ -71,18 +122,20 @@ export function MainRow({ row, settings }: { row: LayoutRow; settings: Settings 
 export function WidgetPanel({
   widget,
   settings,
+  integrationSettings,
   slot,
   style,
 }: {
   widget: WidgetName;
   settings: Settings;
+  integrationSettings?: Settings;
   slot: "left" | "right";
   style?: CSSProperties;
 }) {
   const Widget = REGISTRY[widget] ?? ClockWidget;
   return (
     <section className="panel" data-slot={slot} style={style}>
-      <Widget settings={settings} />
+      <Widget settings={settings} integrationSettings={integrationSettings} />
     </section>
   );
 }
