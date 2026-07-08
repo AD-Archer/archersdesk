@@ -91,7 +91,7 @@ interface ChessData {
 
 const CHESS_MODE_KEY = "archersdesk.chessMode";
 
-function ClickSettingsGlyph() {
+export function ClickSettingsGlyph() {
   return (
     <span className="click-settings-glyph" aria-hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">

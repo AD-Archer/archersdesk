@@ -41,6 +41,68 @@ const GH_VERBS: Record<string, string> = {
   PullRequestReviewEvent: "reviewed",
 };
 
+const QBIT_STATE: Record<string, string> = {
+  downloading: "downloading",
+  forcedDL: "downloading",
+  metaDL: "fetching metadata",
+  uploading: "seeding",
+  forcedUP: "seeding",
+  stalledUP: "seeding",
+  stalledDL: "stalled",
+  pausedUP: "paused",
+  pausedDL: "paused",
+  queuedUP: "queued",
+  queuedDL: "queued",
+  checkingUP: "checking",
+  checkingDL: "checking",
+  allocating: "allocating",
+  moving: "moving",
+  error: "error",
+  missingFiles: "error",
+};
+
+const TRANSMISSION_STATE: Record<number, string> = {
+  0: "stopped",
+  1: "queued to check",
+  2: "checking",
+  3: "queued",
+  4: "downloading",
+  5: "queued to seed",
+  6: "seeding",
+};
+
+const HA_TOGGLE_DOMAINS = new Set(["light", "switch", "input_boolean", "fan"]);
+
+interface HaState {
+  entity_id: string;
+  state: string;
+  attributes?: { friendly_name?: string; unit_of_measurement?: string };
+}
+
+// shared GET /api/states with diagnostics — a plain 401 usually means a
+// cut-off token (older builds capped the field) or a reverse proxy that
+// stripped the bearer on redirect / served an sso login page instead of ha.
+async function haFetchStates(url: string, token: string): Promise<{ error: string } | { states: HaState[] }> {
+  let res: Response;
+  try {
+    res = await grab(`${url}/api/states`, { Authorization: `Bearer ${token}` });
+  } catch {
+    return { error: "home assistant unreachable — check the url" };
+  }
+  if (res.redirected)
+    return {
+      error: "home assistant redirected the request and dropped the token — point the url straight at ha, not at an sso/login proxy",
+    };
+  if (res.status === 401)
+    return {
+      error: "home assistant rejected that token — make a fresh long-lived token (profile → security) and re-paste it; older ones may have been cut off",
+    };
+  if (!res.ok) return { error: `home assistant: error ${res.status}` };
+  if (!(res.headers.get("content-type") ?? "").includes("application/json"))
+    return { error: "home assistant returned a login page, not data — its url is behind an sso proxy; use a direct/bypass url" };
+  return { states: (await res.json()) as HaState[] };
+}
+
 const WAKATIME_DEFAULT_API = "https://api.wakatime.com/api/v1";
 
 function normalizeApiBase(url: string, fallback: string) {
@@ -64,6 +126,9 @@ function wakaItems(items: unknown, count = 3) {
 interface Fetcher {
   ttl: number; // ms
   fetch(settings: Settings): Promise<IntegrationPayload>;
+  // optional write path — only services that can mutate remote state (seerr
+  // approve/decline, home assistant toggle) define this.
+  action?(settings: Settings, name: string, payload: unknown): Promise<IntegrationPayload>;
 }
 
 export const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
@@ -239,6 +304,419 @@ export const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
         title: m.grandparentTitle ? `${m.grandparentTitle} · ${m.title}` : (m.title ?? ""),
       }));
       return { configured: true, data: { server: "plex", playing } };
+    },
+  },
+
+  adguard: {
+    ttl: 60 * 1000,
+    async fetch(settings) {
+      const { url, username, password } = settings.integrations.adguard;
+      if (!url) return need("set your adguard home url in settings → accounts");
+      const auth: Record<string, string> =
+        username || password
+          ? { Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}` }
+          : {};
+      const [statusRes, statsRes] = await Promise.all([
+        grab(`${url}/control/status`, auth),
+        grab(`${url}/control/stats`, auth),
+      ]);
+      if (statusRes.status === 401 || statsRes.status === 401)
+        return need("adguard home rejected that username/password");
+      if (!statusRes.ok) return need(`adguard home: error ${statusRes.status}`);
+      if (!statsRes.ok) return need(`adguard home: error ${statsRes.status}`);
+      const status = (await statusRes.json()) as { protection_enabled?: boolean };
+      const stats = (await statsRes.json()) as {
+        num_dns_queries?: number;
+        num_blocked_filtering?: number;
+        top_blocked_domains?: Array<Record<string, number>>;
+      };
+      const queriesToday = stats.num_dns_queries ?? 0;
+      const blockedToday = stats.num_blocked_filtering ?? 0;
+      const topBlocked = (stats.top_blocked_domains ?? [])
+        .map((entry) => {
+          const [domain, count] = Object.entries(entry)[0] ?? [];
+          return { domain: domain ?? "", count: count ?? 0 };
+        })
+        .filter((d) => d.domain)
+        .slice(0, 5);
+      return {
+        configured: true,
+        data: {
+          queriesToday,
+          blockedToday,
+          blockedPct: queriesToday > 0 ? (blockedToday / queriesToday) * 100 : 0,
+          protectionEnabled: status.protection_enabled ?? true,
+          topBlocked,
+        },
+      };
+    },
+  },
+
+  pihole: {
+    ttl: 60 * 1000,
+    async fetch(settings) {
+      const { url, password } = settings.integrations.pihole;
+      if (!url || !password) return need("set your pi-hole url + password in settings → accounts");
+      const authRes = await grab(
+        `${url}/api/auth`,
+        { "Content-Type": "application/json" },
+        { method: "POST", body: JSON.stringify({ password }) }
+      );
+      if (authRes.status === 401) return need("pi-hole rejected that password");
+      if (!authRes.ok) return need(`pi-hole login: error ${authRes.status}`);
+      const authBody = (await authRes.json()) as { session?: { sid?: string; valid?: boolean } };
+      const sid = authBody.session?.sid;
+      if (!sid || authBody.session?.valid === false) return need("pi-hole login did not return a session");
+
+      const sidHeaders = { "X-FTL-SID": sid };
+      const [summaryRes, topRes, blockingRes] = await Promise.all([
+        grab(`${url}/api/stats/summary`, sidHeaders),
+        grab(`${url}/api/stats/top_domains?blocked=true&count=5`, sidHeaders),
+        grab(`${url}/api/dns/blocking`, sidHeaders).catch(() => null),
+      ]);
+      if (!summaryRes.ok) return need(`pi-hole: error ${summaryRes.status}`);
+      const summary = (await summaryRes.json()) as {
+        queries?: { total?: number; blocked?: number };
+      };
+      const top = topRes.ok
+        ? ((await topRes.json()) as { top_domains?: Array<{ domain?: string; count?: number }> })
+        : { top_domains: [] };
+      const blocking = blockingRes?.ok
+        ? ((await blockingRes.json()) as { blocking?: string })
+        : { blocking: "enabled" };
+      const queriesToday = summary.queries?.total ?? 0;
+      const blockedToday = summary.queries?.blocked ?? 0;
+      const topBlocked = (top.top_domains ?? [])
+        .filter((d) => d.domain)
+        .slice(0, 5)
+        .map((d) => ({ domain: d.domain!, count: d.count ?? 0 }));
+      return {
+        configured: true,
+        data: {
+          queriesToday,
+          blockedToday,
+          blockedPct: queriesToday > 0 ? (blockedToday / queriesToday) * 100 : 0,
+          protectionEnabled: blocking.blocking !== "disabled",
+          topBlocked,
+        },
+      };
+    },
+  },
+
+  qbittorrent: {
+    ttl: 20 * 1000,
+    async fetch(settings) {
+      const { url, apiKey, username, password } = settings.integrations.qbittorrent;
+      if (!url) return need("set your qbittorrent url in settings → accounts");
+
+      // three ways in: an api key (5.2+), a username+password login, or — if
+      // neither is set — assume the url itself is already authenticated
+      // (e.g. a qui "client proxy key" link, or webui auth disabled for this
+      // source) and call the api directly with no extra auth.
+      let auth: Record<string, string> = {};
+      if (apiKey) {
+        auth = { Authorization: `Bearer ${apiKey}` };
+      } else if (username && password) {
+        const loginRes = await grab(
+          `${url}/api/v2/auth/login`,
+          { "Content-Type": "application/x-www-form-urlencoded", Referer: url },
+          { method: "POST", body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}` }
+        );
+        if (!loginRes.ok) return need(`qbittorrent login: error ${loginRes.status}`);
+        const sidMatch = (loginRes.headers.get("set-cookie") ?? "").match(/SID=([^;]+)/);
+        if (!sidMatch) return need("qbittorrent rejected that username/password");
+        auth = { Cookie: `SID=${sidMatch[1]}` };
+      }
+
+      const [torrentsRes, transferRes] = await Promise.all([
+        grab(`${url}/api/v2/torrents/info`, auth),
+        grab(`${url}/api/v2/transfer/info`, auth),
+      ]);
+      if (torrentsRes.status === 401 || torrentsRes.status === 403)
+        return need(
+          apiKey
+            ? "qbittorrent rejected that api key"
+            : username
+              ? "qbittorrent rejected that login"
+              : "qbittorrent needs an api key or username + password — or use an already-authenticated url (e.g. a qui client proxy key link)"
+        );
+      if (torrentsRes.status === 404)
+        return need("qbittorrent: 404 — check the url. a qui \"client proxy key\" url should work as-is with no credentials set");
+      if (!torrentsRes.ok) return need(`qbittorrent: error ${torrentsRes.status}`);
+      const torrents = (await torrentsRes.json()) as Array<{
+        hash: string;
+        name: string;
+        progress: number;
+        dlspeed: number;
+        upspeed: number;
+        ratio: number;
+        size: number;
+        eta: number;
+        state: string;
+      }>;
+      const transfer = transferRes.ok
+        ? ((await transferRes.json()) as { dl_info_speed?: number; up_info_speed?: number })
+        : {};
+      return {
+        configured: true,
+        data: {
+          downloadSpeed: transfer.dl_info_speed ?? 0,
+          uploadSpeed: transfer.up_info_speed ?? 0,
+          torrents: torrents.map((t) => ({
+            id: t.hash,
+            name: t.name,
+            progress: t.progress * 100,
+            dlspeed: t.dlspeed,
+            upspeed: t.upspeed,
+            ratio: t.ratio,
+            size: t.size,
+            eta: t.eta,
+            state: QBIT_STATE[t.state] ?? t.state,
+          })),
+        },
+      };
+    },
+  },
+
+  transmission: {
+    ttl: 20 * 1000,
+    async fetch(settings) {
+      const { url, username, password } = settings.integrations.transmission;
+      if (!url) return need("set your transmission rpc url in settings → accounts");
+      const rpcUrl = `${url}/transmission/rpc`;
+      const auth: Record<string, string> = username
+        ? { Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}` }
+        : {};
+
+      function rpc(method: string, args: Record<string, unknown> | undefined, sessionId: string) {
+        const headers: Record<string, string> = { "Content-Type": "application/json", ...auth };
+        if (sessionId) headers["X-Transmission-Session-Id"] = sessionId;
+        return grab(rpcUrl, headers, { method: "POST", body: JSON.stringify({ method, arguments: args }) });
+      }
+
+      let sessionId = "";
+      let probe = await rpc("session-stats", undefined, sessionId);
+      if (probe.status === 409) {
+        sessionId = probe.headers.get("x-transmission-session-id") ?? "";
+        if (!sessionId) return need("transmission did not return a session id");
+        probe = await rpc("session-stats", undefined, sessionId);
+      }
+      if (probe.status === 401) return need("transmission rejected that username/password");
+      if (!probe.ok) return need(`transmission: error ${probe.status}`);
+      const statsBody = (await probe.json()) as {
+        arguments?: { downloadSpeed?: number; uploadSpeed?: number };
+      };
+
+      const torrentsRes = await rpc(
+        "torrent-get",
+        {
+          fields: [
+            "id",
+            "name",
+            "percentDone",
+            "rateDownload",
+            "rateUpload",
+            "uploadRatio",
+            "status",
+            "totalSize",
+            "eta",
+          ],
+        },
+        sessionId
+      );
+      if (!torrentsRes.ok) return need(`transmission: error ${torrentsRes.status}`);
+      const torrentsBody = (await torrentsRes.json()) as {
+        arguments?: {
+          torrents?: Array<{
+            id: number;
+            name: string;
+            percentDone: number;
+            rateDownload: number;
+            rateUpload: number;
+            uploadRatio: number;
+            status: number;
+            totalSize: number;
+            eta: number;
+          }>;
+        };
+      };
+
+      return {
+        configured: true,
+        data: {
+          downloadSpeed: statsBody.arguments?.downloadSpeed ?? 0,
+          uploadSpeed: statsBody.arguments?.uploadSpeed ?? 0,
+          torrents: (torrentsBody.arguments?.torrents ?? []).map((t) => ({
+            id: String(t.id),
+            name: t.name,
+            progress: t.percentDone * 100,
+            dlspeed: t.rateDownload,
+            upspeed: t.rateUpload,
+            ratio: t.uploadRatio,
+            size: t.totalSize,
+            eta: t.eta,
+            state: TRANSMISSION_STATE[t.status] ?? "unknown",
+          })),
+        },
+      };
+    },
+  },
+
+  seerr: {
+    ttl: 30 * 1000,
+    async fetch(settings) {
+      const { url, apiKey } = settings.integrations.seerr;
+      if (!url || !apiKey) return need("set your seerr url + api key in settings → accounts");
+      const headers = { "X-Api-Key": apiKey };
+      const [countRes, listRes] = await Promise.all([
+        grab(`${url}/api/v1/request/count`, headers),
+        grab(`${url}/api/v1/request?filter=pending&take=8&sort=added`, headers),
+      ]);
+      if (countRes.status === 401 || listRes.status === 401) return need("seerr rejected that api key");
+      if (!countRes.ok) return need(`seerr: error ${countRes.status}`);
+      const counts = (await countRes.json()) as {
+        pending?: number;
+        approved?: number;
+        declined?: number;
+        available?: number;
+        total?: number;
+      };
+      const list = listRes.ok
+        ? ((await listRes.json()) as {
+            results?: Array<{
+              id: number;
+              media?: { tmdbId?: number; mediaType?: "movie" | "tv" };
+              requestedBy?: { displayName?: string; username?: string };
+            }>;
+          })
+        : { results: [] };
+      const pending = await Promise.all(
+        (list.results ?? []).map(async (r) => {
+          const tmdbId = r.media?.tmdbId;
+          const mediaType = r.media?.mediaType ?? "movie";
+          let title = "unknown title";
+          let poster: string | null = null;
+          let overview = "";
+          let releaseDate = "";
+          let voteAverage: number | null = null;
+          if (tmdbId) {
+            const detailRes = await grab(`${url}/api/v1/${mediaType}/${tmdbId}`, headers).catch(() => null);
+            if (detailRes?.ok) {
+              const detail = (await detailRes.json()) as {
+                title?: string;
+                name?: string;
+                posterPath?: string;
+                overview?: string;
+                releaseDate?: string;
+                firstAirDate?: string;
+                voteAverage?: number;
+              };
+              title = detail.title ?? detail.name ?? title;
+              poster = detail.posterPath ? `https://image.tmdb.org/t/p/w342${detail.posterPath}` : null;
+              overview = detail.overview ?? "";
+              releaseDate = detail.releaseDate ?? detail.firstAirDate ?? "";
+              voteAverage = typeof detail.voteAverage === "number" ? detail.voteAverage : null;
+            }
+          }
+          return {
+            id: r.id,
+            title,
+            poster,
+            mediaType,
+            requestedBy: r.requestedBy?.displayName ?? r.requestedBy?.username ?? "someone",
+            overview,
+            releaseDate,
+            voteAverage,
+          };
+        })
+      );
+      return {
+        configured: true,
+        data: {
+          counts: {
+            pending: counts.pending ?? 0,
+            approved: counts.approved ?? 0,
+            declined: counts.declined ?? 0,
+            available: counts.available ?? 0,
+            total: counts.total ?? 0,
+          },
+          pending,
+        },
+      };
+    },
+    async action(settings, name, payload) {
+      const { url, apiKey } = settings.integrations.seerr;
+      if (!url || !apiKey) return need("set your seerr url + api key in settings → accounts");
+      if (name !== "approve" && name !== "decline") return need(`unknown seerr action "${name}"`);
+      const { requestId } = (payload ?? {}) as { requestId?: number };
+      if (!requestId) return need("missing requestId");
+      const res = await grab(`${url}/api/v1/request/${requestId}/${name}`, { "X-Api-Key": apiKey }, { method: "POST" });
+      if (!res.ok) return need(`seerr: error ${res.status}`);
+      return { configured: true, data: { ok: true } };
+    },
+  },
+
+  homeassistant: {
+    ttl: 20 * 1000,
+    async fetch(settings) {
+      const { url, token, entities } = settings.integrations.homeassistant;
+      const ids = entities
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (!url || !token) return need("set your home assistant url + token in settings → accounts");
+      if (!ids.length) return need("add at least one entity id in settings → accounts");
+      const result = await haFetchStates(url, token);
+      if ("error" in result) return need(result.error);
+      const byId = new Map(result.states.map((e) => [e.entity_id, e]));
+      const entitiesOut = ids
+        .map((id) => byId.get(id))
+        .filter((e): e is NonNullable<typeof e> => Boolean(e))
+        .map((e) => {
+          const domain = e.entity_id.split(".")[0];
+          return {
+            entityId: e.entity_id,
+            name: e.attributes?.friendly_name ?? e.entity_id,
+            state: e.state,
+            unit: e.attributes?.unit_of_measurement ?? "",
+            domain,
+            toggleable: HA_TOGGLE_DOMAINS.has(domain),
+          };
+        });
+      if (!entitiesOut.length) return need("none of those entity ids were found in home assistant");
+      return { configured: true, data: { entities: entitiesOut } };
+    },
+    async action(settings, name, payload) {
+      const { url, token } = settings.integrations.homeassistant;
+      if (!url || !token) return need("set your home assistant url + token in settings → accounts");
+
+      if (name === "list") {
+        const result = await haFetchStates(url, token);
+        if ("error" in result) return need(result.error);
+        const entitiesOut = result.states
+          .map((e) => ({
+            entityId: e.entity_id,
+            name: e.attributes?.friendly_name ?? e.entity_id,
+            domain: e.entity_id.split(".")[0],
+          }))
+          .sort((a, b) => a.domain.localeCompare(b.domain) || a.name.localeCompare(b.name));
+        return { configured: true, data: { entities: entitiesOut } };
+      }
+
+      if (name === "toggle") {
+        const { entityId } = (payload ?? {}) as { entityId?: string };
+        if (!entityId) return need("missing entityId");
+        const domain = entityId.split(".")[0];
+        const res = await grab(
+          `${url}/api/services/${domain}/toggle`,
+          { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          { method: "POST", body: JSON.stringify({ entity_id: entityId }) }
+        );
+        if (!res.ok) return need(`home assistant: error ${res.status}`);
+        return { configured: true, data: { ok: true } };
+      }
+
+      return need(`unknown home assistant action "${name}"`);
     },
   },
 
@@ -570,6 +1048,23 @@ const ALL_SERVICES: Record<string, Fetcher> = { ...INTEGRATIONS, ...OPEN_FEEDS }
 
 export function isProxyService(s: string): s is ProxyService {
   return s in ALL_SERVICES;
+}
+
+export function isActionableService(s: string): s is IntegrationService {
+  return s in INTEGRATIONS && typeof INTEGRATIONS[s as IntegrationService].action === "function";
+}
+
+export async function runIntegrationAction(
+  service: IntegrationService,
+  userId: number,
+  settings: Settings,
+  name: string,
+  payload: unknown
+): Promise<IntegrationPayload> {
+  const result = await INTEGRATIONS[service].action!(settings, name, payload);
+  const creds = settings.integrations[service];
+  cache.delete(`${userId}|${service}|${JSON.stringify(creds)}`);
+  return result;
 }
 
 export async function runIntegration(

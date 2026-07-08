@@ -123,6 +123,19 @@ export function useIntegration<T>(
   ]);
 }
 
+/** Fire a write action against a service's proxy (e.g. seerr approve/decline,
+ *  home assistant toggle). Not polled — call it from an event handler. */
+export function useIntegrationAction(service: ProxyService) {
+  return async (action: string, payload?: unknown): Promise<IntegrationPayload> => {
+    const res = await fetch(`/api/integrations/${service}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, payload }),
+    });
+    return res.json();
+  };
+}
+
 /** The standard loading / unconfigured gate. Returns null when data is ready. */
 export function integrationGate<T>(
   payload: IntegrationPayload<T> | null,

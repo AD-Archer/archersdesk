@@ -1171,6 +1171,416 @@ input {
   height: 100%;
 }
 
+/* generic tap-to-configure hero: a div (not a button) so it never blocks the
+   outer page-swipe when a widget sits in a wide/dual panel — see the
+   AwayUntil/Vibe fix in Status.tsx for the bug this avoids. */
+.hero-tap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6vmin;
+  max-width: 88%;
+  padding: 0 0 3.8vmin;
+  cursor: pointer;
+}
+
+.hero-tap:active {
+  opacity: 0.75;
+}
+
+.hero-tap-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: calc(var(--ps) * 0.13);
+  height: calc(var(--ps) * 0.115);
+}
+
+.hero-tap-mi {
+  font-size: calc(var(--ps) * 0.095);
+  color: var(--amber);
+  filter: drop-shadow(0 0 2vmin var(--accent-glow));
+}
+
+.hero-tap .kstat-value {
+  font-size: calc(var(--ps) * 0.12);
+}
+
+/* ── swipe carousel (swipe between items inside a widget) ───────────── */
+
+.swipe-carousel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.6vmin;
+  min-height: 0;
+}
+
+.swipe-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 1vmin;
+}
+
+/* static clipping window — must NOT move, or it takes the clip region with it */
+.swipe-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* the strip that actually slides inside the viewport */
+.swipe-track {
+  display: flex;
+  width: 100%;
+}
+
+.swipe-track.animate {
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.swipe-arrow {
+  flex: 0 0 auto;
+  width: clamp(26px, 7vmin, 36px);
+  height: clamp(26px, 7vmin, 36px);
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel-a);
+  color: var(--cream-dim);
+  font-size: clamp(16px, 4vmin, 22px);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.swipe-arrow:disabled {
+  opacity: 0.3;
+}
+
+.swipe-item {
+  flex: 0 0 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* one page holds `perView` stacked items */
+.swipe-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4vmin;
+  padding: 0 0.5vmin;
+}
+
+.swipe-cell {
+  min-width: 0;
+}
+
+.swipe-dots {
+  display: flex;
+  gap: 1vmin;
+}
+
+.swipe-dot {
+  width: clamp(5px, 1.3vmin, 8px);
+  height: clamp(5px, 1.3vmin, 8px);
+  border-radius: 50%;
+  background: var(--faint);
+  padding: 0;
+}
+
+.swipe-dot.on {
+  background: var(--amber);
+  box-shadow: 0 0 1.4vmin var(--accent-glow);
+}
+
+/* ── torrent stat summary (always visible, below the hero) ──────────── */
+
+.torrent-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2vmin 4vmin;
+  margin-top: 1.4vmin;
+  margin-bottom: 1.4vmin;
+}
+
+.torrent-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 14vmin;
+}
+
+.torrent-summary-item b {
+  font-size: calc(var(--ps) * 0.044);
+  color: var(--cream-dim);
+  font-weight: 600;
+}
+
+.torrent-summary-item small {
+  font-size: calc(var(--ps) * 0.028);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 0.3vmin;
+}
+
+/* ── torrent rows (qbittorrent / transmission list) ─────────────────── */
+
+.torrent-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vmin;
+}
+
+.torrent-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.6vmin;
+}
+
+.torrent-row-name {
+  font-size: calc(var(--ps) * 0.042);
+  color: var(--cream);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.torrent-row-pct {
+  flex: 0 0 auto;
+  font-size: calc(var(--ps) * 0.038);
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.torrent-bar {
+  width: 100%;
+  height: clamp(4px, 1.1vmin, 7px);
+  border-radius: 100px;
+  background: var(--panel-a);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.torrent-bar-fill {
+  height: 100%;
+  background: var(--amber);
+  box-shadow: 0 0 1.2vmin var(--accent-glow);
+}
+
+.torrent-row-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.6vmin;
+  font-size: calc(var(--ps) * 0.03);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.torrent-row-meta span:last-child {
+  white-space: nowrap;
+}
+
+/* ── seerr request rows (approve / decline list) ─────────────────────── */
+
+.seerr-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1.8vmin;
+}
+
+.seerr-row-thumb {
+  width: calc(var(--ps) * 0.09);
+  height: calc(var(--ps) * 0.135);
+  min-width: 30px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex: 0 0 auto;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+.seerr-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3vmin;
+  min-width: 0;
+  flex: 1;
+}
+
+.seerr-row-title {
+  font-size: calc(var(--ps) * 0.044);
+  color: var(--cream);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seerr-row-meta {
+  font-size: calc(var(--ps) * 0.03);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seerr-row-actions {
+  display: flex;
+  gap: 1vmin;
+  flex: 0 0 auto;
+}
+
+.seerr-icon-btn {
+  width: calc(var(--ps) * 0.085);
+  height: calc(var(--ps) * 0.085);
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 50%;
+  font-size: calc(var(--ps) * 0.04);
+  line-height: 1;
+  border: 1px solid var(--line);
+  background: var(--panel-a);
+}
+
+.seerr-icon-btn.approve {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+.seerr-icon-btn.reject {
+  color: var(--dim);
+}
+
+/* seerr detail popup — rendered via portal to document.body, so it can't use
+   the --ps dashboard-panel variable; sizing matches the other edit-pop-* content. */
+.seerr-detail {
+  display: flex;
+  gap: 2.4vmin;
+}
+
+.seerr-detail-poster {
+  width: 96px;
+  height: 144px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex: 0 0 auto;
+  box-shadow: 0 8px 20px var(--shadow);
+}
+
+.seerr-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1vmin;
+  min-width: 0;
+}
+
+.seerr-detail-sub {
+  font-size: clamp(11px, 2.4vmin, 13px);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.seerr-detail-overview {
+  font-size: clamp(12px, 2.6vmin, 14px);
+  color: var(--cream-dim);
+  line-height: 1.5;
+  margin-top: 0.6vmin;
+}
+
+/* ── home assistant entity list ──────────────────────────────────────── */
+
+.ha-list {
+  width: min(84%, calc(var(--ps) * 1.4));
+  display: flex;
+  flex-direction: column;
+}
+
+.ha-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vmin;
+  padding: 1.3vmin 0;
+  border-top: 1px solid var(--line);
+}
+
+.ha-row:first-child {
+  border-top: none;
+}
+
+.ha-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3vmin;
+  min-width: 0;
+}
+
+.ha-row-name {
+  font-size: calc(var(--ps) * 0.042);
+  color: var(--cream-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ha-row-state {
+  font-size: calc(var(--ps) * 0.034);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ha-toggle {
+  flex: 0 0 auto;
+  width: calc(var(--ps) * 0.11);
+  height: calc(var(--ps) * 0.06);
+  min-width: 44px;
+  min-height: 24px;
+  border-radius: 100px;
+  background: var(--panel-a);
+  border: 1px solid var(--line);
+  position: relative;
+}
+
+.ha-toggle.on {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.ha-toggle:disabled {
+  opacity: 0.5;
+}
+
+.ha-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  height: calc(100% - 4px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--cream);
+  transition: left 0.2s;
+}
+
+.ha-toggle.on .ha-toggle-knob {
+  left: calc(100% - 2px);
+  transform: translateX(-100%);
+}
+
 /* ── status signs ──────────────────────────────────────────────────── */
 
 .status {
@@ -1180,7 +1590,8 @@ input {
   gap: 2vmin;
 }
 
-button.status {
+.status-away,
+.status-vibe {
   cursor: pointer;
 }
 
@@ -2608,6 +3019,91 @@ input[type="time"]:focus {
   color: var(--dim);
   font-size: 0.65em;
   margin-left: 1em;
+}
+
+/* home assistant entity picker (settings → accounts) */
+.ha-picker {
+  margin-bottom: 1.8vmin;
+}
+
+.ha-picker-toggle {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel-a);
+  color: var(--amber);
+  font-size: clamp(12px, 2.7vmin, 14px);
+  font-weight: 600;
+  padding: 1.6vmin 2vmin;
+  min-height: 44px;
+}
+
+.ha-picker-body {
+  margin-top: 1.2vmin;
+}
+
+.ha-picker-search {
+  width: 100%;
+  background: var(--panel-a);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--cream);
+  font-size: clamp(13px, 3vmin, 15px);
+  padding: 1.4vmin 2vmin;
+  min-height: 40px;
+  outline: none;
+  margin-bottom: 1vmin;
+}
+
+.ha-picker-search:focus {
+  border-color: var(--amber);
+}
+
+.ha-picker-list {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.ha-picker-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.4vmin;
+  width: 100%;
+  padding: 1.4vmin 2.2vmin;
+  border-bottom: 1px solid var(--line);
+  min-height: 44px;
+}
+
+.ha-picker-row:last-child {
+  border-bottom: none;
+}
+
+.ha-picker-row input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--amber);
+}
+
+.ha-picker-name {
+  color: var(--cream);
+  font-size: clamp(12px, 2.7vmin, 15px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ha-picker-id {
+  color: var(--dim);
+  font-size: 0.78em;
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── alarm overlay ─────────────────────────────────────────────────── */

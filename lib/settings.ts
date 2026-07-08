@@ -48,6 +48,12 @@ export const DEFAULT_SETTINGS: Settings = {
     septa: { station: "" },
     jellyfin: { url: "", apiKey: "", username: "", password: "" },
     plex: { url: "", token: "" },
+    adguard: { url: "", username: "", password: "" },
+    pihole: { url: "", password: "" },
+    homeassistant: { url: "", token: "", entities: "" },
+    seerr: { url: "", apiKey: "" },
+    qbittorrent: { url: "", apiKey: "", username: "", password: "" },
+    transmission: { url: "", username: "", password: "" },
   },
   alarms: [],
   worldclock: [
@@ -184,6 +190,12 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
   const septa = isRecord(s.septa) ? s.septa : {};
   const jellyfin = isRecord(s.jellyfin) ? s.jellyfin : {};
   const plex = isRecord(s.plex) ? s.plex : {};
+  const adguard = isRecord(s.adguard) ? s.adguard : {};
+  const pihole = isRecord(s.pihole) ? s.pihole : {};
+  const homeassistant = isRecord(s.homeassistant) ? s.homeassistant : {};
+  const seerr = isRecord(s.seerr) ? s.seerr : {};
+  const qbittorrent = isRecord(s.qbittorrent) ? s.qbittorrent : {};
+  const transmission = isRecord(s.transmission) ? s.transmission : {};
   const symbols = Array.isArray(stocks.symbols)
     ? stocks.symbols
         .map((x) => String(x).toUpperCase().replace(/[^A-Z0-9.^=-]/g, "").slice(0, 12))
@@ -209,6 +221,35 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
     plex: {
       url: sanitizeUrl(str(plex.url, "", 200)),
       token: trimmed(plex.token, "", 120),
+    },
+    adguard: {
+      url: sanitizeUrl(str(adguard.url, "", 200)),
+      username: trimmed(adguard.username, "", 80),
+      password: str(adguard.password, "", 160),
+    },
+    pihole: {
+      url: sanitizeUrl(str(pihole.url, "", 200)),
+      password: str(pihole.password, "", 160),
+    },
+    homeassistant: {
+      url: sanitizeUrl(str(homeassistant.url, "", 200)),
+      token: trimmed(homeassistant.token, "", 2000),
+      entities: trimmed(homeassistant.entities, "", 4000),
+    },
+    seerr: {
+      url: sanitizeUrl(str(seerr.url, "", 200)),
+      apiKey: trimmed(seerr.apiKey, "", 120),
+    },
+    qbittorrent: {
+      url: sanitizeUrl(str(qbittorrent.url, "", 200)),
+      apiKey: trimmed(qbittorrent.apiKey, "", 160),
+      username: trimmed(qbittorrent.username, "", 80),
+      password: str(qbittorrent.password, "", 160),
+    },
+    transmission: {
+      url: sanitizeUrl(str(transmission.url, "", 200)),
+      username: trimmed(transmission.username, "", 80),
+      password: str(transmission.password, "", 160),
     },
   };
 }

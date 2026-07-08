@@ -403,6 +403,7 @@ export default function Dashboard({
         settings={settings}
         username={username}
         saved={saved}
+        activePage={activeWidgetPage}
         onClose={() => setSettingsOpen(false)}
         onChange={updateSettings}
       />

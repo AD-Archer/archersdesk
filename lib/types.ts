@@ -40,6 +40,12 @@ export const WIDGETS = [
   "septa",
   "jellyfin",
   "plex",
+  "adguard",
+  "pihole",
+  "homeassistant",
+  "seerr",
+  "qbittorrent",
+  "transmission",
 ] as const;
 
 export type WidgetName = (typeof WIDGETS)[number];
@@ -98,6 +104,12 @@ export const WIDGET_INFO: Record<
   septa: { label: "septa", blurb: "next trains at your station", category: "feeds", icon: "train" },
   jellyfin: { label: "jellyfin", blurb: "what's streaming now", category: "accounts", icon: "play_circle" },
   plex: { label: "plex", blurb: "what's streaming now", category: "accounts", icon: "live_tv" },
+  adguard: { label: "adguard home", blurb: "dns queries blocked today", category: "accounts", icon: "shield" },
+  pihole: { label: "pi-hole", blurb: "dns queries blocked today", category: "accounts", icon: "shield" },
+  homeassistant: { label: "home assistant", blurb: "entities you pick, tap to toggle", category: "accounts", icon: "home" },
+  seerr: { label: "seerr", blurb: "jellyseerr / overseerr requests", category: "accounts", icon: "movie" },
+  qbittorrent: { label: "qbittorrent", blurb: "torrents, speed & ratio", category: "accounts", icon: "download" },
+  transmission: { label: "transmission", blurb: "torrents, speed & ratio", category: "accounts", icon: "download" },
 };
 
 export const THEMES = ["ember", "moonlight", "meadow", "rose", "paper"] as const;
@@ -164,6 +176,12 @@ export interface Settings {
     septa: { station: string };
     jellyfin: { url: string; apiKey: string; username: string; password: string };
     plex: { url: string; token: string };
+    adguard: { url: string; username: string; password: string };
+    pihole: { url: string; password: string };
+    homeassistant: { url: string; token: string; entities: string }; // comma-separated entity ids
+    seerr: { url: string; apiKey: string };
+    qbittorrent: { url: string; apiKey: string; username: string; password: string };
+    transmission: { url: string; username: string; password: string };
   };
   alarms: Alarm[];
   worldclock: WorldClockZone[];

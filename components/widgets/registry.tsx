@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import type { LayoutRow, Settings, WidgetName } from "@/lib/types";
+import { AdguardWidget, PiholeWidget } from "./Adblock";
 import { ClockWidget, AnalogWidget, DateWidget, DatetimeWidget } from "./Clock";
 import { CalendarWidget } from "./Calendar";
 import { WeatherWidget, ForecastWidget } from "./Weather";
@@ -11,6 +12,9 @@ import { NowPlayingWidget } from "./NowPlaying";
 import { AlarmsWidget } from "./Alarms";
 import { TimerWidget } from "./Timer";
 import { QuoteWidget } from "./Quote";
+import { HomeAssistantWidget } from "./HomeAssistant";
+import { SeerrWidget } from "./Seerr";
+import { QbittorrentWidget, TransmissionWidget } from "./Torrents";
 import {
   AwayUntilWidget,
   DoNotDisturbWidget,
@@ -89,6 +93,12 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   septa: SeptaWidget,
   jellyfin: JellyfinWidget,
   plex: PlexWidget,
+  adguard: AdguardWidget,
+  pihole: PiholeWidget,
+  homeassistant: HomeAssistantWidget,
+  seerr: SeerrWidget,
+  qbittorrent: QbittorrentWidget,
+  transmission: TransmissionWidget,
 };
 
 export function MainRow({

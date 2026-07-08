@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Alarm, GeocodeResult, LayoutRow, Settings, ThemeName, WidgetName } from "@/lib/types";
 import { MAX_ROWS, THEME_INFO, THEMES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS, WIDGET_PAGE_COUNT } from "@/lib/types";
 import { dayChips, fmt12 } from "./alarmUtil";
+import { useIntegrationAction } from "./widgets/kit";
 
 type Tab = "layout" | "theme" | "alarms" | "location" | "accounts";
 const TABS: Tab[] = ["layout", "theme", "alarms", "location", "accounts"];
@@ -98,6 +99,7 @@ export default function SettingsSheet({
   settings,
   username,
   saved,
+  activePage,
   onClose,
   onChange,
 }: {
@@ -105,6 +107,7 @@ export default function SettingsSheet({
   settings: Settings;
   username: string;
   saved: boolean;
+  activePage?: number;
   onClose: () => void;
   onChange: (next: Settings) => void;
 }) {
@@ -135,7 +138,9 @@ export default function SettingsSheet({
         </div>
         {open && (
           <div className="sec">
-            {tab === "layout" && <LayoutSection settings={settings} onChange={onChange} />}
+            {tab === "layout" && (
+              <LayoutSection settings={settings} onChange={onChange} initialPage={activePage} />
+            )}
             {tab === "theme" && <ThemeSection settings={settings} onChange={onChange} />}
             {tab === "alarms" && <AlarmsSection settings={settings} onChange={onChange} />}
             {tab === "location" && <LocationSection settings={settings} onChange={onChange} />}
@@ -158,11 +163,17 @@ type SectionProps = { settings: Settings; onChange: (next: Settings) => void };
 
 /* ── layout ──────────────────────────────────────────────────────── */
 
-function LayoutSection({ settings, onChange }: SectionProps) {
+function LayoutSection({
+  settings,
+  onChange,
+  initialPage,
+}: SectionProps & { initialPage?: number }) {
   const [picking, setPicking] = useState<{ row: number; slot: "left" | "right" | "widget" } | null>(
     null
   );
-  const [pageIndex, setPageIndex] = useState(0);
+  const [pageIndex, setPageIndex] = useState(() =>
+    Math.min(Math.max(initialPage ?? 0, 0), WIDGET_PAGE_COUNT - 1)
+  );
   const pages = Array.from({ length: WIDGET_PAGE_COUNT }, (_, i) => settings.layout.pages?.[i] ?? settings.layout.rows);
   const rows = pages[pageIndex] ?? pages[0] ?? settings.layout.rows;
 
@@ -601,19 +612,21 @@ function AccountField({
   onValue,
   placeholder,
   secret,
+  maxLength = 120,
 }: {
   label: string;
   value: string | undefined; // stale client state can predate new fields
   onValue: (v: string) => void;
   placeholder?: string;
   secret?: boolean;
+  maxLength?: number;
 }) {
   return (
     <label className="field">
       <span>{label}</span>
       <input
         value={value ?? ""}
-        maxLength={120}
+        maxLength={maxLength}
         placeholder={placeholder}
         type={secret ? "password" : "text"}
         onChange={(e) => onValue(e.target.value)}
@@ -633,6 +646,95 @@ function AccountGroup({ title, blurb, children }: { title: string; blurb: string
         <small>{blurb}</small>
       </div>
       {children}
+    </div>
+  );
+}
+
+function HomeAssistantEntityPicker({
+  settings,
+  patch,
+}: {
+  settings: Settings;
+  patch: (next: Partial<Settings["integrations"]>) => void;
+}) {
+  const ig = settings.integrations;
+  const listEntities = useIntegrationAction("homeassistant");
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [available, setAvailable] = useState<Array<{ entityId: string; name: string; domain: string }> | null>(
+    null
+  );
+  const [search, setSearch] = useState("");
+  const selected = new Set(
+    (ig.homeassistant?.entities ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
+
+  async function openPicker() {
+    setOpen(true);
+    if (available || loading) return;
+    setLoading(true);
+    setError(null);
+    const res = await listEntities("list");
+    setLoading(false);
+    if (!res.configured || !res.data) {
+      setError(res.reason ?? "set url + token above first");
+      return;
+    }
+    setAvailable((res.data as { entities: Array<{ entityId: string; name: string; domain: string }> }).entities);
+  }
+
+  function toggle(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    patch({ homeassistant: { ...ig.homeassistant, entities: Array.from(next).join(", ") } });
+  }
+
+  const q = search.trim().toLowerCase();
+  const filtered = (available ?? []).filter(
+    (e) => !q || e.name.toLowerCase().includes(q) || e.entityId.toLowerCase().includes(q)
+  );
+
+  return (
+    <div className="ha-picker">
+      <button type="button" className="ha-picker-toggle" onClick={() => (open ? setOpen(false) : openPicker())}>
+        {open ? "hide entity list" : `choose entities (${selected.size} selected)`}
+      </button>
+      {open && (
+        <div className="ha-picker-body">
+          {loading && <p className="sec-note">loading entities…</p>}
+          {error && <p className="sec-note">{error}</p>}
+          {available && (
+            <>
+              <input
+                className="ha-picker-search"
+                placeholder="search entities…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                autoCapitalize="off"
+                autoCorrect="off"
+              />
+              <div className="ha-picker-list">
+                {filtered.slice(0, 200).map((e) => (
+                  <label key={e.entityId} className="ha-picker-row">
+                    <input type="checkbox" checked={selected.has(e.entityId)} onChange={() => toggle(e.entityId)} />
+                    <span className="ha-picker-name">{e.name}</span>
+                    <small className="ha-picker-id">{e.entityId}</small>
+                  </label>
+                ))}
+                {filtered.length === 0 && <p className="sec-note">no entities match</p>}
+                {filtered.length > 200 && (
+                  <p className="sec-note">showing first 200 of {filtered.length} — search to narrow it down</p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -757,6 +859,124 @@ function AccountsSection({ settings, onChange }: SectionProps) {
           value={ig.plex?.token}
           secret
           onValue={(v) => patch({ plex: { ...ig.plex, token: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="adguard home" blurb="dns queries blocked today">
+        <AccountField
+          label="server url"
+          value={ig.adguard?.url}
+          placeholder="http://192.168.1.10:3000"
+          onValue={(v) => patch({ adguard: { ...ig.adguard, url: v } })}
+        />
+        <AccountField
+          label="username"
+          value={ig.adguard?.username}
+          onValue={(v) => patch({ adguard: { ...ig.adguard, username: v } })}
+        />
+        <AccountField
+          label="password"
+          value={ig.adguard?.password}
+          secret
+          onValue={(v) => patch({ adguard: { ...ig.adguard, password: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="pi-hole" blurb="dns queries blocked today">
+        <AccountField
+          label="server url"
+          value={ig.pihole?.url}
+          placeholder="http://192.168.1.11"
+          onValue={(v) => patch({ pihole: { ...ig.pihole, url: v } })}
+        />
+        <AccountField
+          label="password"
+          value={ig.pihole?.password}
+          secret
+          onValue={(v) => patch({ pihole: { ...ig.pihole, password: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="home assistant" blurb="entities you pick, tap to toggle">
+        <AccountField
+          label="server url"
+          value={ig.homeassistant?.url}
+          placeholder="http://192.168.1.12:8123"
+          onValue={(v) => patch({ homeassistant: { ...ig.homeassistant, url: v } })}
+        />
+        <AccountField
+          label="long-lived access token"
+          value={ig.homeassistant?.token}
+          secret
+          maxLength={2000}
+          onValue={(v) => patch({ homeassistant: { ...ig.homeassistant, token: v } })}
+        />
+        <HomeAssistantEntityPicker settings={settings} patch={patch} />
+      </AccountGroup>
+
+      <AccountGroup title="seerr" blurb="jellyseerr / overseerr media requests">
+        <AccountField
+          label="server url"
+          value={ig.seerr?.url}
+          placeholder="http://192.168.1.13:5055"
+          onValue={(v) => patch({ seerr: { ...ig.seerr, url: v } })}
+        />
+        <AccountField
+          label="api key (settings → general in seerr)"
+          value={ig.seerr?.apiKey}
+          secret
+          onValue={(v) => patch({ seerr: { ...ig.seerr, apiKey: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="qbittorrent" blurb="api key (5.2+), username + password, or an already-authenticated url">
+        <AccountField
+          label="webui url"
+          value={ig.qbittorrent?.url}
+          placeholder="http://192.168.1.14:8080"
+          onValue={(v) => patch({ qbittorrent: { ...ig.qbittorrent, url: v } })}
+        />
+        <p className="sec-note">
+          using <b>qui</b> (autobrr/qui)? create a client proxy key (settings → client proxy keys)
+          and paste that url above — leave api key, username, and password blank, it&rsquo;s
+          already authenticated.
+        </p>
+        <AccountField
+          label="api key (webui settings → advanced, 5.2+)"
+          value={ig.qbittorrent?.apiKey}
+          secret
+          onValue={(v) => patch({ qbittorrent: { ...ig.qbittorrent, apiKey: v } })}
+        />
+        <AccountField
+          label="username (optional)"
+          value={ig.qbittorrent?.username}
+          onValue={(v) => patch({ qbittorrent: { ...ig.qbittorrent, username: v } })}
+        />
+        <AccountField
+          label="password (optional)"
+          value={ig.qbittorrent?.password}
+          secret
+          onValue={(v) => patch({ qbittorrent: { ...ig.qbittorrent, password: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="transmission" blurb="torrents, speed & ratio">
+        <AccountField
+          label="rpc url"
+          value={ig.transmission?.url}
+          placeholder="http://192.168.1.15:9091"
+          onValue={(v) => patch({ transmission: { ...ig.transmission, url: v } })}
+        />
+        <AccountField
+          label="username (optional)"
+          value={ig.transmission?.username}
+          onValue={(v) => patch({ transmission: { ...ig.transmission, username: v } })}
+        />
+        <AccountField
+          label="password (optional)"
+          value={ig.transmission?.password}
+          secret
+          onValue={(v) => patch({ transmission: { ...ig.transmission, password: v } })}
         />
       </AccountGroup>
 

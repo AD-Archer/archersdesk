@@ -131,14 +131,22 @@ export function VibeWidget({ wide }: WidgetProps) {
   return (
     <>
       <span className="w-label">{STATUS_COPY.vibe.label}</span>
-      <button
+      <div
         className={`w-body status status-vibe mood-${mood}${wide ? " wide" : ""}`}
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
       >
         <div className="status-mark" aria-hidden="true" />
         <div className="status-title">{vibe.title}</div>
         <div className="status-note">{vibe.note}</div>
-      </button>
+      </div>
       <EditablePopup open={open} title="Vibe check" onClose={() => setOpen(false)}>
         <div className="mood-grid">
           {(Object.keys(VIBE_MOODS) as VibeMood[]).map((key) => (
@@ -193,14 +201,22 @@ export function AwayUntilWidget({ wide }: WidgetProps) {
   return (
     <>
       <span className="w-label">status</span>
-      <button
+      <div
         className={`w-body status status-away${away.expired ? " expired" : ""}${wide ? " wide" : ""}`}
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
       >
         <div className="status-mark" aria-hidden="true" />
         <div className="status-title">{away.main}</div>
         <div className="status-note">{away.detail}</div>
-      </button>
+      </div>
       <EditablePopup
         open={open}
         title="Away until"

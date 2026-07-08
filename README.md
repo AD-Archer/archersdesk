@@ -89,12 +89,17 @@ kit's `<MI name="chess" />`. To add icons, append the new names to the
 `icon_names` list in this curl and replace the font file:
 
 ```sh
-curl -A "Mozilla/5.0" -o subset.css "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=<comma-separated,sorted,names>&display=block"
+curl -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36" \
+  -o subset.css "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=<comma-separated,sorted,names>&display=block"
 curl -o app/fonts/material-symbols.woff2 "$(sed -n 's/.*src: url(\([^)]*\)).*/\1/p' subset.css | head -1)"
 ```
 
 (names must be sorted alphabetically; a name missing from the font renders
-as literal text, so eyeball new icons once)
+as literal text, so eyeball new icons once. the user-agent matters — a bare
+`"Mozilla/5.0"` gets served a TTF from this endpoint, saved with a `.woff2`
+extension it doesn't actually have; use a real Chrome UA string like the one
+above so `format('woff2')` shows up in `subset.css` — `grep "format(" subset.css`
+before downloading if unsure)
 
 ## adding a widget
 
