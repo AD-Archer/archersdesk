@@ -135,14 +135,17 @@ export type LayoutRow =
   | { type: "split"; left: WidgetName; right: WidgetName }
   | { type: "dual"; widget: WidgetName };
 
-export const MAX_ROWS = 6;
+export const MAX_ROWS = 12;
+export const WIDGET_PAGE_COUNT = 2;
 
 export interface Settings {
   theme: ThemeName;
   location: Location;
   units: "fahrenheit" | "celsius";
   layout: {
-    rows: LayoutRow[];
+    rows: LayoutRow[]; // legacy page-1 shape
+    pages: LayoutRow[][];
+    presets: LayoutRow[][];
   };
   standby: {
     showTemp: boolean;

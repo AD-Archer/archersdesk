@@ -2,6 +2,7 @@ import { getDb } from "./db";
 import {
   MAX_ROWS,
   THEMES,
+  WIDGET_PAGE_COUNT,
   WIDGETS,
   type Alarm,
   type LayoutRow,
@@ -25,7 +26,17 @@ export const DEFAULT_SETTINGS: Settings = {
     longitude: -74.006,
   },
   units: "fahrenheit",
-  layout: { rows: [{ type: "split", left: "clock", right: "nowplaying" }] },
+  layout: {
+    rows: [{ type: "split", left: "clock", right: "nowplaying" }],
+    pages: [
+      [{ type: "split", left: "clock", right: "nowplaying" }],
+      [
+        { type: "split", left: "weather", right: "alarms" },
+        { type: "split", left: "github", right: "chess" },
+      ],
+    ],
+    presets: [[], []],
+  },
   standby: { showTemp: true, showAlarm: true },
   lastfm: { username: "", apiKey: "" },
   integrations: {
@@ -111,10 +122,10 @@ function sanitizeZones(v: unknown): WorldClockZone[] {
   return out;
 }
 
-function sanitizeRows(layout: Record<string, unknown>): LayoutRow[] {
+function sanitizeRowsValue(v: unknown): LayoutRow[] {
   const rows: LayoutRow[] = [];
-  if (Array.isArray(layout.rows)) {
-    for (const r of layout.rows.slice(0, MAX_ROWS)) {
+  if (Array.isArray(v)) {
+    for (const r of v.slice(0, MAX_ROWS)) {
       if (!isRecord(r)) continue;
       if (r.type === "dual") {
         rows.push({ type: "dual", widget: widget(r.widget, "clock") });
@@ -126,7 +137,13 @@ function sanitizeRows(layout: Record<string, unknown>): LayoutRow[] {
         });
       }
     }
-  } else if (typeof layout.mode === "string") {
+  }
+  return rows;
+}
+
+function sanitizeRows(layout: Record<string, unknown>): LayoutRow[] {
+  let rows = sanitizeRowsValue(layout.rows);
+  if (!rows.length && typeof layout.mode === "string") {
     // legacy single-row shape ({ mode, left, right, dual })
     rows.push(
       layout.mode === "dual"
@@ -135,6 +152,26 @@ function sanitizeRows(layout: Record<string, unknown>): LayoutRow[] {
     );
   }
   return rows.length ? rows : DEFAULT_SETTINGS.layout.rows;
+}
+
+function sanitizePages(layout: Record<string, unknown>): LayoutRow[][] {
+  const out: LayoutRow[][] = [];
+  if (Array.isArray(layout.pages)) {
+    for (const p of layout.pages.slice(0, WIDGET_PAGE_COUNT)) {
+      const rows = sanitizeRowsValue(p);
+      out.push(rows.length ? rows : [{ type: "split", left: "clock", right: "calendar" }]);
+    }
+  }
+  const legacy = sanitizeRows(layout);
+  while (out.length < WIDGET_PAGE_COUNT) {
+    out.push(out.length === 0 ? legacy : DEFAULT_SETTINGS.layout.pages[out.length]);
+  }
+  return out.slice(0, WIDGET_PAGE_COUNT);
+}
+
+function sanitizePresets(layout: Record<string, unknown>): LayoutRow[][] {
+  const presets = Array.isArray(layout.presets) ? layout.presets : [];
+  return Array.from({ length: 2 }, (_, i) => sanitizeRowsValue(presets[i]));
 }
 
 function sanitizeIntegrations(v: unknown): Settings["integrations"] {
@@ -201,7 +238,11 @@ export function sanitizeSettings(input: unknown): Settings {
       longitude: num(loc.longitude, d.location.longitude, -180, 180),
     },
     units: s.units === "celsius" ? "celsius" : "fahrenheit",
-    layout: { rows: sanitizeRows(layout) },
+    layout: {
+      rows: sanitizeRows(layout),
+      pages: sanitizePages(layout),
+      presets: sanitizePresets(layout),
+    },
     standby: {
       showTemp: standby.showTemp !== false,
       showAlarm: standby.showAlarm !== false,

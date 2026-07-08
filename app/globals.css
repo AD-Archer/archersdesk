@@ -1081,11 +1081,12 @@ input {
 
 /* chess hero: tap the rating to choose which mode leads */
 .chess-hero {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.6vmin;
-  padding: 0;
+  padding: 0 0 3.8vmin;
 }
 
 .chess-hero:active {
@@ -1106,17 +1107,6 @@ input {
   filter: drop-shadow(0 0 2vmin var(--accent-glow));
 }
 
-.chess-hero-caret {
-  position: absolute;
-  right: 0.7vmin;
-  bottom: 0.2vmin;
-  width: 1.7vmin;
-  height: 1.7vmin;
-  border-right: 0.36vmin solid var(--dim);
-  border-bottom: 0.36vmin solid var(--dim);
-  transform: rotate(45deg);
-}
-
 /* github streak flame */
 .gh-streak {
   display: inline-flex;
@@ -1133,12 +1123,13 @@ input {
 
 /* wakatime hero: tap to choose the metric shown first */
 .waka-hero {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.6vmin;
   max-width: 88%;
-  padding: 0;
+  padding: 0 0 3.8vmin;
 }
 
 .waka-hero:active {
@@ -1161,6 +1152,23 @@ input {
 
 .waka-hero .kstat-value {
   font-size: calc(var(--ps) * 0.12);
+}
+
+.click-settings-glyph {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: clamp(15px, 4vmin, 22px);
+  height: clamp(15px, 4vmin, 22px);
+  color: var(--dim);
+  opacity: 0.78;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.click-settings-glyph svg {
+  width: 100%;
+  height: 100%;
 }
 
 /* ── status signs ──────────────────────────────────────────────────── */
@@ -2078,6 +2086,29 @@ button.status {
   margin-bottom: 2vmin;
 }
 
+.page-seg {
+  display: flex;
+  gap: 1vmin;
+  margin-bottom: 2vmin;
+}
+
+.page-seg button {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.4vmin;
+  color: var(--dim);
+  font-size: clamp(10px, 2.1vmin, 12px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.page-seg button.on {
+  border-color: var(--amber);
+  color: var(--cream);
+  box-shadow: 0 0 0 1px var(--amber) inset;
+}
+
 .preset-card {
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -2105,6 +2136,33 @@ button.status {
   font-size: clamp(9px, 2vmin, 11px);
   line-height: 1.35;
   margin-top: 0.6vmin;
+}
+
+.preset-row.personal {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.preset-save {
+  min-height: 104px;
+}
+
+.preset-actions {
+  display: flex;
+  gap: 1vmin;
+  margin-top: 1.4vmin;
+}
+
+.preset-actions button {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 1vmin;
+  color: var(--dim);
+  font-size: clamp(10px, 2vmin, 12px);
+}
+
+.preset-actions button:disabled {
+  opacity: 0.35;
 }
 
 .lrow-card {

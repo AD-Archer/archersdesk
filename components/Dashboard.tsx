@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { Alarm, Settings } from "@/lib/types";
+import { WIDGET_PAGE_COUNT } from "@/lib/types";
+import type { Alarm, LayoutRow, Settings } from "@/lib/types";
 import { MainRow, WidgetPanel } from "./widgets/registry";
 import Standby from "./Standby";
 import SettingsSheet from "./SettingsSheet";
@@ -10,7 +11,7 @@ import { alarmMatches } from "./alarmUtil";
 import { unlockAudio } from "./audio";
 import { useWakeLock } from "./hooks";
 
-const PAGES = 2; // 0 = widget rows, 1 = standby
+const PAGES = 1 + WIDGET_PAGE_COUNT; // 0 = standby, 1..n = widget pages
 type PaneSide = "left" | "right";
 type FullscreenElement = HTMLElement & {
   webkitRequestFullscreen?: () => Promise<void> | void;
@@ -19,6 +20,13 @@ type FullscreenDocument = Document & {
   webkitFullscreenElement?: Element | null;
   webkitExitFullscreen?: () => Promise<void> | void;
 };
+
+function widgetPages(settings: Settings): LayoutRow[][] {
+  return Array.from(
+    { length: WIDGET_PAGE_COUNT },
+    (_, i) => settings.layout.pages?.[i] ?? settings.layout.rows
+  );
+}
 
 export default function Dashboard({
   username,
@@ -30,13 +38,14 @@ export default function Dashboard({
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [savedSettings, setSavedSettings] = useState<Settings>(initialSettings);
   const [page, setPage] = useState(0);
-  const [leftRow, setLeftRow] = useState(0);
-  const [rightRow, setRightRow] = useState(0);
-  const [activeDualRow, setActiveDualRow] = useState<number | null>(
-    initialSettings.layout.rows[0]?.type === "dual" ? 0 : null
+  const initialPages = widgetPages(initialSettings);
+  const [leftRows, setLeftRows] = useState(() => initialPages.map(() => 0));
+  const [rightRows, setRightRows] = useState(() => initialPages.map(() => 0));
+  const [activeDualRows, setActiveDualRows] = useState<Array<number | null>>(
+    () => initialPages.map((rows) => (rows[0]?.type === "dual" ? 0 : null))
   );
   const [drag, setDrag] = useState<number | null>(null); // horizontal px
-  const [dragY, setDragY] = useState<{ side: PaneSide; dy: number } | null>(null);
+  const [dragY, setDragY] = useState<{ pageIndex: number; side: PaneSide; dy: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [saved, setSaved] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -51,9 +60,10 @@ export default function Dashboard({
     side: PaneSide;
   } | null>(null);
   const settingsRef = useRef<Settings>(settings);
-  const leftRowRef = useRef(leftRow);
-  const rightRowRef = useRef(rightRow);
-  const activeDualRowRef = useRef(activeDualRow);
+  const pageRef = useRef(page);
+  const leftRowsRef = useRef(leftRows);
+  const rightRowsRef = useRef(rightRows);
+  const activeDualRowsRef = useRef(activeDualRows);
   const ringingRef = useRef<Alarm | null>(null);
   const fired = useRef<Set<string>>(new Set());
   const snooze = useRef<{ at: number; alarm: Alarm } | null>(null);
@@ -61,36 +71,37 @@ export default function Dashboard({
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   settingsRef.current = settings;
-  leftRowRef.current = leftRow;
-  rightRowRef.current = rightRow;
-  activeDualRowRef.current = activeDualRow;
+  pageRef.current = page;
+  leftRowsRef.current = leftRows;
+  rightRowsRef.current = rightRows;
+  activeDualRowsRef.current = activeDualRows;
   ringingRef.current = ringing;
 
-  const rows = settings.layout.rows;
-  const activeDual = activeDualRow !== null && rows[activeDualRow]?.type === "dual";
-  const leftLayout = rows[leftRow];
-  const rightLayout = rows[rightRow];
+  const pages = widgetPages(settings);
+  const activeWidgetPage = Math.max(0, page - 1);
+  const activeRows = pages[activeWidgetPage] ?? pages[0] ?? [];
 
   useWakeLock();
 
   // keep pane row indices valid when rows are removed in settings
   useEffect(() => {
-    const max = Math.max(0, rows.length - 1);
-    const nextLeft = Math.min(leftRow, max);
-    const nextRight = Math.min(rightRow, max);
-    const nextDual =
-      activeDualRow !== null && activeDualRow <= max && rows[activeDualRow]?.type === "dual"
-        ? activeDualRow
-        : rows[nextLeft]?.type === "dual"
-          ? nextLeft
-          : rows[nextRight]?.type === "dual"
-            ? nextRight
-            : null;
-
-    if (activeDualRow !== nextDual) setActiveDualRow(nextDual);
-    if (leftRow !== nextLeft) setLeftRow(nextLeft);
-    if (rightRow !== nextRight) setRightRow(nextRight);
-  }, [rows, leftRow, rightRow, activeDualRow]);
+    const nextLeft = pages.map((rows, i) => Math.min(leftRows[i] ?? 0, Math.max(0, rows.length - 1)));
+    const nextRight = pages.map((rows, i) => Math.min(rightRows[i] ?? 0, Math.max(0, rows.length - 1)));
+    const nextDual = pages.map((rows, i) => {
+      const current = activeDualRows[i];
+      if (current !== null && current !== undefined && current <= rows.length - 1 && rows[current]?.type === "dual") {
+        return current;
+      }
+      return rows[nextLeft[i]]?.type === "dual"
+        ? nextLeft[i]
+        : rows[nextRight[i]]?.type === "dual"
+          ? nextRight[i]
+          : null;
+    });
+    if (JSON.stringify(leftRows) !== JSON.stringify(nextLeft)) setLeftRows(nextLeft);
+    if (JSON.stringify(rightRows) !== JSON.stringify(nextRight)) setRightRows(nextRight);
+    if (JSON.stringify(activeDualRows) !== JSON.stringify(nextDual)) setActiveDualRows(nextDual);
+  }, [pages, leftRows, rightRows, activeDualRows]);
 
   // theme is a document-level attribute so every layer (body glow, sheet,
   // overlays) swaps palette together — applied live while tapping
@@ -191,46 +202,47 @@ export default function Dashboard({
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
       if (e.key === "ArrowRight") setPage((p) => Math.min(PAGES - 1, p + 1));
       if (e.key === "ArrowLeft") setPage((p) => Math.max(0, p - 1));
-      if (e.key === "ArrowDown") moveBothRows(1);
-      if (e.key === "ArrowUp") moveBothRows(-1);
+      if (e.key === "ArrowDown" && pageRef.current > 0) moveBothRows(pageRef.current - 1, 1);
+      if (e.key === "ArrowUp" && pageRef.current > 0) moveBothRows(pageRef.current - 1, -1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function wrapRowIndex(index: number, sourceRows = rows) {
+  function wrapRowIndex(index: number, sourceRows: LayoutRow[]) {
     if (sourceRows.length === 0) return 0;
     return (index + sourceRows.length) % sourceRows.length;
   }
 
-  function moveBothRows(delta: number) {
-    const sourceRows = settingsRef.current.layout.rows;
+  function moveBothRows(pageIndex: number, delta: number) {
+    const sourceRows = widgetPages(settingsRef.current)[pageIndex] ?? [];
     const current =
-      activeDualRowRef.current ??
-      (leftRowRef.current === rightRowRef.current
-        ? leftRowRef.current
-        : Math.max(leftRowRef.current, rightRowRef.current));
+      activeDualRowsRef.current[pageIndex] ??
+      (leftRowsRef.current[pageIndex] === rightRowsRef.current[pageIndex]
+        ? leftRowsRef.current[pageIndex]
+        : Math.max(leftRowsRef.current[pageIndex] ?? 0, rightRowsRef.current[pageIndex] ?? 0));
     const next = wrapRowIndex(current + delta, sourceRows);
     if (sourceRows[next]?.type === "dual") {
-      setActiveDualRow(next);
+      setActiveDualRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
     } else {
-      setActiveDualRow(null);
-      setLeftRow(next);
-      setRightRow(next);
+      setActiveDualRows((all) => all.map((v, i) => (i === pageIndex ? null : v)));
+      setLeftRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
+      setRightRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
     }
   }
 
-  function movePaneRow(side: PaneSide, delta: number) {
-    const current = activeDualRow ?? (side === "left" ? leftRow : rightRow);
-    const next = wrapRowIndex(current + delta);
-    if (rows[next]?.type === "dual") {
-      setActiveDualRow(next);
+  function movePaneRow(pageIndex: number, side: PaneSide, delta: number) {
+    const pageRows = pages[pageIndex] ?? [];
+    const current = activeDualRows[pageIndex] ?? (side === "left" ? leftRows[pageIndex] : rightRows[pageIndex]) ?? 0;
+    const next = wrapRowIndex(current + delta, pageRows);
+    if (pageRows[next]?.type === "dual") {
+      setActiveDualRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
     } else if (side === "left") {
-      setActiveDualRow(null);
-      setLeftRow(next);
+      setActiveDualRows((all) => all.map((v, i) => (i === pageIndex ? null : v)));
+      setLeftRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
     } else {
-      setActiveDualRow(null);
-      setRightRow(next);
+      setActiveDualRows((all) => all.map((v, i) => (i === pageIndex ? null : v)));
+      setRightRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
     }
   }
 
@@ -256,7 +268,9 @@ export default function Dashboard({
       s.axis = Math.abs(dx) >= Math.abs(dy) ? "h" : "v";
     }
     if (s.axis === "h") setDrag(dx);
-    else if (s.axis === "v" && page === 0 && rows.length > 1) setDragY({ side: s.side, dy });
+    else if (s.axis === "v" && page > 0 && activeRows.length > 1) {
+      setDragY({ pageIndex: page - 1, side: s.side, dy });
+    }
   }
   function onPointerUp(e: React.PointerEvent) {
     const s = start.current;
@@ -271,20 +285,21 @@ export default function Dashboard({
       const threshold = Math.min(80, window.innerWidth * 0.1);
       if (dx < -threshold) setPage((p) => Math.min(PAGES - 1, p + 1));
       else if (dx > threshold) setPage((p) => Math.max(0, p - 1));
-    } else if (axis === "v" && page === 0) {
+    } else if (axis === "v" && page > 0) {
       const threshold = Math.min(70, window.innerHeight * 0.12);
-      if (dy < -threshold) movePaneRow(s.side, 1);
-      else if (dy > threshold) movePaneRow(s.side, -1);
+      if (dy < -threshold) movePaneRow(page - 1, s.side, 1);
+      else if (dy > threshold) movePaneRow(page - 1, s.side, -1);
     }
   }
 
-  function paneStyle(side: PaneSide) {
-    if (!dragY || dragY.side !== side) return undefined;
+  function paneStyle(pageIndex: number, side: PaneSide) {
+    if (!dragY || dragY.pageIndex !== pageIndex || dragY.side !== side) return undefined;
     return { transform: `translateY(${dragY.dy}px)` };
   }
 
-  function renderSplitPane(side: PaneSide) {
-    const layout = side === "left" ? leftLayout : rightLayout;
+  function renderSplitPane(pageIndex: number, side: PaneSide) {
+    const pageRows = pages[pageIndex] ?? [];
+    const layout = pageRows[side === "left" ? (leftRows[pageIndex] ?? 0) : (rightRows[pageIndex] ?? 0)];
     if (!layout || layout.type === "dual") return null;
     return (
       <WidgetPanel
@@ -292,8 +307,26 @@ export default function Dashboard({
         settings={settings}
         integrationSettings={savedSettings}
         slot={side}
-        style={paneStyle(side)}
+        style={paneStyle(pageIndex, side)}
       />
+    );
+  }
+
+  function renderWidgetPage(pageIndex: number) {
+    const pageRows = pages[pageIndex] ?? [];
+    const activeDualRow = activeDualRows[pageIndex];
+    const activeDual = activeDualRow !== null && activeDualRow !== undefined && pageRows[activeDualRow]?.type === "dual";
+    return (
+      <div className="vrow">
+        {activeDual ? (
+          <MainRow row={pageRows[activeDualRow!]!} settings={settings} integrationSettings={savedSettings} />
+        ) : (
+          <div className="main-view">
+            {renderSplitPane(pageIndex, "left")}
+            {renderSplitPane(pageIndex, "right")}
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -311,20 +344,13 @@ export default function Dashboard({
           style={{ transform: `translateX(calc(${-page * 100}% + ${drag ?? 0}px))` }}
         >
           <section className="page">
-            <div className="vrow">
-              {activeDual ? (
-                <MainRow row={rows[activeDualRow!]!} settings={settings} integrationSettings={savedSettings} />
-              ) : (
-                <div className="main-view">
-                  {renderSplitPane("left")}
-                  {renderSplitPane("right")}
-                </div>
-              )}
-            </div>
-          </section>
-          <section className="page">
             <Standby settings={settings} />
           </section>
+          {pages.map((_, i) => (
+            <section className="page" key={i}>
+              {renderWidgetPage(i)}
+            </section>
+          ))}
         </div>
       </div>
 
@@ -355,10 +381,19 @@ export default function Dashboard({
         ))}
       </div>
 
-      {page === 0 && rows.length > 1 && (
+      {page > 0 && activeRows.length > 1 && (
         <div className="vdots">
-          {rows.map((_, i) => (
-            <i key={i} className={i === activeDualRow || i === leftRow || i === rightRow ? "on" : ""} />
+          {activeRows.map((_, i) => (
+            <i
+              key={i}
+              className={
+                i === activeDualRows[activeWidgetPage] ||
+                i === leftRows[activeWidgetPage] ||
+                i === rightRows[activeWidgetPage]
+                  ? "on"
+                  : ""
+              }
+            />
           ))}
         </div>
       )}

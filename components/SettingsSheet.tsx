@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Alarm, GeocodeResult, LayoutRow, Settings, ThemeName, WidgetName } from "@/lib/types";
-import { MAX_ROWS, THEME_INFO, THEMES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS } from "@/lib/types";
+import { MAX_ROWS, THEME_INFO, THEMES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS, WIDGET_PAGE_COUNT } from "@/lib/types";
 import { dayChips, fmt12 } from "./alarmUtil";
 
 type Tab = "layout" | "theme" | "alarms" | "location" | "accounts";
@@ -18,6 +18,19 @@ const SWATCH: Record<ThemeName, { bg: string; accent: string }> = {
 };
 
 const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
+  {
+    name: "master",
+    blurb: "mixed desk essentials",
+    rows: [
+      { type: "split", left: "nowplaying", right: "chess" },
+      { type: "split", left: "clock", right: "calendar" },
+      { type: "dual", widget: "nowplaying" },
+      { type: "split", left: "forecast", right: "sun" },
+      { type: "dual", widget: "dnd" },
+      { type: "dual", widget: "please_disturb" },
+      { type: "dual", widget: "away_until" },
+    ],
+  },
   {
     name: "bedside",
     blurb: "clock, weather, alarms",
@@ -56,6 +69,26 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
       { type: "dual", widget: "please_disturb" },
       { type: "split", left: "timer", right: "calendar" },
       { type: "dual", widget: "away_until" },
+    ],
+  },
+  {
+    name: "accounts",
+    blurb: "github, chess, wakatime",
+    rows: [
+      { type: "split", left: "github", right: "chess" },
+      { type: "split", left: "wakatime", right: "stocks" },
+      { type: "split", left: "jellyfin", right: "plex" },
+      { type: "split", left: "septa", right: "anilist" },
+    ],
+  },
+  {
+    name: "transit",
+    blurb: "weather, septa, flights",
+    rows: [
+      { type: "split", left: "weather", right: "septa" },
+      { type: "split", left: "citybikes", right: "flights" },
+      { type: "dual", widget: "forecast" },
+      { type: "split", left: "clock", right: "alarms" },
     ],
   },
 ];
@@ -129,14 +162,28 @@ function LayoutSection({ settings, onChange }: SectionProps) {
   const [picking, setPicking] = useState<{ row: number; slot: "left" | "right" | "widget" } | null>(
     null
   );
-  const rows = settings.layout.rows;
+  const [pageIndex, setPageIndex] = useState(0);
+  const pages = Array.from({ length: WIDGET_PAGE_COUNT }, (_, i) => settings.layout.pages?.[i] ?? settings.layout.rows);
+  const rows = pages[pageIndex] ?? pages[0] ?? settings.layout.rows;
 
   function setRows(next: LayoutRow[]) {
-    onChange({ ...settings, layout: { rows: next } });
+    const nextPages = pages.map((p, i) => (i === pageIndex ? next : p));
+    onChange({ ...settings, layout: { ...settings.layout, rows: nextPages[0], pages: nextPages } });
   }
 
   function applyPreset(nextRows: LayoutRow[]) {
     setRows(nextRows.map((r) => ({ ...r })));
+  }
+
+  function savePersonalPreset(i: number) {
+    const presets = Array.from({ length: 2 }, (_, j) => settings.layout.presets?.[j] ?? []);
+    presets[i] = rows.map((r) => ({ ...r }));
+    onChange({ ...settings, layout: { ...settings.layout, presets } });
+  }
+
+  function loadPersonalPreset(i: number) {
+    const preset = settings.layout.presets?.[i] ?? [];
+    if (preset.length) applyPreset(preset);
   }
 
   function patchRow(i: number, next: LayoutRow) {
@@ -208,9 +255,16 @@ function LayoutSection({ settings, onChange }: SectionProps) {
   return (
     <>
       <p className="sec-note">
-        rows stack vertically — swipe <b>up / down</b> on the dashboard to move between them.
-        dual rows give one widget the whole width.
+        standby is the first page. widget pages 1 and 2 each have their own vertical row stack.
+        swipe <b>left / right</b> between pages and <b>up / down</b> through rows.
       </p>
+      <div className="page-seg">
+        {pages.map((_, i) => (
+          <button key={i} className={pageIndex === i ? "on" : ""} onClick={() => setPageIndex(i)}>
+            page {i + 1}
+          </button>
+        ))}
+      </div>
       <div className="preset-row">
         {LAYOUT_PRESETS.map((preset) => (
           <button key={preset.name} className="preset-card" onClick={() => applyPreset(preset.rows)}>
@@ -218,6 +272,23 @@ function LayoutSection({ settings, onChange }: SectionProps) {
             <small>{preset.blurb}</small>
           </button>
         ))}
+      </div>
+      <div className="preset-row personal">
+        {[0, 1].map((i) => {
+          const hasPreset = Boolean(settings.layout.presets?.[i]?.length);
+          return (
+            <div key={i} className="preset-card preset-save">
+              <b>preset {i + 1}</b>
+              <small>{hasPreset ? `${settings.layout.presets![i].length} rows saved` : "empty slot"}</small>
+              <div className="preset-actions">
+                <button onClick={() => savePersonalPreset(i)}>save</button>
+                <button onClick={() => loadPersonalPreset(i)} disabled={!hasPreset}>
+                  load
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
       {rows.map((r, i) => (
         <div key={i} className="lrow-card">

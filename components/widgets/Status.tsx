@@ -13,13 +13,13 @@ const STATUS_COPY = {
   dnd: {
     label: "status",
     title: "DO NOT DISTURB",
-    note: "go away · headphones mean no",
+    note: "go away · actually working here",
     tone: "quiet",
   },
   please: {
     label: "status",
     title: "PLEASE DISTURB",
-    note: "yes, really — come talk to me",
+    note: "PLS",
     tone: "open",
   },
   lunch: {

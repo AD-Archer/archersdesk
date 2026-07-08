@@ -91,6 +91,17 @@ interface ChessData {
 
 const CHESS_MODE_KEY = "archersdesk.chessMode";
 
+function ClickSettingsGlyph() {
+  return (
+    <span className="click-settings-glyph" aria-hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19 13.4a7.6 7.6 0 0 0 0-2.8l2-1.5-2-3.4-2.4 1a7.8 7.8 0 0 0-2.4-1.4L13.8 3h-3.6l-.4 2.3a7.8 7.8 0 0 0-2.4 1.4l-2.4-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 2.8l-2 1.5 2 3.4 2.4-1a7.8 7.8 0 0 0 2.4 1.4l.4 2.3h3.6l.4-2.3a7.8 7.8 0 0 0 2.4-1.4l2.4 1 2-3.4-2-1.5z" />
+      </svg>
+    </span>
+  );
+}
+
 export function ChessWidget({ settings, integrationSettings }: WidgetProps) {
   const payload = useIntegration<ChessData>("chess", integrationSettings ?? settings);
   const [pref, setPref] = useState<string | null>(null);
@@ -121,13 +132,13 @@ export function ChessWidget({ settings, integrationSettings }: WidgetProps) {
       <button className="chess-hero" onClick={() => setOpen(true)} aria-label="choose mode">
         <span className="chess-hero-icon">
           <MI name="chess" className="chess-hero-mi" />
-          <span className="chess-hero-caret" aria-hidden />
         </span>
         <BigStat
           value={hero.rating}
           unit={hero.mode}
           caption={d.puzzles ? `puzzle best ${d.puzzles}` : undefined}
         />
+        <ClickSettingsGlyph />
       </button>
       <MiniList
         rows={d.modes
@@ -396,13 +407,13 @@ export function WakatimeWidget({ settings, integrationSettings }: WidgetProps) {
                 <button className="waka-hero" onClick={() => setOpen(true)} aria-label="choose wakatime stat">
                   <span className="waka-hero-icon">
                     <MI name={WIDGET_INFO.wakatime.icon} className="waka-hero-mi" />
-                    <span className="chess-hero-caret" aria-hidden />
                   </span>
                   <BigStat
                     value={mode === "total" ? d.total : (top?.name ?? "no data")}
                     unit={mode === "total" ? undefined : top?.text}
                     caption={meta.title}
                   />
+                  <ClickSettingsGlyph />
                 </button>
                 {rows.length > 0 && (
                   <MiniList
