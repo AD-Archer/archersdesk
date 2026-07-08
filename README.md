@@ -119,13 +119,45 @@ Keep `COOKIE_SECURE=false` while serving plain http on the LAN.
 ## production (docker)
 
 ```sh
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-Set `ADMIN_USERNAME` / `ADMIN_PASSWORD` in the compose file — the account is
+`docker-compose.yml` pulls the multi-arch image published by CI from
+`ghcr.io/ad-archer/archersdesk:latest`:
+
+```yaml
+# Production only — for development just run `pnpm dev`.
+services:
+  desk:
+    image: ghcr.io/ad-archer/archersdesk:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - desk-data:/app/data
+    environment:
+      # your account — created on first boot, password stays in sync with this
+      ADMIN_USERNAME: archer
+      ADMIN_PASSWORD: change-me-please
+      # set true so randoms can't sign up on your instance
+      DISABLE_REGISTRATION: "true"
+
+      # option a: let infisical inject the rest (machine identity token)
+      # INFISICAL_TOKEN: ${INFISICAL_TOKEN}
+      # INFISICAL_PROJECT_ID: ${INFISICAL_PROJECT_ID}
+      # INFISICAL_ENV: prod
+      # option b: pass secrets straight through
+      LASTFM_API_KEY: ${LASTFM_API_KEY:-}
+      # set true only when serving behind an https reverse proxy
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    restart: unless-stopped
+
+volumes:
+  desk-data:
+```
+
+Set `ADMIN_USERNAME` / `ADMIN_PASSWORD` before first boot — the account is
 created on boot and its password follows the env value. Leave
-`DISABLE_REGISTRATION: "true"` unless you want open signups. CI
-(`.github/workflows/docker.yml`) publishes multi-arch images to
-`ghcr.io/<owner>/archersdesk` on pushes to `main`; swap `build: .` for that
-image once the repo is on GitHub. Secrets come from an Infisical machine
-identity (`INFISICAL_TOKEN` + `INFISICAL_PROJECT_ID`) or plain container env.
+`DISABLE_REGISTRATION: "true"` unless you want open signups. Secrets come from
+an Infisical machine identity (`INFISICAL_TOKEN` + `INFISICAL_PROJECT_ID`) or
+plain container env.

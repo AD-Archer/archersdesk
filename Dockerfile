@@ -1,6 +1,6 @@
 # ── archer's desk · production image ────────────────────────────────
 # Dev never touches this — run `pnpm dev` raw. Build/run only in prod:
-#   docker compose up -d --build
+#   docker compose pull && docker compose up -d
 
 FROM node:22-slim AS base
 ENV PNPM_HOME="/pnpm" PATH="/pnpm:$PATH"
@@ -10,7 +10,7 @@ FROM base AS deps
 WORKDIR /app
 # better-sqlite3 ships prebuilds for linux glibc; toolchain is the fallback
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM base AS build

@@ -1,0 +1,7 @@
+packages:
+  - .
+
+# CI and Docker builds install from a reviewed lockfile. Keep frozen installs
+# deterministic even when a transitive package was published within pnpm's
+# default release-age window.
+minimumReleaseAge: 0

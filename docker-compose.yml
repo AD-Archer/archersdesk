@@ -1,9 +1,7 @@
 # Production only — for development just run `pnpm dev`.
 services:
   desk:
-    build: .
-    # once ci has pushed to ghcr, swap build for the prebuilt image:
-    # image: ghcr.io/<your-github-username>/archersdesk:latest
+    image: ghcr.io/ad-archer/archersdesk:latest
     ports:
       - "3000:3000"
     volumes:
