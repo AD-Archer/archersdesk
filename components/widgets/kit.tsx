@@ -112,14 +112,18 @@ export function Delta({ pct }: { pct: number }) {
 export function useIntegration<T>(
   service: ProxyService,
   settings: Settings,
-  ms = 3 * 60 * 1000
+  ms = 3 * 60 * 1000,
+  refreshKey?: number | string
 ): IntegrationPayload<T> | null {
   const creds =
     service in settings.integrations
       ? settings.integrations[service as keyof Settings["integrations"]]
       : settings.location;
+  // bumping refreshKey changes the poll deps → immediate refetch (used after a
+  // write action so the new state shows without waiting out the interval).
   return usePoll<IntegrationPayload<T>>(`/api/integrations/${service}`, ms, [
     JSON.stringify(creds),
+    refreshKey,
   ]);
 }
 

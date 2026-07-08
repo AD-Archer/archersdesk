@@ -1544,41 +1544,36 @@ input {
   letter-spacing: 0.06em;
 }
 
-.ha-toggle {
+/* lightbulb button: lit (amber, glowing) when the entity is on, dim when off */
+.ha-bulb {
   flex: 0 0 auto;
-  width: calc(var(--ps) * 0.11);
-  height: calc(var(--ps) * 0.06);
-  min-width: 44px;
-  min-height: 24px;
-  border-radius: 100px;
-  background: var(--panel-a);
+  width: calc(var(--ps) * 0.1);
+  height: calc(var(--ps) * 0.1);
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
   border: 1px solid var(--line);
-  position: relative;
+  background: var(--panel-a);
+  color: var(--faint);
+  font-size: calc(var(--ps) * 0.05);
+  transition:
+    color 0.2s,
+    border-color 0.2s;
 }
 
-.ha-toggle.on {
-  background: var(--amber);
+.ha-bulb.on {
+  color: var(--amber);
   border-color: var(--amber);
 }
 
-.ha-toggle:disabled {
-  opacity: 0.5;
+.ha-bulb.on .mi {
+  filter: drop-shadow(0 0 1.4vmin var(--accent-glow));
 }
 
-.ha-toggle-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  height: calc(100% - 4px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--cream);
-  transition: left 0.2s;
-}
-
-.ha-toggle.on .ha-toggle-knob {
-  left: calc(100% - 2px);
-  transform: translateX(-100%);
+.ha-bulb:disabled {
+  opacity: 0.55;
 }
 
 /* ── status signs ──────────────────────────────────────────────────── */
