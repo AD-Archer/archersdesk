@@ -26,12 +26,14 @@ export function SwipeCarousel<T>({
   getKey,
   renderItem,
   perView = 1,
+  layout = "column",
   onItemTap,
 }: {
   items: T[];
   getKey: (item: T, index: number) => string;
   renderItem: (item: T, index: number) => React.ReactNode;
   perView?: number;
+  layout?: "column" | "row";
   onItemTap?: (item: T, index: number) => void;
 }) {
   const [page, setPage] = useState(0);
@@ -117,7 +119,7 @@ export function SwipeCarousel<T>({
           >
             {pages.map((group, p) => (
               <div className="swipe-item" key={p}>
-                <div className="swipe-page">
+                <div className={`swipe-page${layout === "row" ? " row" : ""}`}>
                   {group.map((item, j) => {
                     const gi = p * perView + j;
                     return (

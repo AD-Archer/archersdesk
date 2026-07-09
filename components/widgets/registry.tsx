@@ -15,6 +15,8 @@ import { QuoteWidget } from "./Quote";
 import { HomeAssistantWidget } from "./HomeAssistant";
 import { SeerrWidget } from "./Seerr";
 import { QbittorrentWidget, TransmissionWidget } from "./Torrents";
+import { AgendaWidget } from "./Agenda";
+import { EpicGamesWidget } from "./Epic";
 import {
   AwayUntilWidget,
   DoNotDisturbWidget,
@@ -99,6 +101,8 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   seerr: SeerrWidget,
   qbittorrent: QbittorrentWidget,
   transmission: TransmissionWidget,
+  agenda: AgendaWidget,
+  epicgames: EpicGamesWidget,
 };
 
 export function MainRow({

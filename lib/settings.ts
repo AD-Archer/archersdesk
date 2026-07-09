@@ -5,6 +5,7 @@ import {
   WIDGET_PAGE_COUNT,
   WIDGETS,
   type Alarm,
+  type CalendarFeed,
   type LayoutRow,
   type Settings,
   type ThemeName,
@@ -61,6 +62,8 @@ export const DEFAULT_SETTINGS: Settings = {
     { label: "tokyo", tz: "Asia/Tokyo" },
     { label: "los angeles", tz: "America/Los_Angeles" },
   ],
+  calendars: [],
+  showEpicInAgenda: true,
 };
 
 const DAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -124,6 +127,25 @@ function sanitizeZones(v: unknown): WorldClockZone[] {
     const tz = str(z.tz, "");
     if (!tz || !validTz(tz)) continue;
     out.push({ label: str(z.label, tz.split("/").pop() ?? tz, 32), tz });
+  }
+  return out;
+}
+
+function sanitizeCalendars(v: unknown): CalendarFeed[] {
+  if (!Array.isArray(v)) return [];
+  const out: CalendarFeed[] = [];
+  for (const c of v.slice(0, 20)) {
+    if (!isRecord(c)) continue;
+    // webcal:// is the same host over https — rewrite before sanitizeUrl
+    const raw = str(c.url, "", 400).trim().replace(/^webcal:\/\//i, "https://");
+    const url = sanitizeUrl(raw);
+    if (!url) continue;
+    out.push({
+      id: trimmed(c.id, "", 64) || url,
+      name: trimmed(c.name, "calendar", 60),
+      url,
+      enabled: c.enabled !== false,
+    });
   }
   return out;
 }
@@ -295,6 +317,8 @@ export function sanitizeSettings(input: unknown): Settings {
     integrations: sanitizeIntegrations(s.integrations),
     alarms: sanitizeAlarms(s.alarms),
     worldclock: sanitizeZones(s.worldclock),
+    calendars: sanitizeCalendars(s.calendars),
+    showEpicInAgenda: s.showEpicInAgenda !== false,
   };
 }
 

@@ -6,8 +6,8 @@ import { MAX_ROWS, THEME_INFO, THEMES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS, 
 import { dayChips, fmt12 } from "./alarmUtil";
 import { useIntegrationAction } from "./widgets/kit";
 
-type Tab = "layout" | "theme" | "alarms" | "location" | "accounts";
-const TABS: Tab[] = ["layout", "theme", "alarms", "location", "accounts"];
+type Tab = "layout" | "theme" | "alarms" | "calendar" | "location" | "accounts";
+const TABS: Tab[] = ["layout", "theme", "alarms", "calendar", "location", "accounts"];
 
 // swatch previews for the theme cards (mirrors globals.css palettes)
 const SWATCH: Record<ThemeName, { bg: string; accent: string }> = {
@@ -143,6 +143,7 @@ export default function SettingsSheet({
             )}
             {tab === "theme" && <ThemeSection settings={settings} onChange={onChange} />}
             {tab === "alarms" && <AlarmsSection settings={settings} onChange={onChange} />}
+            {tab === "calendar" && <CalendarSection settings={settings} onChange={onChange} />}
             {tab === "location" && <LocationSection settings={settings} onChange={onChange} />}
             {tab === "accounts" && <AccountsSection settings={settings} onChange={onChange} />}
           </div>
@@ -491,6 +492,100 @@ function AlarmsSection({ settings, onChange }: SectionProps) {
       <button className="add-btn" onClick={addAlarm}>
         + add alarm
       </button>
+    </>
+  );
+}
+
+/* ── calendars (ical feeds for the agenda widget) ────────────────── */
+
+function CalendarSection({ settings, onChange }: SectionProps) {
+  const calendars = settings.calendars ?? [];
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+
+  function setCalendars(next: typeof calendars) {
+    onChange({ ...settings, calendars: next });
+  }
+
+  function addFeed() {
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) return;
+    setCalendars([
+      ...calendars,
+      { id: crypto.randomUUID(), name: name.trim() || "calendar", url: trimmedUrl, enabled: true },
+    ]);
+    setName("");
+    setUrl("");
+  }
+
+  return (
+    <>
+      <p className="sec-note">
+        add ical/ics feed urls (google, apple, outlook &ldquo;secret address&rdquo; links; webcal:// works).
+        check the ones you want in the agenda widget.
+      </p>
+
+      <div className="cal-rows">
+        {calendars.map((c, i) => (
+          <div key={c.id} className="cal-row">
+            <label className="cal-check">
+              <input
+                type="checkbox"
+                checked={c.enabled}
+                onChange={(e) => setCalendars(calendars.map((x, j) => (j === i ? { ...x, enabled: e.target.checked } : x)))}
+              />
+              <span className="cal-row-body">
+                <b>{c.name}</b>
+                <small>{c.url.replace(/^https?:\/\//, "")}</small>
+              </span>
+            </label>
+            <button className="cal-del" onClick={() => setCalendars(calendars.filter((_, j) => j !== i))} aria-label="remove">
+              ×
+            </button>
+          </div>
+        ))}
+
+        <div className="cal-row">
+          <label className="cal-check">
+            <input
+              type="checkbox"
+              checked={settings.showEpicInAgenda}
+              onChange={(e) => onChange({ ...settings, showEpicInAgenda: e.target.checked })}
+            />
+            <span className="cal-row-body">
+              <b>Epic Free Games</b>
+              <small>this week&rsquo;s free games, as agenda events</small>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div className="acct-group">
+        <div className="acct-head">
+          <b>add calendar</b>
+          <small>name it, paste the ical url</small>
+        </div>
+        <label className="field">
+          <span>name</span>
+          <input value={name} maxLength={60} placeholder="Work" onChange={(e) => setName(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>ical url</span>
+          <input
+            value={url}
+            maxLength={400}
+            placeholder="https://calendar.google.com/…/basic.ics"
+            onChange={(e) => setUrl(e.target.value)}
+            autoCapitalize="off"
+            autoCorrect="off"
+          />
+        </label>
+        <button className="add-btn" onClick={addFeed}>
+          + add calendar
+        </button>
+      </div>
+
+      <p className="sec-note">tip: tap the agenda widget itself to switch between 3 / 5 / 7 days.</p>
     </>
   );
 }

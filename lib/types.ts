@@ -46,6 +46,8 @@ export const WIDGETS = [
   "seerr",
   "qbittorrent",
   "transmission",
+  "agenda",
+  "epicgames",
 ] as const;
 
 export type WidgetName = (typeof WIDGETS)[number];
@@ -110,6 +112,8 @@ export const WIDGET_INFO: Record<
   seerr: { label: "seerr", blurb: "jellyseerr / overseerr requests", category: "accounts", icon: "movie" },
   qbittorrent: { label: "qbittorrent", blurb: "torrents, speed & ratio", category: "accounts", icon: "download" },
   transmission: { label: "transmission", blurb: "torrents, speed & ratio", category: "accounts", icon: "download" },
+  agenda: { label: "agenda", blurb: "your calendars, next few days", category: "tools", icon: "calendar_today" },
+  epicgames: { label: "epic free games", blurb: "free this week + next", category: "feeds", icon: "play_circle" },
 };
 
 export const THEMES = ["ember", "moonlight", "meadow", "rose", "paper"] as const;
@@ -140,6 +144,13 @@ export interface Location {
 export interface WorldClockZone {
   label: string;
   tz: string; // IANA zone
+}
+
+export interface CalendarFeed {
+  id: string;
+  name: string;
+  url: string; // ical/ics feed url (webcal:// is rewritten to https://)
+  enabled: boolean;
 }
 
 /** One vertically-swipeable row of the main view: two squares or one wide. */
@@ -185,11 +196,14 @@ export interface Settings {
   };
   alarms: Alarm[];
   worldclock: WorldClockZone[];
+  calendars: CalendarFeed[];
+  showEpicInAgenda: boolean; // inject epic free-games as events in the agenda
 }
 
 export type IntegrationService = keyof Settings["integrations"];
 
-/** Keyless public feeds served through the same proxy as integrations. */
+/** Keyless public feeds served through the same proxy as integrations.
+ *  `agenda` (calendars) and `epicgames` also ride this proxy path. */
 export const FEED_SERVICES = [
   "dog",
   "cat",
@@ -202,6 +216,8 @@ export const FEED_SERVICES = [
   "f1",
   "citybikes",
   "flights",
+  "agenda",
+  "epicgames",
 ] as const;
 
 export type FeedService = (typeof FEED_SERVICES)[number];

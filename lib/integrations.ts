@@ -1,3 +1,4 @@
+import { EpicFreeGames } from "epic-free-games";
 import type {
   FeedService,
   IntegrationPayload,
@@ -5,6 +6,7 @@ import type {
   ProxyService,
   Settings,
 } from "./types";
+import { expandEvents, parseIcs } from "./ical";
 
 // ── integration fetchers ─────────────────────────────────────────────
 // Each service is one entry: { ttl, fetch(settings) } returning the standard
@@ -1042,7 +1044,105 @@ export const OPEN_FEEDS: Record<FeedService, Fetcher> = {
       return { configured: true, data: { count: states.length, planes: planes.slice(0, 3) } };
     },
   },
+
+  epicgames: {
+    ttl: 30 * 60 * 1000,
+    async fetch() {
+      return { configured: true, data: await fetchEpicGames() };
+    },
+  },
+
+  agenda: {
+    ttl: 10 * 60 * 1000,
+    async fetch(settings) {
+      const feeds = settings.calendars.filter((c) => c.enabled && c.url);
+      if (!feeds.length && !settings.showEpicInAgenda)
+        return need("add a calendar in settings → calendar");
+      const now = Date.now();
+      const windowStart = new Date(now - 12 * 60 * 60 * 1000); // include earlier today
+      const windowEnd = new Date(now + 28 * 24 * 60 * 60 * 1000);
+      const results = await Promise.all(
+        feeds.map(async (c) => {
+          try {
+            const res = await grab(c.url, { Accept: "text/calendar, text/plain, */*" });
+            if (!res.ok) return [];
+            const text = await res.text();
+            return expandEvents(parseIcs(text), windowStart, windowEnd).map((o) => ({
+              title: o.summary,
+              location: o.location,
+              start: o.start.toISOString(),
+              end: o.end.toISOString(),
+              allDay: o.allDay,
+              calendar: c.name,
+            }));
+          } catch {
+            return [];
+          }
+        })
+      );
+      const events = results.flat();
+      if (settings.showEpicInAgenda) {
+        try {
+          events.push(...(await epicAgendaEvents()));
+        } catch {
+          /* epic down — just skip its events */
+        }
+      }
+      events.sort((a, b) => a.start.localeCompare(b.start));
+      return { configured: true, data: { events } };
+    },
+  },
 };
+
+// ── epic free games (shared by the epicgames widget + agenda injection) ──
+
+interface EpicGame {
+  title: string;
+  image: string | null;
+  url: string;
+  free: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+}
+
+async function fetchEpicGames(): Promise<{ current: EpicGame[]; next: EpicGame[] }> {
+  const res = await new EpicFreeGames({ country: "US", locale: "en-US" }).getGames();
+  const map = (g: (typeof res.currentGames)[number], free: boolean): EpicGame => {
+    const img =
+      g.keyImages?.find((k) => k.type === "OfferImageWide")?.url ??
+      g.keyImages?.find((k) => k.type === "DieselStoreFrontWide")?.url ??
+      g.keyImages?.find((k) => k.type === "Thumbnail")?.url ??
+      g.keyImages?.[0]?.url ??
+      null;
+    const slug = g.productSlug || g.catalogNs?.mappings?.[0]?.pageSlug || g.offerMappings?.[0]?.pageSlug || g.urlSlug;
+    const promo = (free ? g.promotions?.promotionalOffers : g.promotions?.upcomingPromotionalOffers)?.[0]
+      ?.promotionalOffers?.[0];
+    return {
+      title: g.title,
+      image: img,
+      url: slug ? `https://store.epicgames.com/en-US/p/${slug}` : "https://store.epicgames.com/en-US/free-games",
+      free,
+      startsAt: promo?.startDate ?? null,
+      endsAt: promo?.endDate ?? null,
+    };
+  };
+  return {
+    current: res.currentGames.map((g) => map(g, true)),
+    next: res.nextGames.map((g) => map(g, false)),
+  };
+}
+
+// synthetic all-day agenda events: current games on the day they stop being
+// free (claim-by), upcoming games on the day they become free.
+async function epicAgendaEvents() {
+  const { current, next } = await fetchEpicGames();
+  const out: Array<{ title: string; location: string; start: string; end: string; allDay: boolean; calendar: string }> = [];
+  for (const g of current)
+    if (g.endsAt) out.push({ title: `Free: ${g.title}`, location: "epic games", start: g.endsAt, end: g.endsAt, allDay: true, calendar: "Epic Games" });
+  for (const g of next)
+    if (g.startsAt) out.push({ title: `Free: ${g.title}`, location: "epic games", start: g.startsAt, end: g.startsAt, allDay: true, calendar: "Epic Games" });
+  return out;
+}
 
 const ALL_SERVICES: Record<string, Fetcher> = { ...INTEGRATIONS, ...OPEN_FEEDS };
 
@@ -1073,9 +1173,13 @@ export async function runIntegration(
   settings: Settings
 ): Promise<IntegrationPayload> {
   const entry = ALL_SERVICES[service];
-  // credentials + location are part of the key so edits refetch immediately
+  // credentials/config are part of the key so edits refetch immediately
   const creds =
-    service in INTEGRATIONS ? settings.integrations[service as IntegrationService] : settings.location;
+    service === "agenda"
+      ? { calendars: settings.calendars, epic: settings.showEpicInAgenda }
+      : service in INTEGRATIONS
+        ? settings.integrations[service as IntegrationService]
+        : settings.location;
   const key = `${userId}|${service}|${JSON.stringify(creds)}`;
   if (cache.size > 500) cache.clear();
   const hit = cache.get(key);

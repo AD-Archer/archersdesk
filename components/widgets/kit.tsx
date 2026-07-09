@@ -116,9 +116,11 @@ export function useIntegration<T>(
   refreshKey?: number | string
 ): IntegrationPayload<T> | null {
   const creds =
-    service in settings.integrations
-      ? settings.integrations[service as keyof Settings["integrations"]]
-      : settings.location;
+    service === "agenda"
+      ? { calendars: settings.calendars, epic: settings.showEpicInAgenda }
+      : service in settings.integrations
+        ? settings.integrations[service as keyof Settings["integrations"]]
+        : settings.location;
   // bumping refreshKey changes the poll deps → immediate refetch (used after a
   // write action so the new state shows without waiting out the interval).
   return usePoll<IntegrationPayload<T>>(`/api/integrations/${service}`, ms, [

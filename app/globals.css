@@ -1277,6 +1277,17 @@ input {
   padding: 0 0.5vmin;
 }
 
+/* row layout: items become side-by-side columns (e.g. agenda day columns) */
+.swipe-page.row {
+  flex-direction: row;
+  gap: 1vmin;
+  align-items: stretch;
+}
+
+.swipe-page.row .swipe-cell {
+  flex: 1 1 0;
+}
+
 .swipe-cell {
   min-width: 0;
 }
@@ -1499,6 +1510,165 @@ input {
   color: var(--cream-dim);
   line-height: 1.5;
   margin-top: 0.6vmin;
+}
+
+/* ── agenda (multi-day calendar columns) ─────────────────────────────── */
+
+.agenda-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 1vmin;
+  margin-bottom: 1.6vmin;
+  padding: 0.8vmin 2vmin;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  background: var(--panel-a);
+  color: var(--cream-dim);
+  font-size: calc(var(--ps) * 0.036);
+  cursor: pointer;
+}
+
+.agenda-picker .mi {
+  color: var(--amber);
+  font-size: calc(var(--ps) * 0.044);
+}
+
+.agenda-picker:active {
+  opacity: 0.75;
+}
+
+.agenda-day {
+  display: flex;
+  flex-direction: column;
+  gap: 1vmin;
+  min-width: 0;
+  height: 100%;
+}
+
+.agenda-day.today .agenda-date {
+  color: var(--on-accent);
+  background: var(--amber);
+}
+
+.agenda-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4vmin;
+}
+
+.agenda-dow {
+  font-size: calc(var(--ps) * 0.03);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+}
+
+.agenda-date {
+  font-family: var(--serif);
+  font-size: calc(var(--ps) * 0.06);
+  line-height: 1.1;
+  width: calc(var(--ps) * 0.1);
+  height: calc(var(--ps) * 0.1);
+  min-width: 26px;
+  min-height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--cream);
+}
+
+.agenda-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vmin;
+  min-width: 0;
+}
+
+.agenda-empty {
+  color: var(--faint);
+  text-align: center;
+  font-size: calc(var(--ps) * 0.04);
+}
+
+.agenda-event {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid var(--amber);
+  padding-left: 1vmin;
+  min-width: 0;
+}
+
+.agenda-event-time {
+  font-size: calc(var(--ps) * 0.026);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.agenda-event-title {
+  font-size: calc(var(--ps) * 0.032);
+  color: var(--cream-dim);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* ── epic free games (one swipeable card per game) ───────────────────── */
+
+.epic-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2vmin;
+  text-align: center;
+}
+
+.epic-art {
+  width: 100%;
+  max-width: calc(var(--ps) * 1.4);
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px var(--shadow);
+}
+
+.epic-badge {
+  font-size: calc(var(--ps) * 0.028);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 0.5vmin 1.8vmin;
+}
+
+.epic-badge.now {
+  color: var(--on-accent);
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.epic-title {
+  font-family: var(--serif);
+  font-size: calc(var(--ps) * 0.055);
+  line-height: 1.2;
+  color: var(--cream);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.epic-meta {
+  font-size: calc(var(--ps) * 0.034);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* ── home assistant entity list ──────────────────────────────────────── */
@@ -1898,20 +2068,23 @@ input {
 
 .np-title {
   font-weight: 700;
-  font-size: calc(var(--ps) * 0.062);
+  font-size: calc(var(--ps) * 0.074);
+  line-height: 1.2;
   text-align: center;
-  max-width: 88%;
-  white-space: nowrap;
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .np-artist {
   font-family: var(--serif);
   font-style: italic;
-  font-size: calc(var(--ps) * 0.052);
+  font-size: calc(var(--ps) * 0.06);
   color: var(--cream-dim);
-  max-width: 85%;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1939,6 +2112,7 @@ input {
 .panel.wide .np-text {
   align-items: flex-start;
   text-align: left;
+  flex: 1; /* take the space beside the art rather than the full row */
 }
 
 .panel.wide .np-title,
@@ -1953,6 +2127,7 @@ input {
   align-items: center;
   gap: 1vmin;
   min-width: 0;
+  width: 100%; /* full panel width in split so the title wraps late, not early */
 }
 
 .eq {
@@ -3014,6 +3189,70 @@ input[type="time"]:focus {
   color: var(--dim);
   font-size: 0.65em;
   margin-left: 1em;
+}
+
+/* calendar feed checkboxes (settings → calendar) */
+.cal-rows {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1.8vmin;
+}
+
+.cal-row {
+  display: flex;
+  align-items: center;
+  gap: 1.4vmin;
+  padding: 1.6vmin 2vmin;
+  border-bottom: 1px solid var(--line);
+}
+
+.cal-row:last-child {
+  border-bottom: none;
+}
+
+.cal-check {
+  display: flex;
+  align-items: center;
+  gap: 1.6vmin;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.cal-check input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--amber);
+}
+
+.cal-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3vmin;
+  min-width: 0;
+}
+
+.cal-row-body b {
+  color: var(--cream);
+  font-size: clamp(13px, 2.9vmin, 15px);
+}
+
+.cal-row-body small {
+  color: var(--dim);
+  font-size: clamp(10px, 2.2vmin, 12px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-del {
+  flex: 0 0 auto;
+  color: var(--dim);
+  font-size: clamp(20px, 5vmin, 26px);
+  line-height: 1;
+  padding: 0 1vmin;
 }
 
 /* home assistant entity picker (settings → accounts) */
