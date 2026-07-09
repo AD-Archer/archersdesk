@@ -1939,16 +1939,40 @@ input {
   color: var(--blue);
 }
 
+/* each mood gets its own colour so they read distinctly at a glance */
+.status-vibe.mood-joyful {
+  --vibe: #f0b429;
+}
+.status-vibe.mood-sad {
+  --vibe: #6ea8fe;
+}
+.status-vibe.mood-stressed {
+  --vibe: #e5573f;
+}
+.status-vibe.mood-calm {
+  --vibe: #35c4a3;
+}
+.status-vibe.mood-busy {
+  --vibe: #d16bd8;
+}
+.status-vibe.mood-mysterious {
+  --vibe: #9b8cff;
+}
+
+/* a bigger, mood-coloured glowing orb — the eye-catcher */
 .status-vibe .status-mark {
-  border-color: var(--blue);
+  width: calc(var(--ps) * 0.24);
+  height: calc(var(--ps) * 0.24);
+  border-color: var(--vibe, var(--amber));
   box-shadow:
-    0 0 3vmin var(--accent-glow),
-    0 0 5vmin var(--glow-2);
+    0 0 4vmin var(--vibe, var(--amber)),
+    0 0 9vmin var(--vibe, var(--amber)),
+    inset 0 0 2vmin var(--vibe, var(--amber));
 }
 
 .status-vibe .status-mark::before {
-  inset: 18%;
-  background: radial-gradient(circle at 35% 35%, var(--cream), var(--amber) 48%, var(--accent-2));
+  inset: 14%;
+  background: radial-gradient(circle at 34% 32%, #fff, var(--vibe, var(--amber)) 58%, transparent 100%);
 }
 
 .status-vibe .status-mark::after {
@@ -1957,31 +1981,18 @@ input {
   top: 50%;
   width: calc(var(--ps) * 0.11);
   height: calc(var(--ps) * 0.018);
+  background: var(--vibe, var(--amber));
   transform: translate(-50%, -50%) rotate(-22deg);
 }
 
-.status-vibe.mood-sad .status-mark,
-.status-vibe.mood-calm .status-mark {
-  border-color: var(--blue);
+/* colour the mood name + note to match, so the whole card shifts per mood */
+.status-vibe .status-title {
+  color: var(--vibe, var(--cream));
 }
 
-.status-vibe.mood-stressed .status-mark,
-.status-vibe.mood-busy .status-mark {
-  border-color: var(--amber);
-}
-
-.status-vibe.mood-mysterious .status-mark {
-  border-color: var(--cream-dim);
-}
-
-.status-vibe.mood-sad .status-note,
-.status-vibe.mood-calm .status-note {
-  color: var(--blue);
-}
-
-.status-vibe.mood-stressed .status-note,
-.status-vibe.mood-busy .status-note {
-  color: var(--amber);
+.status-vibe .status-note {
+  color: var(--vibe, var(--dim));
+  opacity: 0.85;
 }
 
 .mood-grid {
@@ -2557,6 +2568,27 @@ input {
   border-top: 1px solid var(--line);
   font-size: clamp(10px, 2.3vmin, 13px);
   color: var(--dim);
+}
+
+.sheet-foot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4vmin;
+  min-width: 0;
+}
+
+.sheet-foot-info small {
+  font-size: clamp(9px, 2vmin, 12px);
+  color: var(--faint);
+}
+
+.sheet-foot-info a {
+  color: var(--amber);
+  text-decoration: none;
+}
+
+.sheet-foot-info a:active {
+  opacity: 0.7;
 }
 
 .btn-ghost {

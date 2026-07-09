@@ -43,9 +43,10 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
   },
   {
     name: "workday",
-    blurb: "calendar, music, status",
+    blurb: "agenda, music, status",
     rows: [
       { type: "split", left: "calendar", right: "nowplaying" },
+      { type: "dual", widget: "agenda" },
       { type: "dual", widget: "please_disturb" },
       { type: "dual", widget: "away_until" },
       { type: "split", left: "timer", right: "dnd" },
@@ -90,6 +91,16 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
       { type: "split", left: "citybikes", right: "flights" },
       { type: "dual", widget: "forecast" },
       { type: "split", left: "clock", right: "alarms" },
+    ],
+  },
+  {
+    name: "selfhosted",
+    blurb: "adguard, seerr, torrents, home",
+    rows: [
+      { type: "split", left: "qbittorrent", right: "seerr" },
+      { type: "split", left: "adguard", right: "homeassistant" },
+      { type: "dual", widget: "agenda" },
+      { type: "split", left: "pihole", right: "epicgames" },
     ],
   },
 ];
@@ -149,7 +160,15 @@ export default function SettingsSheet({
           </div>
         )}
         <div className="sheet-foot">
-          <span>signed in as {username}</span>
+          <div className="sheet-foot-info">
+            <span>signed in as {username}</span>
+            <small>
+              Bug or Feature?{" "}
+              <a href="https://github.com/AD-Archer/archersdesk" target="_blank" rel="noreferrer">
+                submit an issue on github
+              </a>
+            </small>
+          </div>
           <span style={{ flex: 1 }} />
           <button className="btn-ghost" onClick={logout}>
             sign out
