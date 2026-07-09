@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isUser, requireUser } from "@/lib/api";
-import { getUserSettings, mutateUserSettings, sanitizeSettings } from "@/lib/settings";
+import { getUserSettings, mutateUserSettings, preserveSavedSecrets, sanitizeSettings } from "@/lib/settings";
 
 export async function GET(req: NextRequest) {
   const user = requireUser(req);
@@ -20,7 +20,7 @@ export async function PUT(req: NextRequest) {
   // presence (that is owned solely by /api/presence). Read-modify-write:
   // take the incoming doc but keep each device's presence from the server copy.
   const settings = mutateUserSettings(user.id, (current) => {
-    const incoming = sanitizeSettings(body.settings);
+    const incoming = preserveSavedSecrets(current, sanitizeSettings(body.settings));
     const presenceById = new Map(current.devices.map((d) => [d.id, d.presence]));
     incoming.devices = incoming.devices.map((d) => ({
       ...d,

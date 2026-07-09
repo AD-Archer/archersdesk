@@ -5,7 +5,7 @@ A deskside dashboard, to be used on a second monitor/tablet or smart phone with 
 ## stack
 
 - **Next.js** (app router)
-- **SQLite** (better-sqlite3) — users, sessions, per-user settings JSON
+- **SQLite** (better-sqlite3) — users, sessions, encrypted per-user settings
 - **Infisical** — secrets manager; run scripts auto-detect it and fall back to
   plain env vars when absent
 - **Docker** — production only, with CI pushing images to GHCR
@@ -25,6 +25,7 @@ pnpm dev          # → http://localhost:3000
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | account bootstrapped from env on boot   | none    |
 | `DISABLE_REGISTRATION` | `true` = env accounts only                           | `false` |
 | `DATA_DIR`             | sqlite location                                      | `./data`|
+| `SETTINGS_ENCRYPTION_KEY` | stable key for encrypted settings-at-rest          | generated in `DATA_DIR` |
 | `COOKIE_SECURE`        | `true` only behind https                             | `false` |
 
 ## using it
@@ -55,6 +56,11 @@ GitHub Streak Stats JSON when available — add a token for headroom. WakaTime
 defaults to `https://api.wakatime.com/api/v1` and accepts an **api url**
 override so self-hosted wakapi or hackatime work
 (`https://hackatime.hackclub.com/api/hackatime/v1`).
+
+Settings are encrypted before they are stored in SQLite. Set
+`SETTINGS_ENCRYPTION_KEY` in production so backups can be restored elsewhere;
+if it is omitted, the app creates `DATA_DIR/settings.encryption.key` and uses
+that file. Keep that key with the database backup.
 
 ### themes
 
@@ -110,6 +116,8 @@ services:
       # INFISICAL_ENV: prod
       # option b: pass secrets straight through
       LASTFM_API_KEY: ${LASTFM_API_KEY:-}
+      # optional but recommended: stable key for encrypted settings-at-rest
+      SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:-}
       # set true only when serving behind an https reverse proxy
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     restart: unless-stopped
@@ -122,4 +130,5 @@ Set `ADMIN_USERNAME` / `ADMIN_PASSWORD` before first boot — the account is
 created on boot and its password follows the env value. Leave
 `DISABLE_REGISTRATION: "true"` unless you want open signups. Secrets come from
 an Infisical machine identity (`INFISICAL_TOKEN` + `INFISICAL_PROJECT_ID`) or
-plain container env.
+plain container env. Settings saved through the UI are encrypted in sqlite; set
+`SETTINGS_ENCRYPTION_KEY` or preserve the generated key file in the data volume.

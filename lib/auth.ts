@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { getDb } from "./db";
-import { DEFAULT_SETTINGS, migrateAllSettings } from "./settings";
+import { DEFAULT_SETTINGS, migrateAllSettings, saveUserSettings } from "./settings";
 import { env } from "./env";
 
 export const SESSION_COOKIE = "desk_session";
@@ -25,11 +25,7 @@ function seedEnvUser() {
     const info = db
       .prepare("INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)")
       .run(username, bcrypt.hashSync(password, 10), Date.now());
-    db.prepare("INSERT INTO settings (user_id, data, updated_at) VALUES (?, ?, ?)").run(
-      Number(info.lastInsertRowid),
-      JSON.stringify(DEFAULT_SETTINGS),
-      Date.now()
-    );
+    saveUserSettings(Number(info.lastInsertRowid), DEFAULT_SETTINGS);
     console.log(`[archersdesk] seeded account "${username}" from env`);
   } else if (!bcrypt.compareSync(password, row.password_hash)) {
     db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(
@@ -70,11 +66,7 @@ export async function registerUser(username: string, password: string): Promise<
       .prepare("INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)")
       .run(username, hash, Date.now());
     const id = Number(info.lastInsertRowid);
-    db.prepare("INSERT INTO settings (user_id, data, updated_at) VALUES (?, ?, ?)").run(
-      id,
-      JSON.stringify(DEFAULT_SETTINGS),
-      Date.now()
-    );
+    saveUserSettings(id, DEFAULT_SETTINGS);
     return { id, username };
   } catch (err: unknown) {
     if (err instanceof Error && err.message.includes("UNIQUE")) return "taken";

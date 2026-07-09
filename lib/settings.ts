@@ -1,4 +1,8 @@
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { getDb } from "./db";
+import { env } from "./env";
 import {
   MAX_ROWS,
   THEMES,
@@ -25,6 +29,9 @@ import {
 
 const MAX_DEVICES = 12;
 const DEFAULT_THEME: ThemeName = "ember";
+const SETTINGS_ENCRYPTION_PREFIX = "enc:v1:";
+const SETTINGS_KEY_FILE = "settings.encryption.key";
+let cachedSettingsKey: Buffer | null = null;
 
 const DEFAULT_LOCATION: Location = {
   name: "New York",
@@ -92,6 +99,76 @@ const DAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function keyFromString(raw: string): Buffer {
+  const value = raw.trim();
+  if (/^[A-Fa-f0-9]{64}$/.test(value)) return Buffer.from(value, "hex");
+  if (/^[A-Za-z0-9_-]{43,44}$/.test(value)) {
+    const decoded = Buffer.from(value, "base64url");
+    if (decoded.length === 32) return decoded;
+  }
+  if (/^[A-Za-z0-9+/]{43}=?$/.test(value)) {
+    const decoded = Buffer.from(value, "base64");
+    if (decoded.length === 32) return decoded;
+  }
+  return crypto.createHash("sha256").update(value).digest();
+}
+
+function getSettingsKey(): Buffer {
+  if (cachedSettingsKey) return cachedSettingsKey;
+  if (env.settingsEncryptionKey.trim()) {
+    cachedSettingsKey = keyFromString(env.settingsEncryptionKey);
+    return cachedSettingsKey;
+  }
+
+  const keyPath = path.join(env.dataDir, SETTINGS_KEY_FILE);
+  let raw = "";
+  try {
+    raw = fs.readFileSync(keyPath, "utf8").trim();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+
+  if (!raw) {
+    raw = crypto.randomBytes(32).toString("base64url");
+    try {
+      fs.writeFileSync(keyPath, `${raw}\n`, { mode: 0o600, flag: "wx" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      raw = fs.readFileSync(keyPath, "utf8").trim();
+    }
+  }
+
+  cachedSettingsKey = keyFromString(raw);
+  return cachedSettingsKey;
+}
+
+export function isEncryptedSettingsData(data: string): boolean {
+  return data.startsWith(SETTINGS_ENCRYPTION_PREFIX);
+}
+
+function encryptSettingsData(settings: Settings): string {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", getSettingsKey(), iv);
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(settings), "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${SETTINGS_ENCRYPTION_PREFIX}${iv.toString("base64url")}:${tag.toString("base64url")}:${ciphertext.toString("base64url")}`;
+}
+
+function decryptSettingsData(data: string): string {
+  const [, , ivRaw, tagRaw, ciphertextRaw] = data.split(":");
+  if (!ivRaw || !tagRaw || !ciphertextRaw) throw new Error("invalid encrypted settings payload");
+  const decipher = crypto.createDecipheriv("aes-256-gcm", getSettingsKey(), Buffer.from(ivRaw, "base64url"));
+  decipher.setAuthTag(Buffer.from(tagRaw, "base64url"));
+  return Buffer.concat([
+    decipher.update(Buffer.from(ciphertextRaw, "base64url")),
+    decipher.final(),
+  ]).toString("utf8");
+}
+
+function parseStoredSettings(data: string): unknown {
+  return JSON.parse(isEncryptedSettingsData(data) ? decryptSettingsData(data) : data);
 }
 
 function widget(v: unknown, fallback: WidgetName): WidgetName {
@@ -391,14 +468,84 @@ export function sanitizeSettings(input: unknown): Settings {
   };
 }
 
+function keepWhenStale(incoming: string, current: string, stale: boolean): string {
+  return stale && !incoming && current ? current : incoming;
+}
+
+/** Stale browsers may still autosave an older settings document after another
+ *  device has saved account secrets. Preserve saved secrets from that newer DB
+ *  row unless the incoming write is based on the current version. */
+export function preserveSavedSecrets(current: Settings, incoming: Settings): Settings {
+  const stale = incoming.version < current.version;
+  if (!stale) return incoming;
+  const cur = current.integrations;
+  const next = incoming.integrations;
+  return {
+    ...incoming,
+    lastfm: {
+      ...incoming.lastfm,
+      apiKey: keepWhenStale(incoming.lastfm.apiKey, current.lastfm.apiKey, stale),
+    },
+    integrations: {
+      ...next,
+      github: {
+        ...next.github,
+        token: keepWhenStale(next.github.token, cur.github.token, stale),
+      },
+      wakatime: {
+        ...next.wakatime,
+        apiKey: keepWhenStale(next.wakatime.apiKey, cur.wakatime.apiKey, stale),
+      },
+      jellyfin: {
+        ...next.jellyfin,
+        apiKey: keepWhenStale(next.jellyfin.apiKey, cur.jellyfin.apiKey, stale),
+        password: keepWhenStale(next.jellyfin.password, cur.jellyfin.password, stale),
+      },
+      plex: {
+        ...next.plex,
+        token: keepWhenStale(next.plex.token, cur.plex.token, stale),
+      },
+      adguard: {
+        ...next.adguard,
+        password: keepWhenStale(next.adguard.password, cur.adguard.password, stale),
+      },
+      pihole: {
+        ...next.pihole,
+        password: keepWhenStale(next.pihole.password, cur.pihole.password, stale),
+      },
+      homeassistant: {
+        ...next.homeassistant,
+        token: keepWhenStale(next.homeassistant.token, cur.homeassistant.token, stale),
+      },
+      seerr: {
+        ...next.seerr,
+        apiKey: keepWhenStale(next.seerr.apiKey, cur.seerr.apiKey, stale),
+      },
+      qbittorrent: {
+        ...next.qbittorrent,
+        apiKey: keepWhenStale(next.qbittorrent.apiKey, cur.qbittorrent.apiKey, stale),
+        password: keepWhenStale(next.qbittorrent.password, cur.qbittorrent.password, stale),
+      },
+      transmission: {
+        ...next.transmission,
+        password: keepWhenStale(next.transmission.password, cur.transmission.password, stale),
+      },
+    },
+  };
+}
+
 export function getUserSettings(userId: number): Settings {
   const row = getDb().prepare("SELECT data FROM settings WHERE user_id = ?").get(userId) as
     | { data: string }
     | undefined;
   if (!row) return DEFAULT_SETTINGS;
   try {
-    return sanitizeSettings(JSON.parse(row.data));
-  } catch {
+    return sanitizeSettings(parseStoredSettings(row.data));
+  } catch (error) {
+    if (isEncryptedSettingsData(row.data)) {
+      console.error("[archersdesk] encrypted settings could not be decrypted", error);
+      throw new Error("settings are encrypted but could not be decrypted; check SETTINGS_ENCRYPTION_KEY");
+    }
     return DEFAULT_SETTINGS;
   }
 }
@@ -409,7 +556,7 @@ export function saveUserSettings(userId: number, settings: Settings) {
       `INSERT INTO settings (user_id, data, updated_at) VALUES (?, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`
     )
-    .run(userId, JSON.stringify(settings), Date.now());
+    .run(userId, encryptSettingsData(settings), Date.now());
 }
 
 /** Eagerly upgrade any legacy (pre-devices) settings rows to the current shape.
@@ -424,17 +571,18 @@ export function migrateAllSettings() {
   let migrated = 0;
   for (const row of rows) {
     let parsed: unknown;
+    const encrypted = isEncryptedSettingsData(row.data);
     try {
-      parsed = JSON.parse(row.data);
+      parsed = parseStoredSettings(row.data);
     } catch {
-      continue; // corrupt row — getUserSettings falls back to defaults on read
+      continue; // corrupt plaintext row — getUserSettings falls back to defaults on read
     }
-    // only touch legacy docs (no `devices` array); already-migrated rows are left alone
-    if (isRecord(parsed) && Array.isArray(parsed.devices)) continue;
+    // Rewrite plaintext rows to encrypted storage, and still migrate legacy docs.
+    if (encrypted && isRecord(parsed) && Array.isArray(parsed.devices)) continue;
     saveUserSettings(row.user_id, sanitizeSettings(parsed));
     migrated++;
   }
-  if (migrated) console.log(`[archersdesk] migrated ${migrated} settings row(s) to the devices schema`);
+  if (migrated) console.log(`[archersdesk] encrypted/migrated ${migrated} settings row(s)`);
 }
 
 /** Resolve the current settings doc plus the device a browser is acting as

@@ -22,5 +22,8 @@ export const env = {
   // Cookies must stay non-secure when the Echo Show hits the app over plain
   // http on the LAN. Set COOKIE_SECURE=true behind an https reverse proxy.
   cookieSecure: process.env.COOKIE_SECURE === "true",
+  // Encrypts the settings JSON stored in sqlite. If omitted, a persistent key
+  // is generated in DATA_DIR so local installs still survive restarts.
+  settingsEncryptionKey: process.env.SETTINGS_ENCRYPTION_KEY || "",
   isProd: process.env.NODE_ENV === "production",
 };

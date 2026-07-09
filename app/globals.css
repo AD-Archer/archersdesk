@@ -29,6 +29,7 @@
   --sheet-b: #0d0b09;
   --shadow: rgba(0, 0, 0, 0.55);
   --grain: 0.045;
+  --app-height: 100dvh;
 
   --serif: var(--font-serif), "Georgia", serif;
   --sans: var(--font-sans), "Helvetica Neue", sans-serif;
@@ -137,12 +138,16 @@
 
 html,
 body {
-  height: 100%;
+  width: 100%;
+  height: var(--app-height);
+  min-height: var(--app-height);
   overflow: hidden;
   overscroll-behavior: none;
+  background: var(--bg);
 }
 
 body {
+  min-height: var(--app-height);
   background: var(--bg);
   background-image:
     radial-gradient(120vw 90vh at 50% 118%, var(--glow-1), transparent 60%),
@@ -212,13 +217,15 @@ input {
 .stage {
   position: fixed;
   inset: 0;
+  bottom: auto;
+  height: var(--app-height);
   overflow: hidden;
   touch-action: none;
 }
 
 .pager-track {
   display: flex;
-  height: 100%;
+  height: var(--app-height);
   will-change: transform;
 }
 
@@ -228,7 +235,7 @@ input {
 
 .page {
   flex: 0 0 100%;
-  height: 100%;
+  height: var(--app-height);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4958,4 +4965,28 @@ input[type="time"]:focus {
 
 @media (orientation: portrait) {
   .remotebtn { right: 1.6vmin; }
+}
+
+/* ── iOS visible-viewport sizing ──────────────────────────────────── */
+
+.stage,
+.alarm-overlay,
+.away-overlay,
+.device-picker,
+.remote-sheet {
+  bottom: auto;
+  height: var(--app-height);
+  min-height: var(--app-height);
+}
+
+.remote {
+  min-height: var(--app-height);
+}
+
+html[data-ios="true"] body {
+  min-height: var(--app-height);
+}
+
+html[data-standalone="true"] .fsbtn {
+  display: none;
 }

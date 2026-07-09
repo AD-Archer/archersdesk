@@ -19,6 +19,8 @@ services:
       # INFISICAL_ENV: prod
       # option b: pass secrets straight through
       LASTFM_API_KEY: ${LASTFM_API_KEY:-}
+      # optional but recommended: stable key for encrypted settings-at-rest
+      SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:-}
       # set true only when serving behind an https reverse proxy
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     restart: unless-stopped

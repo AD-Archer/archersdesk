@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import RegisterSW from "@/components/RegisterSW";
+import ViewportFit from "@/components/ViewportFit";
 import "./globals.css";
 
 const serif = localFont({
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${serif.variable} ${sans.variable} ${icons.variable}`}>
       <body>
         {children}
+        <ViewportFit />
         <RegisterSW />
       </body>
     </html>
