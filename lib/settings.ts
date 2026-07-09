@@ -2,13 +2,18 @@ import { getDb } from "./db";
 import {
   MAX_ROWS,
   THEMES,
+  VIBES,
   WIDGET_PAGE_COUNT,
   WIDGETS,
   type Alarm,
   type CalendarFeed,
+  type Device,
   type LayoutRow,
+  type Location,
+  type Presence,
   type Settings,
   type ThemeName,
+  type Vibe,
   type WidgetName,
   type WorldClockZone,
 } from "./types";
@@ -18,27 +23,44 @@ import {
 // sanitize() is the only gate: whatever the client sends, what lands in
 // the db (and comes back out) is a fully-shaped Settings object.
 
-export const DEFAULT_SETTINGS: Settings = {
-  theme: "ember",
-  location: {
-    name: "New York",
-    region: "New York · United States",
-    latitude: 40.7128,
-    longitude: -74.006,
-  },
-  units: "fahrenheit",
-  layout: {
-    rows: [{ type: "split", left: "clock", right: "nowplaying" }],
-    pages: [
-      [{ type: "split", left: "clock", right: "nowplaying" }],
-      [
-        { type: "split", left: "weather", right: "alarms" },
-        { type: "split", left: "github", right: "chess" },
-      ],
+const MAX_DEVICES = 12;
+const DEFAULT_THEME: ThemeName = "ember";
+
+const DEFAULT_LOCATION: Location = {
+  name: "New York",
+  region: "New York · United States",
+  latitude: 40.7128,
+  longitude: -74.006,
+};
+
+const DEFAULT_LAYOUT: Device["layout"] = {
+  rows: [{ type: "split", left: "clock", right: "nowplaying" }],
+  pages: [
+    [{ type: "split", left: "clock", right: "nowplaying" }],
+    [
+      { type: "split", left: "weather", right: "alarms" },
+      { type: "split", left: "github", right: "chess" },
     ],
-    presets: [[], []],
-  },
-  standby: { showTemp: true, showAlarm: true },
+  ],
+};
+
+const DEFAULT_PRESENCE: Presence = { awayUntil: null, awayLocation: "", vibe: "joyful" };
+
+export const DEFAULT_SETTINGS: Settings = {
+  version: 0,
+  devices: [
+    {
+      id: "default",
+      name: "main",
+      theme: DEFAULT_THEME,
+      location: { ...DEFAULT_LOCATION },
+      layout: { rows: [...DEFAULT_LAYOUT.rows], pages: DEFAULT_LAYOUT.pages.map((p) => [...p]) },
+      standby: { showTemp: true, showAlarm: true },
+      presence: { ...DEFAULT_PRESENCE },
+    },
+  ],
+  presets: [[], []],
+  units: "fahrenheit",
   lastfm: { username: "", apiKey: "" },
   integrations: {
     github: { username: "", token: "" },
@@ -73,7 +95,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 function widget(v: unknown, fallback: WidgetName): WidgetName {
-  const name = String(v ?? "").toLowerCase();
+  let name = String(v ?? "").toLowerCase();
+  if (name === "lunch") name = "away_until"; // removed widget → nearest surviving equivalent
   return (WIDGETS as readonly string[]).includes(name) ? (name as WidgetName) : fallback;
 }
 
@@ -99,7 +122,7 @@ function validTz(tz: string): boolean {
   }
 }
 
-function sanitizeAlarms(v: unknown): Alarm[] {
+function sanitizeAlarms(v: unknown, validDeviceIds: Set<string>): Alarm[] {
   if (!Array.isArray(v)) return [];
   const out: Alarm[] = [];
   for (const a of v.slice(0, 20)) {
@@ -109,11 +132,15 @@ function sanitizeAlarms(v: unknown): Alarm[] {
     const days = Array.isArray(a.days)
       ? a.days.map((d) => String(d).toLowerCase().slice(0, 3)).filter((d) => DAY_NAMES.includes(d))
       : [];
+    const devices = Array.isArray(a.devices)
+      ? Array.from(new Set(a.devices.map((d) => String(d)).filter((d) => validDeviceIds.has(d))))
+      : [];
     out.push({
       time: time.padStart(5, "0"),
       label: str(a.label, "alarm", 40),
       days,
       enabled: a.enabled !== false,
+      devices, // empty = all devices
     });
   }
   return out;
@@ -179,7 +206,7 @@ function sanitizeRows(layout: Record<string, unknown>): LayoutRow[] {
         : { type: "split", left: widget(layout.left, "clock"), right: widget(layout.right, "nowplaying") }
     );
   }
-  return rows.length ? rows : DEFAULT_SETTINGS.layout.rows;
+  return rows.length ? rows : [...DEFAULT_LAYOUT.rows];
 }
 
 function sanitizePages(layout: Record<string, unknown>): LayoutRow[][] {
@@ -192,14 +219,46 @@ function sanitizePages(layout: Record<string, unknown>): LayoutRow[][] {
   }
   const legacy = sanitizeRows(layout);
   while (out.length < WIDGET_PAGE_COUNT) {
-    out.push(out.length === 0 ? legacy : DEFAULT_SETTINGS.layout.pages[out.length]);
+    out.push(out.length === 0 ? legacy : [...DEFAULT_LAYOUT.pages[out.length]]);
   }
   return out.slice(0, WIDGET_PAGE_COUNT);
 }
 
-function sanitizePresets(layout: Record<string, unknown>): LayoutRow[][] {
-  const presets = Array.isArray(layout.presets) ? layout.presets : [];
+function sanitizePresetsValue(v: unknown): LayoutRow[][] {
+  const presets = Array.isArray(v) ? v : [];
   return Array.from({ length: 2 }, (_, i) => sanitizeRowsValue(presets[i]));
+}
+
+function sanitizePresence(v: unknown): Presence {
+  const p = isRecord(v) ? v : {};
+  let awayUntil: string | null = null;
+  if (typeof p.awayUntil === "string") {
+    const d = new Date(p.awayUntil);
+    if (!Number.isNaN(d.getTime())) awayUntil = d.toISOString();
+  }
+  const vibe = (VIBES as readonly string[]).includes(String(p.vibe)) ? (p.vibe as Vibe) : "joyful";
+  return { awayUntil, awayLocation: trimmed(p.awayLocation, "", 80), vibe };
+}
+
+function sanitizeDevice(raw: unknown, fallbackId: string, fallbackName: string): Device {
+  const s = isRecord(raw) ? raw : {};
+  const layout = isRecord(s.layout) ? s.layout : {};
+  const standby = isRecord(s.standby) ? s.standby : {};
+  const loc = isRecord(s.location) ? s.location : {};
+  return {
+    id: trimmed(s.id, "", 64) || fallbackId,
+    name: trimmed(s.name, fallbackName, 40) || fallbackName,
+    theme: (THEMES as readonly string[]).includes(String(s.theme)) ? (s.theme as ThemeName) : DEFAULT_THEME,
+    location: {
+      name: str(loc.name, DEFAULT_LOCATION.name, 60),
+      region: str(loc.region, "", 80),
+      latitude: num(loc.latitude, DEFAULT_LOCATION.latitude, -90, 90),
+      longitude: num(loc.longitude, DEFAULT_LOCATION.longitude, -180, 180),
+    },
+    layout: { rows: sanitizeRows(layout), pages: sanitizePages(layout) },
+    standby: { showTemp: standby.showTemp !== false, showAlarm: standby.showAlarm !== false },
+    presence: sanitizePresence(s.presence),
+  };
 }
 
 function sanitizeIntegrations(v: unknown): Settings["integrations"] {
@@ -283,39 +342,49 @@ function sanitizeUrl(v: string): string {
 }
 
 export function sanitizeSettings(input: unknown): Settings {
-  const d = DEFAULT_SETTINGS;
   const s = isRecord(input) ? input : {};
-  const layout = isRecord(s.layout) ? s.layout : {};
-  const standby = isRecord(s.standby) ? s.standby : {};
   const lastfm = isRecord(s.lastfm) ? s.lastfm : {};
-  const loc = isRecord(s.location) ? s.location : {};
+
+  // Devices: use the provided array, else migrate legacy top-level
+  // theme/location/layout/standby into a single "default" device.
+  let devices: Device[];
+  if (Array.isArray(s.devices) && s.devices.length) {
+    const seen = new Set<string>();
+    devices = s.devices.slice(0, MAX_DEVICES).map((raw, i) => {
+      const dev = sanitizeDevice(raw, `device-${i + 1}`, `device ${i + 1}`);
+      while (seen.has(dev.id)) dev.id = `${dev.id}-${i + 1}`;
+      seen.add(dev.id);
+      return dev;
+    });
+  } else {
+    devices = [
+      sanitizeDevice(
+        { id: "default", name: "main", theme: s.theme, location: s.location, layout: s.layout, standby: s.standby },
+        "default",
+        "main"
+      ),
+    ];
+  }
+  const validIds = new Set(devices.map((d) => d.id));
+
+  // Presets are account-global now; legacy docs kept them under layout.presets.
+  const presetsRaw = Array.isArray(s.presets)
+    ? s.presets
+    : isRecord(s.layout)
+      ? (s.layout as Record<string, unknown>).presets
+      : undefined;
 
   return {
-    theme: (THEMES as readonly string[]).includes(String(s.theme))
-      ? (s.theme as ThemeName)
-      : d.theme,
-    location: {
-      name: str(loc.name, d.location.name, 60),
-      region: str(loc.region, "", 80),
-      latitude: num(loc.latitude, d.location.latitude, -90, 90),
-      longitude: num(loc.longitude, d.location.longitude, -180, 180),
-    },
+    version: num(s.version, 0, 0, Number.MAX_SAFE_INTEGER),
+    devices,
+    presets: sanitizePresetsValue(presetsRaw),
     units: s.units === "celsius" ? "celsius" : "fahrenheit",
-    layout: {
-      rows: sanitizeRows(layout),
-      pages: sanitizePages(layout),
-      presets: sanitizePresets(layout),
-    },
-    standby: {
-      showTemp: standby.showTemp !== false,
-      showAlarm: standby.showAlarm !== false,
-    },
     lastfm: {
       username: str(lastfm.username, "", 64),
       apiKey: str(lastfm.apiKey, "", 64),
     },
     integrations: sanitizeIntegrations(s.integrations),
-    alarms: sanitizeAlarms(s.alarms),
+    alarms: sanitizeAlarms(s.alarms, validIds),
     worldclock: sanitizeZones(s.worldclock),
     calendars: sanitizeCalendars(s.calendars),
     showEpicInAgenda: s.showEpicInAgenda !== false,
@@ -341,4 +410,70 @@ export function saveUserSettings(userId: number, settings: Settings) {
        ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`
     )
     .run(userId, JSON.stringify(settings), Date.now());
+}
+
+/** Eagerly upgrade any legacy (pre-devices) settings rows to the current shape.
+ *  Runs once on boot. sanitizeSettings already migrates on read, so this is a
+ *  belt-and-suspenders pass so an upgraded instance rewrites old data proactively
+ *  — no DB schema change is involved (same tables; the migration lives in JSON). */
+export function migrateAllSettings() {
+  const rows = getDb().prepare("SELECT user_id, data FROM settings").all() as Array<{
+    user_id: number;
+    data: string;
+  }>;
+  let migrated = 0;
+  for (const row of rows) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.data);
+    } catch {
+      continue; // corrupt row — getUserSettings falls back to defaults on read
+    }
+    // only touch legacy docs (no `devices` array); already-migrated rows are left alone
+    if (isRecord(parsed) && Array.isArray(parsed.devices)) continue;
+    saveUserSettings(row.user_id, sanitizeSettings(parsed));
+    migrated++;
+  }
+  if (migrated) console.log(`[archersdesk] migrated ${migrated} settings row(s) to the devices schema`);
+}
+
+/** Resolve the current settings doc plus the device a browser is acting as
+ *  (falls back to the first device when the id is unknown/absent). */
+export function getDeviceSettings(userId: number, deviceId: string | null | undefined) {
+  const settings = getUserSettings(userId);
+  const device = settings.devices.find((d) => d.id === deviceId) ?? settings.devices[0];
+  return { settings, device };
+}
+
+/** Read-modify-write under the single settings row. The mutator receives the
+ *  current (sanitized) settings and returns the next state; version is bumped
+ *  and the result re-sanitized before persisting. Returns the saved settings. */
+export function mutateUserSettings(
+  userId: number,
+  mutate: (current: Settings) => Settings
+): Settings {
+  const current = getUserSettings(userId);
+  const next = sanitizeSettings(mutate(current));
+  next.version = current.version + 1;
+  saveUserSettings(userId, next);
+  return next;
+}
+
+/** Merge a presence patch into the targeted devices. Does NOT bump version —
+ *  presence is delivered by the presence poll itself, so it must not force a
+ *  full-settings refetch on every away/vibe change. Only keys present in
+ *  `patch` are applied (an absent key leaves the current value untouched). */
+export function setPresence(
+  userId: number,
+  deviceIds: string[],
+  patch: Partial<Presence>
+): Settings {
+  const targets = new Set(deviceIds);
+  const current = getUserSettings(userId);
+  const devices = current.devices.map((d) =>
+    targets.has(d.id) ? { ...d, presence: sanitizePresence({ ...d.presence, ...patch }) } : d
+  );
+  const next: Settings = { ...current, devices };
+  saveUserSettings(userId, next);
+  return next;
 }

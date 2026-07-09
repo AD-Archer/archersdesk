@@ -2,17 +2,26 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { WIDGET_PAGE_COUNT } from "@/lib/types";
-import type { Alarm, LayoutRow, Settings } from "@/lib/types";
+import type { Alarm, Device, LayoutRow, Presence, Settings, ViewSettings } from "@/lib/types";
+import { fromView, toView } from "@/lib/view";
 import { MainRow, WidgetPanel } from "./widgets/registry";
 import Standby from "./Standby";
 import SettingsSheet from "./SettingsSheet";
 import AlarmOverlay from "./AlarmOverlay";
+import AwayOverlay from "./AwayOverlay";
+import DevicePicker from "./DevicePicker";
+import Remote from "./Remote";
 import { alarmMatches } from "./alarmUtil";
+import { alarmsForDevice } from "./alarmUtil";
+import { pushPresence } from "./presence";
 import { unlockAudio } from "./audio";
-import { useWakeLock } from "./hooks";
+import { usePoll, useWakeLock } from "./hooks";
 
 const PAGES = 1 + WIDGET_PAGE_COUNT; // 0 = standby, 1..n = widget pages
+const DEVICE_KEY = "archersdesk.deviceId";
+const LAST_DEVICE_KEY = "archersdesk.lastDeviceId";
 type PaneSide = "left" | "right";
+type PresenceSnap = { version: number; devices: Array<{ id: string; presence: Presence }> };
 type FullscreenElement = HTMLElement & {
   webkitRequestFullscreen?: () => Promise<void> | void;
 };
@@ -21,11 +30,19 @@ type FullscreenDocument = Document & {
   webkitExitFullscreen?: () => Promise<void> | void;
 };
 
-function widgetPages(settings: Settings): LayoutRow[][] {
+function widgetPages(view: ViewSettings): LayoutRow[][] {
   return Array.from(
     { length: WIDGET_PAGE_COUNT },
-    (_, i) => settings.layout.pages?.[i] ?? settings.layout.rows
+    (_, i) => view.layout.pages?.[i] ?? view.layout.rows
   );
+}
+
+function activeDeviceOf(settings: Settings, deviceId: string | null): Device {
+  return settings.devices.find((d) => d.id === deviceId) ?? settings.devices[0];
+}
+
+function existingDeviceId(devices: Device[], id: string | null): string | null {
+  return id && devices.some((d) => d.id === id) ? id : null;
 }
 
 export default function Dashboard({
@@ -37,8 +54,12 @@ export default function Dashboard({
 }) {
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [savedSettings, setSavedSettings] = useState<Settings>(initialSettings);
+  // which device this browser is acting as: a device id, "remote", or null
+  // (unresolved → show the picker). `ready` gates first paint until resolved.
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const [page, setPage] = useState(0);
-  const initialPages = widgetPages(initialSettings);
+  const initialPages = widgetPages(toView(initialSettings, initialSettings.devices[0]));
   const [leftRows, setLeftRows] = useState(() => initialPages.map(() => 0));
   const [rightRows, setRightRows] = useState(() => initialPages.map(() => 0));
   const [activeDualRows, setActiveDualRows] = useState<Array<number | null>>(
@@ -51,6 +72,7 @@ export default function Dashboard({
   const [fullscreen, setFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
   const [ringing, setRinging] = useState<Alarm | null>(null);
+  const [awayNow, setAwayNow] = useState(() => Date.now());
 
   const start = useRef<{
     x: number;
@@ -60,6 +82,8 @@ export default function Dashboard({
     side: PaneSide;
   } | null>(null);
   const settingsRef = useRef<Settings>(settings);
+  const deviceIdRef = useRef<string | null>(deviceId);
+  const viewRef = useRef<ViewSettings | null>(null);
   const pageRef = useRef(page);
   const leftRowsRef = useRef(leftRows);
   const rightRowsRef = useRef(rightRows);
@@ -69,21 +93,132 @@ export default function Dashboard({
   const snooze = useRef<{ at: number; alarm: Alarm } | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncedVersion = useRef(initialSettings.version);
+  const refetching = useRef(false);
 
   settingsRef.current = settings;
+  deviceIdRef.current = deviceId;
   pageRef.current = page;
   leftRowsRef.current = leftRows;
   rightRowsRef.current = rightRows;
   activeDualRowsRef.current = activeDualRows;
   ringingRef.current = ringing;
 
-  const pages = widgetPages(settings);
+  const activeDevice = activeDeviceOf(settings, deviceId);
+  const view = toView(settings, activeDevice);
+  const savedView = toView(savedSettings, activeDeviceOf(savedSettings, deviceId));
+  viewRef.current = view;
+
+  const pages = widgetPages(view);
   const activeWidgetPage = Math.max(0, page - 1);
   const activeRows = pages[activeWidgetPage] ?? pages[0] ?? [];
 
+  const onDisplay = ready && deviceId !== null && deviceId !== "remote";
+  const activeAwayUntil = onDisplay ? view.presence.awayUntil : null;
+  const showAway =
+    !!activeAwayUntil && new Date(activeAwayUntil).getTime() > awayNow && !ringing;
+
   useWakeLock();
 
-  // keep pane row indices valid when rows are removed in settings
+  // resolve which device this browser is, once, after hydration
+  useEffect(() => {
+    const stored = window.localStorage.getItem(DEVICE_KEY);
+    const storedDisplay = window.localStorage.getItem(LAST_DEVICE_KEY);
+    const devs = settingsRef.current.devices;
+    const fallbackDevice = existingDeviceId(devs, storedDisplay) ?? devs[0]?.id ?? null;
+    const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+    let resolved: string | null;
+    if (stored === "remote") resolved = isLandscape ? fallbackDevice : "remote";
+    else if (stored && devs.some((d) => d.id === stored)) resolved = stored;
+    else if (devs.length === 1) {
+      resolved = devs[0].id;
+    } else resolved = null; // multiple devices / stale id → show picker
+    if (resolved) window.localStorage.setItem(DEVICE_KEY, resolved);
+    if (resolved && resolved !== "remote") window.localStorage.setItem(LAST_DEVICE_KEY, resolved);
+    deviceIdRef.current = resolved;
+    setDeviceId(resolved);
+    setReady(true);
+  }, []);
+
+  // A phone can act as the remote in portrait, but landscape should snap back
+  // to the last real display so rotation is enough to recover the dashboard.
+  useEffect(() => {
+    const mq = window.matchMedia("(orientation: landscape)");
+    const onOrientation = () => {
+      if (!mq.matches || deviceIdRef.current !== "remote") return;
+      const devs = settingsRef.current.devices;
+      const storedDisplay = window.localStorage.getItem(LAST_DEVICE_KEY);
+      const fallback = existingDeviceId(devs, storedDisplay) ?? devs[0]?.id ?? null;
+      if (fallback) chooseDevice(fallback);
+    };
+    onOrientation();
+    if (mq.addEventListener) mq.addEventListener("change", onOrientation);
+    else mq.addListener(onOrientation);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", onOrientation);
+      else mq.removeListener(onOrientation);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // presence poll — the remote pushes here; every browser watches it (~3.5s)
+  const presenceSnap = usePoll<PresenceSnap>("/api/presence", 3500, []);
+  useEffect(() => {
+    if (presenceSnap) applyPresence(presenceSnap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presenceSnap]);
+
+  function applyPresence(snap: PresenceSnap) {
+    setSettings((prev) => {
+      const byId = new Map(snap.devices.map((d) => [d.id, d.presence]));
+      let changed = false;
+      const devices = prev.devices.map((d) => {
+        const p = byId.get(d.id);
+        if (p && JSON.stringify(p) !== JSON.stringify(d.presence)) {
+          changed = true;
+          return { ...d, presence: p };
+        }
+        return d;
+      });
+      if (!changed) return prev;
+      const next = { ...prev, devices };
+      settingsRef.current = next;
+      return next;
+    });
+    // a bumped version means a remote-side alarm/layout/device edit — resync the
+    // full doc (unless we're mid-edit, which would clobber our own change)
+    if (snap.version > syncedVersion.current) void refetchSettings();
+  }
+
+  async function refetchSettings() {
+    if (refetching.current || saveTimer.current) return;
+    refetching.current = true;
+    try {
+      const res = await fetch("/api/settings");
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.settings) {
+          syncedVersion.current = data.settings.version;
+          settingsRef.current = data.settings;
+          setSettings(data.settings);
+          setSavedSettings(data.settings);
+        }
+      }
+    } catch {
+      // offline — the next poll retries
+    } finally {
+      refetching.current = false;
+    }
+  }
+
+  // tick once a second only while an away is pending, so the overlay auto-clears
+  useEffect(() => {
+    if (!activeAwayUntil || new Date(activeAwayUntil).getTime() <= Date.now()) return;
+    const id = setInterval(() => setAwayNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [activeAwayUntil]);
+
+  // keep pane row indices valid when rows are removed / device switched
   useEffect(() => {
     const nextLeft = pages.map((rows, i) => Math.min(leftRows[i] ?? 0, Math.max(0, rows.length - 1)));
     const nextRight = pages.map((rows, i) => Math.min(rightRows[i] ?? 0, Math.max(0, rows.length - 1)));
@@ -106,8 +241,8 @@ export default function Dashboard({
   // theme is a document-level attribute so every layer (body glow, sheet,
   // overlays) swaps palette together — applied live while tapping
   useLayoutEffect(() => {
-    document.documentElement.dataset.theme = settings.theme;
-  }, [settings.theme]);
+    document.documentElement.dataset.theme = view.theme;
+  }, [view.theme]);
 
   // track fullscreen state (echo show / browser chrome)
   useEffect(() => {
@@ -145,11 +280,12 @@ export default function Dashboard({
   }
 
   // every settings change autosaves (debounced) — no save button anywhere
-  function updateSettings(next: Settings) {
+  function saveCanonical(next: Settings) {
     settingsRef.current = next;
     setSettings(next);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
+      saveTimer.current = null;
       try {
         const res = await fetch("/api/settings", {
           method: "PUT",
@@ -157,7 +293,13 @@ export default function Dashboard({
           body: JSON.stringify({ settings: settingsRef.current }),
         });
         if (res.ok) {
-          setSavedSettings(settingsRef.current);
+          const data = await res.json();
+          if (data?.settings) {
+            syncedVersion.current = data.settings.version;
+            settingsRef.current = data.settings;
+            setSettings(data.settings);
+            setSavedSettings(data.settings);
+          }
           setSaved(true);
           if (savedTimer.current) clearTimeout(savedTimer.current);
           savedTimer.current = setTimeout(() => setSaved(false), 1800);
@@ -168,23 +310,86 @@ export default function Dashboard({
     }, 600);
   }
 
+  // the settings sheet edits a flattened view; fold it back into canonical
+  function updateSettings(next: ViewSettings) {
+    saveCanonical(fromView(next));
+  }
+
+  function chooseDevice(id: string) {
+    window.localStorage.setItem(DEVICE_KEY, id);
+    if (id !== "remote") window.localStorage.setItem(LAST_DEVICE_KEY, id);
+    deviceIdRef.current = id;
+    setDeviceId(id);
+    setSettingsOpen(false);
+    setPage(0);
+  }
+
+  function chooseLastDisplayDevice() {
+    const devs = settingsRef.current.devices;
+    const storedDisplay = window.localStorage.getItem(LAST_DEVICE_KEY);
+    const fallback = existingDeviceId(devs, storedDisplay) ?? devs[0]?.id ?? null;
+    if (fallback) chooseDevice(fallback);
+  }
+
+  function createDevice(name: string) {
+    const base = settingsRef.current.devices[0];
+    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `dev-${Date.now()}`;
+    const device: Device = {
+      id,
+      name,
+      theme: base.theme,
+      location: { ...base.location },
+      layout: { rows: [...base.layout.rows], pages: base.layout.pages.map((p) => [...p]) },
+      standby: { ...base.standby },
+      presence: { awayUntil: null, awayLocation: "", vibe: "joyful" },
+    };
+    saveCanonical({ ...settingsRef.current, devices: [...settingsRef.current.devices, device] });
+    chooseDevice(id);
+  }
+
+  function clearAway() {
+    const id = deviceIdRef.current;
+    if (!id || id === "remote") return;
+    setSettings((prev) => {
+      const devices = prev.devices.map((d) =>
+        d.id === id ? { ...d, presence: { ...d.presence, awayUntil: null } } : d
+      );
+      const next = { ...prev, devices };
+      settingsRef.current = next;
+      return next;
+    });
+    void pushPresence([id], { awayUntil: null });
+  }
+
+  async function logout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // ignore — redirect anyway
+    }
+    window.location.href = "/login";
+  }
+
   // browsers gate audio behind a gesture — unlock on the first touch
   useEffect(() => {
     window.addEventListener("pointerdown", unlockAudio, { once: true });
     return () => window.removeEventListener("pointerdown", unlockAudio);
   }, []);
 
-  // alarm engine: tick once a second, ring on match (once per minute-key)
+  // alarm engine: tick once a second, ring on match (once per minute-key), but
+  // only for alarms targeting this device, and never in remote/picker mode
   useEffect(() => {
     const id = setInterval(() => {
       if (ringingRef.current) return;
+      const self = deviceIdRef.current;
+      if (!self || self === "remote") return;
       const now = new Date();
       if (snooze.current && now.getTime() >= snooze.current.at) {
         setRinging(snooze.current.alarm);
         snooze.current = null;
         return;
       }
-      for (const a of settingsRef.current.alarms) {
+      for (const a of alarmsForDevice(settingsRef.current.alarms, self)) {
         if (!alarmMatches(a, now)) continue;
         const key = `${now.toDateString()}|${a.time}|${a.label}`;
         if (fired.current.has(key)) continue;
@@ -215,7 +420,7 @@ export default function Dashboard({
   }
 
   function moveBothRows(pageIndex: number, delta: number) {
-    const sourceRows = widgetPages(settingsRef.current)[pageIndex] ?? [];
+    const sourceRows = (viewRef.current ? widgetPages(viewRef.current) : pages)[pageIndex] ?? [];
     const current =
       activeDualRowsRef.current[pageIndex] ??
       (leftRowsRef.current[pageIndex] === rightRowsRef.current[pageIndex]
@@ -304,8 +509,8 @@ export default function Dashboard({
     return (
       <WidgetPanel
         widget={layout[side]}
-        settings={settings}
-        integrationSettings={savedSettings}
+        settings={view}
+        integrationSettings={savedView}
         slot={side}
         style={paneStyle(pageIndex, side)}
       />
@@ -319,7 +524,7 @@ export default function Dashboard({
     return (
       <div className="vrow">
         {activeDual ? (
-          <MainRow row={pageRows[activeDualRow!]!} settings={settings} integrationSettings={savedSettings} />
+          <MainRow row={pageRows[activeDualRow!]!} settings={view} integrationSettings={savedView} />
         ) : (
           <div className="main-view">
             {renderSplitPane(pageIndex, "left")}
@@ -327,6 +532,28 @@ export default function Dashboard({
           </div>
         )}
       </div>
+    );
+  }
+
+  if (!ready) return <main />;
+
+  if (deviceId === null) {
+    return (
+      <DevicePicker devices={settings.devices} onChoose={chooseDevice} onCreate={createDevice} />
+    );
+  }
+
+  if (deviceId === "remote") {
+    return (
+      <Remote
+        settings={settings}
+        username={username}
+        onChoose={chooseDevice}
+        onBecomeDisplay={chooseLastDisplayDevice}
+        onSaveSettings={saveCanonical}
+        onLogout={logout}
+        onPushed={applyPresence}
+      />
     );
   }
 
@@ -344,7 +571,7 @@ export default function Dashboard({
           style={{ transform: `translateX(calc(${-page * 100}% + ${drag ?? 0}px))` }}
         >
           <section className="page">
-            <Standby settings={settings} />
+            <Standby settings={view} />
           </section>
           {pages.map((_, i) => (
             <section className="page" key={i}>
@@ -367,6 +594,10 @@ export default function Dashboard({
           )}
         </button>
       )}
+
+      <button className="remotebtn" onClick={() => chooseDevice("remote")} aria-label="use as remote" title="use as remote">
+        remote
+      </button>
 
       <button className="gear" onClick={() => setSettingsOpen(true)} aria-label="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
@@ -400,13 +631,17 @@ export default function Dashboard({
 
       <SettingsSheet
         open={settingsOpen}
-        settings={settings}
+        settings={view}
         username={username}
         saved={saved}
         activePage={activeWidgetPage}
+        deviceId={activeDevice.id}
+        onChooseDevice={chooseDevice}
         onClose={() => setSettingsOpen(false)}
         onChange={updateSettings}
       />
+
+      {showAway && <AwayOverlay presence={view.presence} onBack={clearAway} />}
 
       {ringing && (
         <AlarmOverlay

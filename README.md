@@ -1,12 +1,10 @@
 # archer's desk
 
-An ambient, StandBy-style dashboard for small screens — built for a 5" Echo Show
-(960×480) on a desk, happy in any browser, installable as a PWA. Everything is
-configured by tapping; the only typing left is usernames and API keys.
+A deskside dashboard, to be used on a second monitor/tablet or smart phone with custom componets for things like home servers(jellyfin, plex, home assistant), lastfm, chess.com, weather and more. 
 
 ## stack
 
-- **Next.js** (app router) — dev runs raw, no containers
+- **Next.js** (app router)
 - **SQLite** (better-sqlite3) — users, sessions, per-user settings JSON
 - **Infisical** — secrets manager; run scripts auto-detect it and fall back to
   plain env vars when absent
@@ -18,10 +16,6 @@ configured by tapping; the only typing left is usernames and API keys.
 pnpm install
 pnpm dev          # → http://localhost:3000
 ```
-
-`pnpm dev` goes through `scripts/with-env.sh`: if the `infisical` CLI and an
-`.infisical.json` (or `INFISICAL_TOKEN`) are present it wraps the command in
-`infisical run`, otherwise it just runs `next dev`.
 
 ### env / secrets
 
@@ -35,7 +29,7 @@ pnpm dev          # → http://localhost:3000
 
 ## using it
 
-Two pages, swiped **left/right**: the widget board and a standby page (big
+Muliple pages, swiped **left/right**: the widget board and a standby page (big
 clock · date · temperature · next alarm). The board is made of **rows** you
 swipe **up/down** — each row is either two square panels (each side swipes
 independently) or one wide `dual` panel:
@@ -53,18 +47,6 @@ and autosaves: layout rows (add/remove/reorder, pick widgets from a grid),
 themes, alarms (time picker + day chips + toggles), location (search a city,
 tap a result), and accounts.
 
-### widgets
-
-time & date: `clock` · `analog` · `date` · `datetime` · `worldclock`
-sky: `weather` · `forecast` · `sun` · `moon`
-tools: `calendar` · `alarms` · `timer` · `quote`
-status signs: `dnd` · `please_disturb` · `lunch` · `away_until` · `vibe`
-accounts: `nowplaying` (last.fm/navidrome) · `github` · `chess` (chess.com) ·
-`stocks` · `anilist` · `wakatime` · `jellyfin` · `plex`
-keyless feeds: `dog` · `cat` · `fox` · `duck` · `shibe` (rotating critter
-cams) · `catfact` · `dogfact` · `spacenews` · `f1` (next race + standings) ·
-`citybikes` (nearest stations to your location) · `flights` (aircraft
-overhead via OpenSky) · `septa` (regional rail arrivals via api.septa.org)
 
 Account widgets need a username/key in **settings → accounts**; feeds need
 nothing. Weather/forecast/sun use Open-Meteo (no key). Stocks come from
@@ -81,25 +63,6 @@ override so self-hosted wakapi or hackatime work
 `[data-theme]` in `app/globals.css` — every widget reads tokens, so new
 widgets and new themes compose for free.
 
-### icons
-
-Widget icons are Material Symbols (rounded), self-hosted as a subset font at
-`app/fonts/material-symbols.woff2` and rendered by ligature name via the
-kit's `<MI name="chess" />`. To add icons, append the new names to the
-`icon_names` list in this curl and replace the font file:
-
-```sh
-curl -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36" \
-  -o subset.css "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=<comma-separated,sorted,names>&display=block"
-curl -o app/fonts/material-symbols.woff2 "$(sed -n 's/.*src: url(\([^)]*\)).*/\1/p' subset.css | head -1)"
-```
-
-(names must be sorted alphabetically; a name missing from the font renders
-as literal text, so eyeball new icons once. the user-agent matters — a bare
-`"Mozilla/5.0"` gets served a TTF from this endpoint, saved with a `.woff2`
-extension it doesn't actually have; use a real Chrome UA string like the one
-above so `format('woff2')` shows up in `subset.css` — `grep "format(" subset.css`
-before downloading if unsure)
 
 ## adding a widget
 
@@ -114,12 +77,6 @@ object: ttl + fetch), a credentials field in `Settings.integrations`
 (+ sanitize in `lib/settings.ts`), a field group in settings → accounts, and
 use `useIntegration("<service>", settings)` in the widget. Caching, error
 envelopes, and refetch-on-credential-change are handled for you.
-
-## echo show
-
-Open Silk → `http://<your-machine>:3000`, sign in, tap the fullscreen button
-(or Silk menu → *Add to Home Screen*). The wake lock keeps the screen on.
-Keep `COOKIE_SECURE=false` while serving plain http on the LAN.
 
 ## production (docker)
 

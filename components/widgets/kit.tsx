@@ -5,7 +5,7 @@
 // stat, label/value lists, and a polling hook for integration proxies.
 // Everything reads theme tokens, so new widgets pick up themes for free.
 
-import type { IntegrationPayload, ProxyService, Settings } from "@/lib/types";
+import type { IntegrationPayload, ProxyService, ViewSettings } from "@/lib/types";
 import { usePoll } from "../hooks";
 
 /** Material Symbols glyph (self-hosted subset — names must be in the font;
@@ -111,7 +111,7 @@ export function Delta({ pct }: { pct: number }) {
  *  Credentialed services key off their credentials, feeds off location. */
 export function useIntegration<T>(
   service: ProxyService,
-  settings: Settings,
+  settings: ViewSettings,
   ms = 3 * 60 * 1000,
   refreshKey?: number | string
 ): IntegrationPayload<T> | null {
@@ -119,14 +119,14 @@ export function useIntegration<T>(
     service === "agenda"
       ? { calendars: settings.calendars, epic: settings.showEpicInAgenda }
       : service in settings.integrations
-        ? settings.integrations[service as keyof Settings["integrations"]]
+        ? settings.integrations[service as keyof ViewSettings["integrations"]]
         : settings.location;
+  // location-aware feeds resolve on the server per active device, so the
+  // device id rides along in the query string (and in the poll deps).
+  const url = `/api/integrations/${service}?device=${encodeURIComponent(settings.deviceId)}`;
   // bumping refreshKey changes the poll deps → immediate refetch (used after a
   // write action so the new state shows without waiting out the interval).
-  return usePoll<IntegrationPayload<T>>(`/api/integrations/${service}`, ms, [
-    JSON.stringify(creds),
-    refreshKey,
-  ]);
+  return usePoll<IntegrationPayload<T>>(url, ms, [JSON.stringify(creds), settings.deviceId, refreshKey]);
 }
 
 /** Fire a write action against a service's proxy (e.g. seerr approve/decline,

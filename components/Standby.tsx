@@ -1,17 +1,17 @@
 "use client";
 
-import type { Settings } from "@/lib/types";
+import type { ViewSettings } from "@/lib/types";
 import { useNow } from "./hooks";
-import { clock12, fmt12, nextAlarm } from "./alarmUtil";
+import { alarmsForDevice, clock12, fmt12, nextAlarm } from "./alarmUtil";
 import { WxIcon, useWeather } from "./widgets/Weather";
 
 const DATE_FMT = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" });
 
-export default function Standby({ settings }: { settings: Settings }) {
+export default function Standby({ settings }: { settings: ViewSettings }) {
   const now = useNow(1000);
   const { time, ampm } = clock12(now);
   const wx = useWeather(settings);
-  const next = nextAlarm(settings.alarms, now);
+  const next = nextAlarm(alarmsForDevice(settings.alarms, settings.deviceId), now);
 
   return (
     <div className="standby">

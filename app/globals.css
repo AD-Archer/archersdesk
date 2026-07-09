@@ -1881,7 +1881,6 @@ input {
   text-shadow: 0 0 6vmin rgba(88, 194, 106, 0.5);
 }
 
-.status-lunch .status-mark::before,
 .status-away .status-mark::before,
 .status-vibe .status-mark::before {
   content: "";
@@ -1889,10 +1888,6 @@ input {
   inset: 24%;
   border-radius: 50%;
   background: var(--amber);
-}
-
-.status-lunch .status-mark::after {
-  display: none;
 }
 
 .status-away .status-mark {
@@ -3538,4 +3533,1429 @@ input[type="time"]:focus {
   color: var(--amber);
   font-size: 13px;
   margin-left: 6px;
+}
+
+/* ── away overlay (forced presence screen) ─────────────────────────── */
+
+.away-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vmin;
+  background: var(--bg);
+  text-align: center;
+  padding: 6vmin;
+}
+
+.away-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(90vw 70vh at 50% 42%, var(--glow-1), transparent 70%);
+  pointer-events: none;
+}
+
+.away-mark {
+  width: min(18vmin, 120px);
+  height: min(18vmin, 120px);
+  border-radius: 50%;
+  border: 0.7vmin solid var(--blue);
+  box-shadow: 0 0 5vmin var(--glow-1);
+  position: relative;
+}
+
+.away-mark::before {
+  content: "";
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
+.away-title {
+  font-family: var(--serif);
+  font-size: min(16vw, 26vh);
+  line-height: 1;
+}
+
+.away-where {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: min(5vw, 8vh);
+  color: var(--amber);
+}
+
+.away-until {
+  color: var(--cream-dim);
+  font-size: clamp(14px, 3.4vmin, 20px);
+}
+
+.away-back {
+  margin-top: 3vmin;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 2.2vmin 6vmin;
+  font-size: clamp(13px, 3vmin, 17px);
+  color: var(--cream);
+  min-height: 44px;
+}
+
+/* ── device picker (first-run / multi-device) ──────────────────────── */
+
+.device-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 6vmin;
+}
+
+.dp-card {
+  width: min(520px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 3vmin;
+}
+
+.dp-card h1 {
+  font-family: var(--serif);
+  font-size: clamp(24px, 6vmin, 40px);
+}
+
+.dp-card p {
+  color: var(--cream-dim);
+  font-size: clamp(13px, 3vmin, 16px);
+}
+
+.dp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4vmin;
+}
+
+.dp-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  padding: 2.4vmin 3vmin;
+  min-height: 56px;
+}
+
+.dp-item b {
+  font-size: clamp(15px, 3.6vmin, 19px);
+}
+
+.dp-item small {
+  color: var(--cream-dim);
+  font-size: 12px;
+}
+
+.dp-item.dp-remote {
+  border-color: var(--amber);
+}
+
+.dp-create {
+  display: flex;
+  gap: 1.4vmin;
+}
+
+.dp-create input {
+  flex: 1;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 2vmin 2.4vmin;
+  background: var(--bg-2);
+  color: var(--cream);
+  min-height: 44px;
+}
+
+.dp-create button {
+  background: var(--amber);
+  color: var(--on-accent);
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 0 4vmin;
+  min-height: 44px;
+}
+
+.dp-create button:disabled {
+  opacity: 0.4;
+}
+
+/* ── remote (phone control screen) ─────────────────────────────────── */
+
+.remote {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  padding: max(4vmin, env(safe-area-inset-top)) 4vmin 8vmin;
+  display: flex;
+  flex-direction: column;
+  gap: 3vmin;
+  overflow-y: auto;
+}
+
+.remote-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2vmin;
+}
+
+.remote-head h1 {
+  font-family: var(--serif);
+  font-size: clamp(26px, 8vw, 40px);
+  line-height: 1;
+}
+
+.remote-head small {
+  color: var(--cream-dim);
+  font-size: 13px;
+}
+
+.remote-head-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1vmin;
+  align-items: flex-end;
+}
+
+.remote-head-actions button {
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 1.6vmin 3.4vmin;
+  color: var(--cream);
+  font-size: 13px;
+  min-height: 40px;
+}
+
+.remote-logout {
+  color: var(--cream-dim) !important;
+}
+
+.remote-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  color: var(--cream-dim);
+  font-size: 13px;
+  margin-bottom: 1.2vmin;
+}
+
+.remote-section-head div {
+  display: flex;
+  gap: 1vmin;
+}
+
+.remote-section-head button {
+  color: var(--amber);
+  font-size: 12px;
+}
+
+.remote-devices,
+.remote-control {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 3vmin;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.remote-device {
+  display: flex;
+  align-items: center;
+  gap: 2vmin;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 2.2vmin 2.6vmin;
+  margin-bottom: 1.4vmin;
+  min-height: 56px;
+}
+
+.remote-device.on {
+  border-color: var(--amber);
+  background: var(--glow-1);
+}
+
+.rd-check {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--amber);
+  font-weight: 800;
+}
+
+.rd-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rd-body b {
+  font-size: clamp(15px, 4vw, 18px);
+}
+
+.rd-body small {
+  color: var(--cream-dim);
+  font-size: 12px;
+}
+
+.rd-alarm {
+  color: var(--blue) !important;
+}
+
+.remote-vibes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4vmin;
+}
+
+.remote-vibes button {
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 1.8vmin 3.6vmin;
+  color: var(--cream);
+  font-size: 14px;
+  min-height: 44px;
+}
+
+.remote-vibes button:disabled {
+  opacity: 0.4;
+}
+
+.remote-field {
+  display: flex;
+  flex-direction: column;
+  gap: 1vmin;
+  margin-bottom: 2vmin;
+}
+
+.remote-field span {
+  color: var(--cream-dim);
+  font-size: 13px;
+}
+
+.remote-field input {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 2vmin 2.4vmin;
+  background: var(--bg-2);
+  color: var(--cream);
+  min-height: 44px;
+}
+
+.remote-away-actions,
+.remote-become {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4vmin;
+}
+
+.remote-away-actions button,
+.remote-become button {
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 1.8vmin 3.6vmin;
+  color: var(--cream);
+  font-size: 14px;
+  min-height: 44px;
+}
+
+.remote-primary {
+  background: var(--amber) !important;
+  color: var(--on-accent) !important;
+  font-weight: 700;
+  border-color: transparent !important;
+}
+
+.remote-away-actions button:disabled {
+  opacity: 0.4;
+}
+
+/* ── devices settings section ──────────────────────────────────────── */
+
+.dev-card {
+  display: flex;
+  align-items: center;
+  gap: 1.6vmin;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 2vmin 2.4vmin;
+  margin-bottom: 1.4vmin;
+}
+
+.dev-name {
+  flex: 1;
+  background: transparent;
+  color: var(--cream);
+  border: none;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+  padding: 1vmin 0;
+}
+
+.dev-actions {
+  display: flex;
+  gap: 1vmin;
+  align-items: center;
+}
+
+.dev-actions button {
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 1.2vmin 2.6vmin;
+  color: var(--cream);
+  font-size: 12px;
+  min-height: 36px;
+}
+
+.dev-actions .del {
+  color: var(--cream-dim);
+}
+
+.dev-actions .del:disabled {
+  opacity: 0.35;
+}
+
+.dev-current {
+  color: var(--amber);
+  font-size: 12px;
+  padding: 0 1.4vmin;
+}
+
+.dev-add {
+  display: flex;
+  gap: 1.4vmin;
+  margin-top: 2vmin;
+}
+
+.dev-add input {
+  flex: 1;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 1.8vmin 2.4vmin;
+  background: var(--bg-2);
+  color: var(--cream);
+  min-height: 44px;
+}
+
+.dev-add button {
+  background: var(--amber);
+  color: var(--on-accent);
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 0 3.4vmin;
+  min-height: 44px;
+}
+
+.dev-add button:disabled {
+  opacity: 0.4;
+}
+
+.dev-remote {
+  margin-top: 2.4vmin;
+}
+
+/* ── direct "use as remote" button ─────────────────────────────────── */
+
+.remotebtn {
+  position: fixed;
+  top: max(1.2vmin, env(safe-area-inset-top));
+  right: clamp(58px, 7.2vmin, 78px);
+  z-index: 31;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1vmin 2.6vmin;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  color: var(--cream);
+  font-size: clamp(12px, 3vmin, 15px);
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  min-height: 40px;
+}
+
+.remotebtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (orientation: portrait) {
+  .fsbtn { display: none; }
+  .remotebtn { right: 1.6vmin; }
+  /* move the gear to the left so it doesn't collide with the remote button */
+  .gear { left: 1.6vmin; right: auto; }
+}
+
+/* ── remote: nav + cards ───────────────────────────────────────────── */
+
+.remote-head-id h1 {
+  font-family: var(--serif);
+  font-size: clamp(26px, 8vw, 40px);
+  line-height: 1;
+}
+
+.remote-head-id small {
+  color: var(--cream-dim);
+  font-size: 13px;
+}
+
+.remote-nav {
+  display: flex;
+  gap: 1vmin;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 0.8vmin;
+}
+
+.remote-nav button {
+  flex: 1;
+  border-radius: 100px;
+  padding: 1.8vmin 0;
+  color: var(--cream-dim);
+  font-size: 14px;
+  min-height: 40px;
+}
+
+.remote-nav button.on {
+  background: var(--amber);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.remote-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 3vmin;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.remote-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-transform: lowercase;
+  letter-spacing: 0.05em;
+  color: var(--cream-dim);
+  font-size: 12px;
+  margin-bottom: 2vmin;
+}
+
+.remote-selall {
+  display: flex;
+  gap: 1.4vmin;
+}
+
+.remote-selall button {
+  color: var(--amber);
+  font-size: 12px;
+}
+
+.remote-hint {
+  color: var(--cream-dim);
+  font-size: 12px;
+  margin-top: 1.6vmin;
+  text-align: center;
+}
+
+.rd-body b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rd-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue);
+  display: inline-block;
+}
+
+.remote-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4vmin;
+}
+
+.remote-row-actions button {
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 1.8vmin 4vmin;
+  color: var(--cream);
+  font-size: 14px;
+  min-height: 44px;
+}
+
+.remote-row-actions button:disabled,
+.remote-vibes button:disabled {
+  opacity: 0.4;
+}
+
+/* ── remote: slide-up sheet (alarms / devices menu) ────────────────── */
+
+.remote-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  padding: max(4vmin, env(safe-area-inset-top)) 4vmin max(4vmin, env(safe-area-inset-bottom));
+  animation: remote-sheet-in 0.22s ease;
+}
+
+@keyframes remote-sheet-in {
+  from { transform: translateY(4%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.remote-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3vmin;
+}
+
+.remote-sheet-head b {
+  font-family: var(--serif);
+  font-size: clamp(22px, 6vw, 32px);
+}
+
+.remote-sheet-head button {
+  font-size: 30px;
+  color: var(--cream-dim);
+  line-height: 1;
+  padding: 0 2vmin;
+}
+
+.remote-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vmin;
+}
+
+.ram-item {
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.ram-row {
+  display: flex;
+  align-items: center;
+  gap: 2vmin;
+  padding: 2.2vmin 2.6vmin;
+}
+
+.ram-time {
+  font-family: var(--serif);
+  font-size: clamp(20px, 6vw, 28px);
+  color: var(--cream);
+}
+
+.ram-time em {
+  font-size: 0.5em;
+  color: var(--cream-dim);
+}
+
+.ram-info {
+  flex: 1;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ram-info b {
+  font-size: 15px;
+}
+
+.ram-info small {
+  color: var(--cream-dim);
+  font-size: 12px;
+}
+
+.ram-editor {
+  border-top: 1px solid var(--line);
+  padding: 2.4vmin 2.6vmin;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8vmin;
+}
+
+.ram-editor input[type="time"],
+.ram-label {
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 1.6vmin 2vmin;
+  background: var(--bg-2);
+  color: var(--cream);
+  min-height: 44px;
+}
+
+.ram-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1vmin;
+}
+
+.ram-chips-label {
+  color: var(--cream-dim);
+  font-size: 12px;
+  margin-top: -0.6vmin;
+}
+
+.ram-del {
+  align-self: flex-start;
+  color: #e57373;
+  font-size: 13px;
+  margin-top: 0.6vmin;
+}
+
+.remote-add {
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  padding: 2.4vmin;
+  color: var(--cream-dim);
+  min-height: 48px;
+}
+
+/* ── remote polish pass ────────────────────────────────────────────── */
+
+.remote {
+  position: relative;
+  height: 100dvh;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    clamp(16px, 4.2vw, 28px)
+    max(24px, env(safe-area-inset-bottom));
+  gap: clamp(14px, 3.6vw, 22px);
+  background:
+    radial-gradient(110vw 58vh at 18% -16%, var(--glow-2), transparent 62%),
+    radial-gradient(95vw 54vh at 85% 12%, var(--glow-1), transparent 64%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+}
+
+.remote::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 24%),
+    radial-gradient(60vw 22vh at 50% 100%, var(--glow-1), transparent 72%);
+  opacity: 0.85;
+}
+
+.remote > * {
+  position: relative;
+  z-index: 1;
+}
+
+.remote-head {
+  align-items: center;
+  padding: 2px 2px 0;
+}
+
+.remote-head-id h1 {
+  font-size: clamp(36px, 13vw, 58px);
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.remote-head-id small {
+  display: block;
+  margin-top: 4px;
+  color: var(--dim);
+  font-size: clamp(11px, 3vw, 13px);
+}
+
+.remote-logout {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  min-height: 38px;
+  padding: 0 14px;
+  background: var(--panel-b);
+  color: var(--cream-dim) !important;
+}
+
+.remote-nav {
+  position: sticky;
+  top: max(8px, env(safe-area-inset-top));
+  z-index: 4;
+  gap: 4px;
+  padding: 5px;
+  border-color: var(--line-strong);
+  background: color-mix(in srgb, var(--sheet-a) 78%, transparent);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(14px);
+}
+
+.remote-nav button {
+  min-height: 42px;
+  color: var(--dim);
+  font-size: clamp(12px, 3.2vw, 14px);
+}
+
+.remote-nav button.on {
+  background: linear-gradient(180deg, var(--amber), var(--accent-2));
+  box-shadow: 0 0 22px var(--accent-glow);
+}
+
+.remote-card {
+  border-color: var(--line-strong);
+  border-radius: 16px;
+  padding: clamp(16px, 4.6vw, 24px);
+  background:
+    linear-gradient(180deg, var(--panel-a), var(--panel-b)),
+    color-mix(in srgb, var(--sheet-a) 54%, transparent);
+  box-shadow:
+    0 18px 52px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.remote-card-head {
+  margin-bottom: 14px;
+  color: var(--dim);
+  font-size: clamp(10px, 2.8vw, 12px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.remote-selall button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  min-height: 30px;
+  padding: 0 11px;
+  color: var(--cream-dim);
+}
+
+.remote-devices {
+  display: grid;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.remote-device {
+  position: relative;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  border-color: var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-2) 62%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.remote-device.on {
+  border-color: color-mix(in srgb, var(--amber) 70%, var(--line-strong));
+  background:
+    radial-gradient(44vw 18vh at 90% 12%, var(--glow-1), transparent 72%),
+    color-mix(in srgb, var(--bg-2) 72%, transparent);
+}
+
+.remote-device.on::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--amber) 30%, transparent), 0 0 30px var(--glow-1);
+}
+
+.rd-check {
+  width: 28px;
+  height: 28px;
+  margin-top: 2px;
+  border-color: var(--line-strong);
+  background: var(--panel-b);
+}
+
+.remote-device.on .rd-check {
+  border-color: transparent;
+  background: var(--amber);
+  color: var(--on-accent);
+}
+
+.rd-body {
+  min-width: 0;
+  flex: 1;
+  gap: 4px;
+}
+
+.rd-body b {
+  font-family: var(--serif);
+  font-size: clamp(18px, 5.2vw, 24px);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--cream);
+}
+
+.rd-body small {
+  color: var(--cream-dim);
+  line-height: 1.35;
+}
+
+.rd-alarm {
+  color: var(--blue) !important;
+}
+
+.rd-dot {
+  width: 9px;
+  height: 9px;
+  box-shadow: 0 0 16px var(--blue);
+}
+
+.remote-hint {
+  margin-top: 12px;
+  color: var(--dim);
+  text-align: left;
+}
+
+.remote-vibes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.remote-vibes button {
+  min-height: 48px;
+  border-color: var(--line);
+  border-radius: 12px;
+  background: var(--panel-b);
+  color: var(--cream);
+  text-transform: capitalize;
+}
+
+.remote-vibes button:active:not(:disabled),
+.remote-row-actions button:active:not(:disabled),
+.remote-selall button:active {
+  transform: translateY(1px);
+}
+
+.remote-field {
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.remote-field span {
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.remote-field input {
+  min-height: 50px;
+  border-color: var(--line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--bg) 65%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.remote-field input:focus {
+  border-color: var(--amber);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 18%, transparent);
+}
+
+.remote-row-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.remote-row-actions button {
+  min-height: 50px;
+  border-color: var(--line);
+  border-radius: 13px;
+  background: var(--panel-b);
+}
+
+.remote-primary {
+  background: linear-gradient(180deg, var(--amber), var(--accent-2)) !important;
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+
+.remote-sheet {
+  inset: auto 0 0;
+  max-height: 92dvh;
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid var(--line-strong);
+  background:
+    radial-gradient(80vw 40vh at 80% 0%, var(--glow-1), transparent 68%),
+    linear-gradient(180deg, var(--sheet-a), var(--sheet-b));
+  box-shadow: 0 -24px 80px rgba(0, 0, 0, 0.48);
+}
+
+.remote-sheet::before {
+  content: "";
+  width: 42px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--line-strong);
+  align-self: center;
+  margin-bottom: 16px;
+}
+
+.remote-sheet-head {
+  margin-bottom: 18px;
+}
+
+.remote-sheet-head b {
+  font-size: clamp(28px, 9vw, 42px);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.remote-sheet-head button {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--cream-dim);
+}
+
+.remote-sheet-body {
+  gap: 12px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.ram-item,
+.dev-card {
+  border-color: var(--line);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--bg-2) 66%, transparent);
+}
+
+.ram-row {
+  padding: 14px;
+}
+
+.ram-time {
+  min-width: 76px;
+  font-size: clamp(24px, 8vw, 34px);
+}
+
+.ram-info b {
+  color: var(--cream);
+  font-size: 15px;
+}
+
+.ram-editor {
+  padding: 14px;
+  gap: 12px;
+}
+
+.ram-editor input[type="time"],
+.ram-label,
+.dev-add input,
+.dev-name {
+  border-color: var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+}
+
+.ram-chips {
+  gap: 8px;
+}
+
+.remote-add {
+  border-color: var(--line);
+  border-radius: 15px;
+  background: var(--panel-b);
+  color: var(--cream-dim);
+}
+
+.dev-card {
+  align-items: stretch;
+  flex-direction: column;
+  padding: 14px;
+}
+
+.dev-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.dev-actions button,
+.dev-add button {
+  min-height: 42px;
+  border-radius: 12px;
+}
+
+.dev-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.away-overlay {
+  overflow: hidden;
+  background:
+    radial-gradient(78vw 56vh at 50% 35%, var(--glow-2), transparent 68%),
+    radial-gradient(98vw 76vh at 50% 115%, var(--glow-1), transparent 62%),
+    linear-gradient(180deg, var(--bg), var(--bg-2));
+}
+
+.away-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 6vmin;
+  border: 1px solid var(--line);
+  border-radius: min(8vmin, 44px);
+  pointer-events: none;
+}
+
+.away-mark {
+  width: min(16vmin, 96px);
+  height: min(16vmin, 96px);
+  border-width: max(3px, 0.7vmin);
+  border-color: var(--amber);
+  box-shadow: 0 0 5vmin var(--accent-glow), inset 0 0 3vmin var(--glow-1);
+}
+
+.away-mark::before {
+  background: var(--amber);
+}
+
+.away-title {
+  font-size: min(18vw, 24vh);
+  font-style: italic;
+  text-shadow: 0 0 7vmin var(--time-glow);
+}
+
+.away-where {
+  max-width: min(82vw, 780px);
+  color: var(--blue);
+  overflow-wrap: anywhere;
+}
+
+.away-until {
+  color: var(--cream-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.away-back {
+  background: var(--panel-b);
+  backdrop-filter: blur(10px);
+}
+
+.device-picker {
+  background:
+    radial-gradient(80vw 48vh at 25% 0%, var(--glow-2), transparent 68%),
+    radial-gradient(82vw 58vh at 80% 112%, var(--glow-1), transparent 70%),
+    linear-gradient(180deg, var(--bg), var(--bg-2));
+}
+
+.dp-card {
+  width: min(560px, 92vw);
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  padding: clamp(20px, 5vw, 34px);
+  background:
+    linear-gradient(180deg, var(--panel-a), var(--panel-b)),
+    color-mix(in srgb, var(--sheet-a) 64%, transparent);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.35);
+}
+
+.dp-card h1 {
+  font-style: italic;
+}
+
+.dp-list {
+  gap: 10px;
+}
+
+.dp-item {
+  border-color: var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-2) 64%, transparent);
+}
+
+.dp-item b {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.dp-item.dp-remote {
+  border-color: color-mix(in srgb, var(--amber) 68%, var(--line-strong));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--amber) 18%, transparent);
+}
+
+.dp-create input,
+.dp-create button {
+  border-radius: 13px;
+}
+
+@media (min-width: 760px) {
+  .remote {
+    align-items: center;
+  }
+
+  .remote > * {
+    width: min(560px, 100%);
+  }
+
+  .remote-devices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── remote cleanup: full popups, calmer surfaces ─────────────────── */
+
+.remote,
+.device-picker,
+.away-overlay {
+  background: var(--bg);
+}
+
+.remote::before,
+.away-glow,
+.away-overlay::before {
+  display: none;
+}
+
+.remote-head-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.remote-head-actions button,
+.remote-display-switch,
+.remote-logout {
+  background: var(--panel-b);
+  box-shadow: none;
+}
+
+.remote-nav button.on,
+.remote-primary {
+  background: var(--amber) !important;
+  color: var(--on-accent) !important;
+  box-shadow: none;
+}
+
+.remote-card,
+.remote-device,
+.remote-vibes button,
+.remote-row-actions button,
+.ram-item,
+.dev-card,
+.remote-add,
+.dp-card,
+.dp-item {
+  background: color-mix(in srgb, var(--panel-a) 84%, var(--bg) 16%);
+  box-shadow: none;
+}
+
+.remote-device.on {
+  background: color-mix(in srgb, var(--panel-a) 74%, var(--amber) 26%);
+}
+
+.remote-device.on::after {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--amber) 36%, transparent);
+}
+
+.remote > .remote-sheet,
+.remote-sheet {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  max-height: none;
+  height: 100dvh;
+  border-radius: 0;
+  border-top: 0;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    clamp(16px, 4vw, 28px)
+    max(18px, env(safe-area-inset-bottom));
+  background: var(--bg);
+  box-shadow: none;
+}
+
+.remote-sheet::before {
+  content: none;
+  display: none;
+}
+
+.remote-sheet-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-bottom: 12px;
+  background: var(--bg);
+}
+
+.remote-sheet-head button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: var(--panel-b);
+}
+
+.remote-sheet-body {
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+.away-mark {
+  box-shadow: none;
+}
+
+.dp-card {
+  box-shadow: 0 16px 46px rgba(0, 0, 0, 0.26);
+}
+
+/* ── remote visual correction: glyphs, not pill buttons ───────────── */
+
+.remotebtn {
+  right: clamp(52px, 7vmin, 74px);
+  gap: 0;
+  min-height: 0;
+  padding: 1.6vmin;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--cream);
+  opacity: 0.32;
+  backdrop-filter: none;
+  transition: opacity 0.25s;
+}
+
+.remotebtn:hover,
+.remotebtn:active {
+  opacity: 0.9;
+}
+
+.remotebtn .mi {
+  font-size: clamp(17px, 3.4vmin, 26px);
+}
+
+.remote-head {
+  align-items: flex-start;
+}
+
+.remote-head-actions {
+  align-items: flex-end;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.remote-head-actions .remote-text-action {
+  min-height: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  color: var(--cream-dim) !important;
+  box-shadow: none;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.remote-head-actions .remote-display-switch {
+  color: var(--amber) !important;
+}
+
+.remote-head-actions .remote-text-action:disabled {
+  opacity: 0.35;
+}
+
+.remote-nav {
+  position: static;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.remote-nav button {
+  position: relative;
+  min-height: 58px;
+  padding: 8px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent !important;
+  color: var(--cream-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.remote-nav button.on {
+  border-color: var(--amber);
+  background: transparent !important;
+  color: var(--amber) !important;
+  box-shadow: none;
+}
+
+.remote-nav button:active {
+  transform: translateY(1px);
+}
+
+.remote-nav .mi {
+  font-size: 23px;
+  line-height: 1;
+}
+
+.remote-nav-label {
+  display: block;
+}
+
+.rd-alarm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.rd-alarm-icon {
+  font-size: 1.05em;
+  color: currentColor;
+}
+
+@media (orientation: portrait) {
+  .remotebtn { right: 1.6vmin; }
 }

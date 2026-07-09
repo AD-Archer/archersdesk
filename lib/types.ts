@@ -18,7 +18,6 @@ export const WIDGETS = [
   "quote",
   "dnd",
   "please_disturb",
-  "lunch",
   "away_until",
   "vibe",
   "github",
@@ -83,7 +82,6 @@ export const WIDGET_INFO: Record<
   quote: { label: "quote", blurb: "a line a day", category: "tools", icon: "format_quote" },
   dnd: { label: "do not disturb", blurb: "quiet status sign", category: "status", icon: "do_not_disturb_on" },
   please_disturb: { label: "please disturb", blurb: "interruptions welcome", category: "status", icon: "notifications_active" },
-  lunch: { label: "at lunch", blurb: "back after a bite", category: "status", icon: "restaurant" },
   away_until: { label: "away until", blurb: "editable return time", category: "status", icon: "logout" },
   vibe: { label: "vibe check", blurb: "general fun status", category: "status", icon: "mood" },
   nowplaying: { label: "now playing", blurb: "last.fm / navidrome", category: "accounts", icon: "music_note" },
@@ -132,7 +130,12 @@ export interface Alarm {
   label: string;
   days: string[]; // mon..sun, empty = every day
   enabled: boolean;
+  devices: string[]; // device ids that respond; empty = all devices
 }
+
+/** Fun status moods shown by the vibe widget / remote. */
+export const VIBES = ["joyful", "sad", "stressed", "calm", "busy", "mysterious"] as const;
+export type Vibe = (typeof VIBES)[number];
 
 export interface Location {
   name: string;
@@ -161,19 +164,36 @@ export type LayoutRow =
 export const MAX_ROWS = 12;
 export const WIDGET_PAGE_COUNT = 2;
 
-export interface Settings {
+/** Live, server-synced status for one device. Pushed by the remote. */
+export interface Presence {
+  awayUntil: string | null; // ISO; null = not away. Forces the away screen while in the future.
+  awayLocation: string; // free-text "where I am" note
+  vibe: Vibe;
+}
+
+/** A named logical display/profile. A browser chooses which device it *is*
+ *  (see localStorage `archersdesk.deviceId`); several browsers may share one. */
+export interface Device {
+  id: string;
+  name: string;
   theme: ThemeName;
   location: Location;
-  units: "fahrenheit" | "celsius";
   layout: {
     rows: LayoutRow[]; // legacy page-1 shape
     pages: LayoutRow[][];
-    presets: LayoutRow[][];
   };
   standby: {
     showTemp: boolean;
     showAlarm: boolean;
   };
+  presence: Presence;
+}
+
+export interface Settings {
+  version: number; // monotonic; bumped on every write for poll compare-and-refetch
+  devices: Device[];
+  presets: LayoutRow[][]; // shared layout-preset library (account-global)
+  units: "fahrenheit" | "celsius";
   lastfm: {
     username: string;
     apiKey: string; // per-user secret override; server LASTFM_API_KEY is the default
@@ -198,6 +218,31 @@ export interface Settings {
   worldclock: WorldClockZone[];
   calendars: CalendarFeed[];
   showEpicInAgenda: boolean; // inject epic free-games as events in the agenda
+}
+
+/** The flattened, per-active-device shape the client actually renders from:
+ *  every account-global field, plus the active device's own theme/location/
+ *  layout/standby/presence hoisted to the top level. Widgets read this, so a
+ *  widget can keep reading `settings.location` etc. unchanged. Built by
+ *  `toView`; folded back into a canonical `Settings` by `fromView` (lib/view). */
+export interface ViewSettings {
+  deviceId: string;
+  deviceName: string;
+  theme: ThemeName;
+  location: Location;
+  layout: { rows: LayoutRow[]; pages: LayoutRow[][] };
+  standby: { showTemp: boolean; showAlarm: boolean };
+  presence: Presence;
+  units: Settings["units"];
+  lastfm: Settings["lastfm"];
+  integrations: Settings["integrations"];
+  alarms: Alarm[];
+  worldclock: WorldClockZone[];
+  calendars: CalendarFeed[];
+  showEpicInAgenda: boolean;
+  presets: LayoutRow[][];
+  devices: Device[]; // full list, for the device switcher / remote / settings
+  version: number;
 }
 
 export type IntegrationService = keyof Settings["integrations"];

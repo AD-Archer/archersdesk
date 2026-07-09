@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isUser, requireUser } from "@/lib/api";
-import { getUserSettings } from "@/lib/settings";
+import { getDeviceSettings } from "@/lib/settings";
 import type { DayForecast, WeatherData } from "@/lib/types";
 
 // Open-Meteo current conditions + 5-day forecast + sun times, keyed off the
@@ -31,7 +31,9 @@ export async function GET(req: NextRequest) {
   const user = requireUser(req);
   if (!isUser(user)) return user;
 
-  const { location, units } = getUserSettings(user.id);
+  const { settings, device } = getDeviceSettings(user.id, req.nextUrl.searchParams.get("device"));
+  const { location } = device;
+  const { units } = settings;
   const key = `${location.latitude.toFixed(2)},${location.longitude.toFixed(2)}|${units}`;
 
   const hit = cache.get(key);

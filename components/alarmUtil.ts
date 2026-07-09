@@ -7,6 +7,11 @@ export interface NextAlarm {
   at: Date;
 }
 
+/** Alarms that ring on this device: targeted at it, or at every device ([]). */
+export function alarmsForDevice(alarms: Alarm[], deviceId: string): Alarm[] {
+  return alarms.filter((a) => a.devices.length === 0 || a.devices.includes(deviceId));
+}
+
 /** Next occurrence across all enabled alarms, searching the coming week. */
 export function nextAlarm(alarms: Alarm[], from: Date = new Date()): NextAlarm | null {
   let best: NextAlarm | null = null;

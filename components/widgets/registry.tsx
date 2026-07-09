@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import type { LayoutRow, Settings, WidgetName } from "@/lib/types";
+import type { LayoutRow, ViewSettings, WidgetName } from "@/lib/types";
 import { AdguardWidget, PiholeWidget } from "./Adblock";
 import { ClockWidget, AnalogWidget, DateWidget, DatetimeWidget } from "./Clock";
 import { CalendarWidget } from "./Calendar";
@@ -20,7 +20,6 @@ import { EpicGamesWidget } from "./Epic";
 import {
   AwayUntilWidget,
   DoNotDisturbWidget,
-  LunchWidget,
   PleaseDisturbWidget,
   VibeWidget,
 } from "./Status";
@@ -49,8 +48,8 @@ import {
 } from "./Feeds";
 
 export interface WidgetProps {
-  settings: Settings;
-  integrationSettings?: Settings;
+  settings: ViewSettings;
+  integrationSettings?: ViewSettings;
   wide?: boolean;
 }
 
@@ -73,7 +72,6 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   quote: QuoteWidget,
   dnd: DoNotDisturbWidget,
   please_disturb: PleaseDisturbWidget,
-  lunch: LunchWidget,
   away_until: AwayUntilWidget,
   vibe: VibeWidget,
   github: GithubWidget,
@@ -111,8 +109,8 @@ export function MainRow({
   integrationSettings,
 }: {
   row: LayoutRow;
-  settings: Settings;
-  integrationSettings?: Settings;
+  settings: ViewSettings;
+  integrationSettings?: ViewSettings;
 }) {
   if (row.type === "dual") {
     const Widget = REGISTRY[row.widget] ?? ClockWidget;
@@ -141,8 +139,8 @@ export function WidgetPanel({
   style,
 }: {
   widget: WidgetName;
-  settings: Settings;
-  integrationSettings?: Settings;
+  settings: ViewSettings;
+  integrationSettings?: ViewSettings;
   slot: "left" | "right";
   style?: CSSProperties;
 }) {

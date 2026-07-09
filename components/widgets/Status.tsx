@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { VIBES, type Vibe } from "@/lib/types";
 import EditablePopup from "../EditablePopup";
 import { useNow } from "../hooks";
+import { pushPresence } from "../presence";
 import type { WidgetProps } from "./registry";
-
-const AWAY_KEY = "archersdesk.awayUntil";
-const VIBE_KEY = "archersdesk.vibeMood";
-type VibeMood = "joyful" | "sad" | "stressed" | "calm" | "busy" | "mysterious";
 
 const STATUS_COPY = {
   dnd: {
@@ -22,12 +20,6 @@ const STATUS_COPY = {
     note: "PLS",
     tone: "open",
   },
-  lunch: {
-    label: "status",
-    title: "At lunch",
-    note: "Back soon",
-    tone: "lunch",
-  },
   vibe: {
     label: "status",
     title: "Vibe check",
@@ -36,7 +28,7 @@ const STATUS_COPY = {
   },
 } as const;
 
-const VIBE_MOODS: Record<VibeMood, { label: string; title: string; note: string }> = {
+const VIBE_MOODS: Record<Vibe, { label: string; title: string; note: string }> = {
   joyful: { label: "joyful", title: "Joyful", note: "High sparkle, low friction" },
   sad: { label: "sad", title: "Soft mode", note: "Gentle interruptions only" },
   stressed: { label: "stressed", title: "Stressed", note: "Send help, not surprises" },
@@ -44,12 +36,6 @@ const VIBE_MOODS: Record<VibeMood, { label: string; title: string; note: string 
   busy: { label: "busy", title: "In motion", note: "Fast replies unlikely" },
   mysterious: { label: "mysterious", title: "Unclear aura", note: "Proceed with curiosity" },
 };
-
-const DEFAULT_VIBE: VibeMood = "joyful";
-
-function isVibeMood(value: string | null): value is VibeMood {
-  return Boolean(value && value in VIBE_MOODS);
-}
 
 function toInputValue(date: Date) {
   const offset = date.getTimezoneOffset() * 60_000;
@@ -108,24 +94,18 @@ export function PleaseDisturbWidget({ wide }: WidgetProps) {
   return <StatusCard {...STATUS_COPY.please} wide={wide} />;
 }
 
-export function LunchWidget({ wide }: WidgetProps) {
-  return <StatusCard {...STATUS_COPY.lunch} wide={wide} />;
-}
-
-export function VibeWidget({ wide }: WidgetProps) {
+export function VibeWidget({ settings, wide }: WidgetProps) {
   const [open, setOpen] = useState(false);
-  const [mood, setMood] = useState<VibeMood>(DEFAULT_VIBE);
+  // presence is server-synced per device; keep a local optimistic copy so the
+  // pick shows instantly, and reconcile whenever the poll refreshes props.
+  const [mood, setMood] = useState<Vibe>(settings.presence.vibe);
+  useEffect(() => setMood(settings.presence.vibe), [settings.presence.vibe]);
   const vibe = VIBE_MOODS[mood];
 
-  useEffect(() => {
-    const saved = window.localStorage.getItem(VIBE_KEY);
-    if (isVibeMood(saved)) setMood(saved);
-  }, []);
-
-  function pick(next: VibeMood) {
-    window.localStorage.setItem(VIBE_KEY, next);
+  function pick(next: Vibe) {
     setMood(next);
     setOpen(false);
+    void pushPresence([settings.deviceId], { vibe: next });
   }
 
   return (
@@ -149,7 +129,7 @@ export function VibeWidget({ wide }: WidgetProps) {
       </div>
       <EditablePopup open={open} title="Vibe check" onClose={() => setOpen(false)}>
         <div className="mood-grid">
-          {(Object.keys(VIBE_MOODS) as VibeMood[]).map((key) => (
+          {VIBES.map((key) => (
             <button key={key} className={`mood-card${mood === key ? " on" : ""}`} onClick={() => pick(key)}>
               <b>{VIBE_MOODS[key].label}</b>
               <small>{VIBE_MOODS[key].note}</small>
@@ -161,37 +141,43 @@ export function VibeWidget({ wide }: WidgetProps) {
   );
 }
 
-export function AwayUntilWidget({ wide }: WidgetProps) {
+export function AwayUntilWidget({ settings, wide }: WidgetProps) {
   const now = useNow(30_000);
   const [open, setOpen] = useState(false);
-  const [awayUntil, setAwayUntil] = useState<string | null>(null);
+  // optimistic mirrors of the synced presence, reconciled on each poll
+  const [awayUntil, setAwayUntil] = useState<string | null>(settings.presence.awayUntil);
+  const [awayLoc, setAwayLoc] = useState(settings.presence.awayLocation);
   const [draft, setDraft] = useState("");
-  const away = formatAwayUntil(awayUntil, now);
+  const [draftLoc, setDraftLoc] = useState("");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(AWAY_KEY);
-    if (saved) {
-      setAwayUntil(saved);
-      setDraft(toInputValue(new Date(saved)));
-    } else {
-      setDraft(toInputValue(new Date(Date.now() + 60 * 60_000)));
-    }
-  }, []);
+    setAwayUntil(settings.presence.awayUntil);
+    setAwayLoc(settings.presence.awayLocation);
+  }, [settings.presence.awayUntil, settings.presence.awayLocation]);
+
+  useEffect(() => {
+    setDraft(toInputValue(awayUntil ? new Date(awayUntil) : new Date(Date.now() + 60 * 60_000)));
+    setDraftLoc(awayLoc);
+    // seed the editor when opening / when synced values change
+  }, [open, awayUntil, awayLoc]);
+
+  const away = formatAwayUntil(awayUntil, now);
+  const note = awayLoc ? `${away.detail} · ${awayLoc}` : away.detail;
 
   function save() {
     const next = new Date(draft);
     if (Number.isNaN(next.getTime())) return;
     const value = next.toISOString();
-    window.localStorage.setItem(AWAY_KEY, value);
     setAwayUntil(value);
+    setAwayLoc(draftLoc);
     setOpen(false);
+    void pushPresence([settings.deviceId], { awayUntil: value, awayLocation: draftLoc });
   }
 
   function clear() {
-    window.localStorage.removeItem(AWAY_KEY);
     setAwayUntil(null);
-    setDraft(toInputValue(new Date(Date.now() + 60 * 60_000)));
     setOpen(false);
+    void pushPresence([settings.deviceId], { awayUntil: null });
   }
 
   function quick(minutes: number) {
@@ -215,7 +201,7 @@ export function AwayUntilWidget({ wide }: WidgetProps) {
       >
         <div className="status-mark" aria-hidden="true" />
         <div className="status-title">{away.main}</div>
-        <div className="status-note">{away.detail}</div>
+        <div className="status-note">{note}</div>
       </div>
       <EditablePopup
         open={open}
@@ -236,6 +222,16 @@ export function AwayUntilWidget({ wide }: WidgetProps) {
         <label className="edit-field">
           <span>return time</span>
           <input type="datetime-local" value={draft} onChange={(e) => setDraft(e.target.value)} />
+        </label>
+        <label className="edit-field">
+          <span>where you are</span>
+          <input
+            type="text"
+            placeholder="e.g. coffee shop"
+            maxLength={80}
+            value={draftLoc}
+            onChange={(e) => setDraftLoc(e.target.value)}
+          />
         </label>
         <div className="edit-quick">
           <button onClick={() => quick(30)}>+30m</button>

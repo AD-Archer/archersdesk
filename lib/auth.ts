@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { getDb } from "./db";
-import { DEFAULT_SETTINGS } from "./settings";
+import { DEFAULT_SETTINGS, migrateAllSettings } from "./settings";
 import { env } from "./env";
 
 export const SESSION_COOKIE = "desk_session";
@@ -45,6 +45,8 @@ const g = globalThis as typeof globalThis & { __deskSeeded?: boolean };
 if (!g.__deskSeeded) {
   g.__deskSeeded = true;
   seedEnvUser();
+  // upgrade any pre-existing accounts' settings to the devices schema on boot
+  migrateAllSettings();
 }
 
 export interface User {

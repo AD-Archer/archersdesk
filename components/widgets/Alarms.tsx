@@ -1,12 +1,13 @@
 "use client";
 
 import { useNow } from "../hooks";
-import { dayChips, fmt12, nextAlarm, untilText } from "../alarmUtil";
+import { alarmsForDevice, dayChips, fmt12, nextAlarm, untilText } from "../alarmUtil";
 import type { WidgetProps } from "./registry";
 
 export function AlarmsWidget({ settings }: WidgetProps) {
   const now = useNow(10_000);
-  const next = nextAlarm(settings.alarms, now);
+  const alarms = alarmsForDevice(settings.alarms, settings.deviceId);
+  const next = nextAlarm(alarms, now);
 
   return (
     <>
@@ -27,9 +28,9 @@ export function AlarmsWidget({ settings }: WidgetProps) {
             add one in settings → alarms
           </div>
         )}
-        {settings.alarms.length > 0 && (
+        {alarms.length > 0 && (
           <div className="al-list">
-            {settings.alarms.slice(0, 3).map((a, i) => (
+            {alarms.slice(0, 3).map((a, i) => (
               <div key={i} className={`al-row${a.enabled ? "" : " off"}`}>
                 <b>
                   {fmt12(a.time).time} {fmt12(a.time).ampm}

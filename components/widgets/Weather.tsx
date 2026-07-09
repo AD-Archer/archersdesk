@@ -68,7 +68,8 @@ export function WxIcon({ kind }: { kind: string }) {
 }
 
 export function useWeather(settings: WidgetProps["settings"]): WeatherData | null {
-  return usePoll<WeatherData>("/api/weather", 10 * 60 * 1000, [
+  return usePoll<WeatherData>(`/api/weather?device=${encodeURIComponent(settings.deviceId)}`, 10 * 60 * 1000, [
+    settings.deviceId,
     settings.location.latitude,
     settings.location.longitude,
     settings.units,

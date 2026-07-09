@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Alarm, GeocodeResult, LayoutRow, Settings, ThemeName, WidgetName } from "@/lib/types";
+import type { Alarm, Device, GeocodeResult, LayoutRow, ThemeName, ViewSettings, WidgetName } from "@/lib/types";
 import { MAX_ROWS, THEME_INFO, THEMES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS, WIDGET_PAGE_COUNT } from "@/lib/types";
 import { dayChips, fmt12 } from "./alarmUtil";
 import { useIntegrationAction } from "./widgets/kit";
 
-type Tab = "layout" | "theme" | "alarms" | "calendar" | "location" | "accounts";
-const TABS: Tab[] = ["layout", "theme", "alarms", "calendar", "location", "accounts"];
+type Tab = "layout" | "theme" | "alarms" | "calendar" | "location" | "devices" | "accounts";
+const TABS: Tab[] = ["layout", "theme", "alarms", "calendar", "location", "devices", "accounts"];
 
 // swatch previews for the theme cards (mirrors globals.css palettes)
 const SWATCH: Record<ThemeName, { bg: string; accent: string }> = {
@@ -50,7 +50,7 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
       { type: "dual", widget: "please_disturb" },
       { type: "dual", widget: "away_until" },
       { type: "split", left: "timer", right: "dnd" },
-      { type: "split", left: "vibe", right: "lunch" },
+      { type: "split", left: "vibe", right: "away_until" },
     ],
   },
   {
@@ -111,16 +111,20 @@ export default function SettingsSheet({
   username,
   saved,
   activePage,
+  deviceId,
+  onChooseDevice,
   onClose,
   onChange,
 }: {
   open: boolean;
-  settings: Settings;
+  settings: ViewSettings;
   username: string;
   saved: boolean;
   activePage?: number;
+  deviceId: string;
+  onChooseDevice: (id: string) => void;
   onClose: () => void;
-  onChange: (next: Settings) => void;
+  onChange: (next: ViewSettings) => void;
 }) {
   const [tab, setTab] = useState<Tab>("layout");
 
@@ -156,6 +160,14 @@ export default function SettingsSheet({
             {tab === "alarms" && <AlarmsSection settings={settings} onChange={onChange} />}
             {tab === "calendar" && <CalendarSection settings={settings} onChange={onChange} />}
             {tab === "location" && <LocationSection settings={settings} onChange={onChange} />}
+            {tab === "devices" && (
+              <DevicesSection
+                settings={settings}
+                onChange={onChange}
+                deviceId={deviceId}
+                onChooseDevice={onChooseDevice}
+              />
+            )}
             {tab === "accounts" && <AccountsSection settings={settings} onChange={onChange} />}
           </div>
         )}
@@ -179,7 +191,7 @@ export default function SettingsSheet({
   );
 }
 
-type SectionProps = { settings: Settings; onChange: (next: Settings) => void };
+type SectionProps = { settings: ViewSettings; onChange: (next: ViewSettings) => void };
 
 /* ── layout ──────────────────────────────────────────────────────── */
 
@@ -207,13 +219,13 @@ function LayoutSection({
   }
 
   function savePersonalPreset(i: number) {
-    const presets = Array.from({ length: 2 }, (_, j) => settings.layout.presets?.[j] ?? []);
+    const presets = Array.from({ length: 2 }, (_, j) => settings.presets?.[j] ?? []);
     presets[i] = rows.map((r) => ({ ...r }));
-    onChange({ ...settings, layout: { ...settings.layout, presets } });
+    onChange({ ...settings, presets });
   }
 
   function loadPersonalPreset(i: number) {
-    const preset = settings.layout.presets?.[i] ?? [];
+    const preset = settings.presets?.[i] ?? [];
     if (preset.length) applyPreset(preset);
   }
 
@@ -306,11 +318,11 @@ function LayoutSection({
       </div>
       <div className="preset-row personal">
         {[0, 1].map((i) => {
-          const hasPreset = Boolean(settings.layout.presets?.[i]?.length);
+          const hasPreset = Boolean(settings.presets?.[i]?.length);
           return (
             <div key={i} className="preset-card preset-save">
               <b>preset {i + 1}</b>
-              <small>{hasPreset ? `${settings.layout.presets![i].length} rows saved` : "empty slot"}</small>
+              <small>{hasPreset ? `${settings.presets![i].length} rows saved` : "empty slot"}</small>
               <div className="preset-actions">
                 <button onClick={() => savePersonalPreset(i)}>save</button>
                 <button onClick={() => loadPersonalPreset(i)} disabled={!hasPreset}>
@@ -428,7 +440,10 @@ function AlarmsSection({ settings, onChange }: SectionProps) {
   }
 
   function addAlarm() {
-    const alarms = [...settings.alarms, { time: "07:00", label: "alarm", days: [], enabled: true }];
+    const alarms: Alarm[] = [
+      ...settings.alarms,
+      { time: "07:00", label: "alarm", days: [], enabled: true, devices: [] },
+    ];
     onChange({ ...settings, alarms });
     setEditing(alarms.length - 1);
   }
@@ -501,6 +516,29 @@ function AlarmsSection({ settings, onChange }: SectionProps) {
                   onChange={(e) => patchAlarm(i, { label: e.target.value })}
                 />
               </label>
+              <div className="field">
+                <span>
+                  rings on{" "}
+                  {a.devices.length === 0 ? <em>every device</em> : `${a.devices.length} device(s)`}
+                </span>
+                <div className="day-chips">
+                  {settings.devices.map((d) => (
+                    <button
+                      key={d.id}
+                      className={`day-chip${a.devices.includes(d.id) ? " on" : ""}`}
+                      onClick={() =>
+                        patchAlarm(i, {
+                          devices: a.devices.includes(d.id)
+                            ? a.devices.filter((x) => x !== d.id)
+                            : [...a.devices, d.id],
+                        })
+                      }
+                    >
+                      {d.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button className="del-btn" onClick={() => removeAlarm(i)}>
                 delete alarm
               </button>
@@ -768,8 +806,8 @@ function HomeAssistantEntityPicker({
   settings,
   patch,
 }: {
-  settings: Settings;
-  patch: (next: Partial<Settings["integrations"]>) => void;
+  settings: ViewSettings;
+  patch: (next: Partial<ViewSettings["integrations"]>) => void;
 }) {
   const ig = settings.integrations;
   const listEntities = useIntegrationAction("homeassistant");
@@ -853,9 +891,97 @@ function HomeAssistantEntityPicker({
   );
 }
 
+/* ── devices ─────────────────────────────────────────────────────── */
+
+function DevicesSection({
+  settings,
+  onChange,
+  deviceId,
+  onChooseDevice,
+}: SectionProps & { deviceId: string; onChooseDevice: (id: string) => void }) {
+  const [name, setName] = useState("");
+  const devices = settings.devices;
+
+  function rename(id: string, next: string) {
+    onChange({ ...settings, devices: devices.map((d) => (d.id === id ? { ...d, name: next } : d)) });
+  }
+
+  function remove(id: string) {
+    if (devices.length <= 1) return;
+    const nextDevices = devices.filter((d) => d.id !== id);
+    onChange({ ...settings, devices: nextDevices });
+    if (id === deviceId) onChooseDevice(nextDevices[0].id);
+  }
+
+  function add() {
+    const n = name.trim();
+    if (!n) return;
+    const base = devices[0];
+    const device: Device = {
+      id: crypto.randomUUID(),
+      name: n,
+      theme: base.theme,
+      location: { ...base.location },
+      layout: { rows: [...base.layout.rows], pages: base.layout.pages.map((p) => [...p]) },
+      standby: { ...base.standby },
+      presence: { awayUntil: null, awayLocation: "", vibe: "joyful" },
+    };
+    onChange({ ...settings, devices: [...devices, device] });
+    setName("");
+  }
+
+  const currentName = devices.find((d) => d.id === deviceId)?.name ?? deviceId;
+
+  return (
+    <>
+      <p className="sec-note">
+        devices are named screens (office, bedside…). this browser is acting as <b>{currentName}</b>.
+        accounts, alarms &amp; calendars are shared; layout, theme, location and away/vibe are per
+        device — a new device starts as a copy of your first.
+      </p>
+      {devices.map((d) => (
+        <div key={d.id} className="dev-card">
+          <input
+            className="dev-name"
+            value={d.name}
+            maxLength={40}
+            onChange={(e) => rename(d.id, e.target.value)}
+          />
+          <div className="dev-actions">
+            {d.id === deviceId ? (
+              <span className="dev-current">this device</span>
+            ) : (
+              <button onClick={() => onChooseDevice(d.id)}>switch to</button>
+            )}
+            <button className="del" onClick={() => remove(d.id)} disabled={devices.length <= 1}>
+              delete
+            </button>
+          </div>
+        </div>
+      ))}
+      <div className="dev-add">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="new device name"
+          maxLength={40}
+        />
+        <button onClick={add} disabled={!name.trim()}>
+          add device
+        </button>
+      </div>
+      <button className="btn-ghost dev-remote" onClick={() => onChooseDevice("remote")}>
+        use this browser as a remote
+      </button>
+    </>
+  );
+}
+
+/* ── accounts ────────────────────────────────────────────────────── */
+
 function AccountsSection({ settings, onChange }: SectionProps) {
   const ig = settings.integrations;
-  const patch = (next: Partial<Settings["integrations"]>) =>
+  const patch = (next: Partial<ViewSettings["integrations"]>) =>
     onChange({ ...settings, integrations: { ...ig, ...next } });
   const [symbolsDraft, setSymbolsDraft] = useState(ig.stocks.symbols.join(", "));
 

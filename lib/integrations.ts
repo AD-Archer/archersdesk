@@ -3,10 +3,15 @@ import type {
   FeedService,
   IntegrationPayload,
   IntegrationService,
+  Location,
   ProxyService,
   Settings,
 } from "./types";
 import { expandEvents, parseIcs } from "./ical";
+
+// Fetchers read global credentials from Settings, plus the active device's
+// location (hoisted in here so location-aware feeds keep reading `.location`).
+type IntCtx = Settings & { location: Location };
 
 // ── integration fetchers ─────────────────────────────────────────────
 // Each service is one entry: { ttl, fetch(settings) } returning the standard
@@ -127,10 +132,10 @@ function wakaItems(items: unknown, count = 3) {
 
 interface Fetcher {
   ttl: number; // ms
-  fetch(settings: Settings): Promise<IntegrationPayload>;
+  fetch(settings: IntCtx): Promise<IntegrationPayload>;
   // optional write path — only services that can mutate remote state (seerr
   // approve/decline, home assistant toggle) define this.
-  action?(settings: Settings, name: string, payload: unknown): Promise<IntegrationPayload>;
+  action?(settings: IntCtx, name: string, payload: unknown): Promise<IntegrationPayload>;
 }
 
 export const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
@@ -1158,10 +1163,12 @@ export async function runIntegrationAction(
   service: IntegrationService,
   userId: number,
   settings: Settings,
+  location: Location,
   name: string,
   payload: unknown
 ): Promise<IntegrationPayload> {
-  const result = await INTEGRATIONS[service].action!(settings, name, payload);
+  const ctx: IntCtx = { ...settings, location };
+  const result = await INTEGRATIONS[service].action!(ctx, name, payload);
   const creds = settings.integrations[service];
   cache.delete(`${userId}|${service}|${JSON.stringify(creds)}`);
   return result;
@@ -1170,8 +1177,10 @@ export async function runIntegrationAction(
 export async function runIntegration(
   service: ProxyService,
   userId: number,
-  settings: Settings
+  settings: Settings,
+  location: Location
 ): Promise<IntegrationPayload> {
+  const ctx: IntCtx = { ...settings, location };
   const entry = ALL_SERVICES[service];
   // credentials/config are part of the key so edits refetch immediately
   const creds =
@@ -1179,7 +1188,7 @@ export async function runIntegration(
       ? { calendars: settings.calendars, epic: settings.showEpicInAgenda }
       : service in INTEGRATIONS
         ? settings.integrations[service as IntegrationService]
-        : settings.location;
+        : location;
   const key = `${userId}|${service}|${JSON.stringify(creds)}`;
   if (cache.size > 500) cache.clear();
   const hit = cache.get(key);
@@ -1187,7 +1196,7 @@ export async function runIntegration(
   const pending = inflight.get(key);
   if (pending) return pending;
   const req = entry
-    .fetch(settings)
+    .fetch(ctx)
     .catch((err: unknown) => {
       const reason =
         err instanceof Error && err.name === "TimeoutError"
