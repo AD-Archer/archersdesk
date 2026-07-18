@@ -38,7 +38,11 @@ function seedEnvUser() {
 }
 
 const g = globalThis as typeof globalThis & { __deskSeeded?: boolean };
-if (!g.__deskSeeded) {
+// seeding is a boot concern — never run it during `next build`. page-data
+// collection imports this module from several parallel worker processes
+// (the globalThis guard can't see across them), and the racing writes on a
+// fresh db file trip SQLITE_BUSY and kill the build.
+if (!g.__deskSeeded && process.env.NEXT_PHASE !== "phase-production-build") {
   g.__deskSeeded = true;
   seedEnvUser();
   // upgrade any pre-existing accounts' settings to the devices schema on boot
