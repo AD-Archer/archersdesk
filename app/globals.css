@@ -2457,6 +2457,54 @@ input {
   display: block;
 }
 
+/* fullscreen toggle — sits just left of the gear, same quiet treatment.
+   small screens make the inline frame cramped, so this throws the frame
+   over the whole display (native fullscreen; the button stays inside the
+   frame, so it's still there to exit with). */
+.embed-fsbtn {
+  position: absolute;
+  top: 1.4vmin;
+  right: calc(2.6vmin + clamp(30px, 5vmin, 40px));
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(30px, 5vmin, 40px);
+  height: clamp(30px, 5vmin, 40px);
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(10, 8, 6, 0.5);
+  backdrop-filter: blur(8px);
+  color: var(--cream-dim);
+  opacity: 0.55;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.embed-fsbtn:hover,
+.embed-fsbtn:active {
+  opacity: 1;
+  transform: scale(1.12);
+}
+
+.embed-fsbtn svg {
+  width: 50%;
+  height: 50%;
+  display: block;
+}
+
+/* while fullscreen the card chrome makes no sense — go full-bleed on black */
+.embed-frame:fullscreen {
+  border: 0;
+  border-radius: 0;
+  background: #000;
+}
+
+.embed-frame:-webkit-full-screen {
+  border: 0;
+  border-radius: 0;
+  background: #000;
+}
+
 .embed-empty {
   display: flex;
   flex-direction: column;

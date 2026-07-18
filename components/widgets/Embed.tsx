@@ -1,12 +1,13 @@
 "use client";
 
 // Embed — a clean full-bleed player frame. No chrome except a floating gear
-// (same mark as the app's settings button); tapping it opens the manager
-// popup where you pick which embed plays, and add / edit / delete saved
-// ones. Writes go through /api/embeds (a small dedicated channel, like
-// /api/presence) so this never needs the full settings-editor round trip.
+// (same mark as the app's settings button) and a fullscreen toggle; tapping
+// the gear opens the manager popup where you pick which embed plays, and
+// add / edit / delete saved ones. Writes go through /api/embeds (a small
+// dedicated channel, like /api/presence) so this never needs the full
+// settings-editor round trip.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { EmbedFeed } from "@/lib/types";
 import EditablePopup from "../EditablePopup";
 import { Shell } from "./kit";
@@ -64,6 +65,31 @@ function toEmbeddable(raw: string): string {
   }
 }
 
+// Safari still exposes the Fullscreen API under webkit prefixes on iOS, so
+// every touchpoint goes through these helpers instead of the bare standard.
+type FullscreenDoc = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitFullscreenEnabled?: boolean;
+  webkitExitFullscreen?: () => void;
+};
+type FullscreenBox = HTMLDivElement & { webkitRequestFullscreen?: () => void };
+
+function fullscreenElement(): Element | null {
+  const doc = document as FullscreenDoc;
+  return doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+}
+
+function exitFullscreen() {
+  const doc = document as FullscreenDoc;
+  if (doc.exitFullscreen) void doc.exitFullscreen().catch(() => {});
+  else doc.webkitExitFullscreen?.();
+}
+
+function requestFullscreen(el: FullscreenBox) {
+  if (el.requestFullscreen) void el.requestFullscreen().catch(() => {});
+  else el.webkitRequestFullscreen?.();
+}
+
 function hostOf(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -99,6 +125,28 @@ function PlayIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" />
       <polygon points="10 8.2 16 12 10 15.8 10 8.2" />
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 4H4v5" />
+      <path d="M15 4h5v5" />
+      <path d="M20 15v5h-5" />
+      <path d="M4 15v5h5" />
+    </svg>
+  );
+}
+
+function CompressIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 4v5H4" />
+      <path d="M15 4v5h5" />
+      <path d="M20 15h-5v5" />
+      <path d="M4 15h5v5" />
     </svg>
   );
 }
@@ -140,6 +188,30 @@ export function EmbedWidget({ settings }: WidgetProps) {
   const current = embeds.find((e) => e.id === selectedId) ?? embeds[0] ?? null;
   const src = current ? toEmbeddable(current.url) : "";
 
+  // fullscreen throws the frame itself over the whole display — the iframe
+  // never moves in the DOM, so playback keeps going. (a css overlay can't do
+  // this here: the pager's will-change:transform traps position:fixed, and
+  // portaling the iframe out would reload it.)
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [fsAvailable, setFsAvailable] = useState(false);
+  const [isFull, setIsFull] = useState(false);
+  useEffect(() => {
+    const doc = document as FullscreenDoc;
+    setFsAvailable(Boolean(doc.fullscreenEnabled || doc.webkitFullscreenEnabled));
+    const onChange = () => setIsFull(Boolean(fullscreenElement()));
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, []);
+
+  function toggleFullscreen() {
+    if (fullscreenElement()) exitFullscreen();
+    else if (frameRef.current) requestFullscreen(frameRef.current);
+  }
+
   function select(id: string) {
     setSelectedId(id);
     localStorage.setItem(SELECTED_KEY, id);
@@ -147,6 +219,9 @@ export function EmbedWidget({ settings }: WidgetProps) {
   }
 
   function openManager() {
+    // the manager popup portals to document.body, which the fullscreen
+    // element would cover — leave fullscreen before opening it.
+    if (fullscreenElement()) exitFullscreen();
     clearForm();
     setOpen(true);
   }
@@ -205,7 +280,7 @@ export function EmbedWidget({ settings }: WidgetProps) {
   return (
     <Shell label="embed">
       <div className="embed">
-        <div className="embed-frame">
+        <div className="embed-frame" ref={frameRef}>
           {src ? (
             <iframe
               key={current!.id}
@@ -225,6 +300,15 @@ export function EmbedWidget({ settings }: WidgetProps) {
           <button className="embed-gear" onClick={openManager} aria-label="manage embeds">
             <GearIcon />
           </button>
+          {src && fsAvailable && (
+            <button
+              className="embed-fsbtn"
+              onClick={toggleFullscreen}
+              aria-label={isFull ? "exit fullscreen" : "fullscreen"}
+            >
+              {isFull ? <CompressIcon /> : <ExpandIcon />}
+            </button>
+          )}
         </div>
       </div>
 
