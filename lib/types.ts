@@ -47,6 +47,8 @@ export const WIDGETS = [
   "transmission",
   "agenda",
   "epicgames",
+  "navidrome",
+  "embed",
 ] as const;
 
 export type WidgetName = (typeof WIDGETS)[number];
@@ -112,6 +114,8 @@ export const WIDGET_INFO: Record<
   transmission: { label: "transmission", blurb: "torrents, speed & ratio", category: "accounts", icon: "download" },
   agenda: { label: "agenda", blurb: "your calendars, next few days", category: "tools", icon: "calendar_today" },
   epicgames: { label: "epic free games", blurb: "free this week + next", category: "feeds", icon: "play_circle" },
+  navidrome: { label: "navidrome", blurb: "search your library, play anything", category: "accounts", icon: "music_note" },
+  embed: { label: "embed", blurb: "youtube, spotify, anything with a url", category: "tools", icon: "live_tv" },
 };
 
 export const THEMES = ["ember", "moonlight", "meadow", "rose", "paper"] as const;
@@ -154,6 +158,12 @@ export interface CalendarFeed {
   name: string;
   url: string; // ical/ics feed url (webcal:// is rewritten to https://)
   enabled: boolean;
+}
+
+export interface EmbedFeed {
+  id: string;
+  name: string;
+  url: string; // youtube/spotify/soundcloud/etc — rewritten to an /embed/ form where needed
 }
 
 /** One vertically-swipeable row of the main view: two squares or one wide. */
@@ -213,7 +223,9 @@ export interface Settings {
     seerr: { url: string; apiKey: string };
     qbittorrent: { url: string; apiKey: string; username: string; password: string };
     transmission: { url: string; username: string; password: string };
+    navidrome: { url: string; username: string; password: string };
   };
+  embeds: EmbedFeed[]; // top-level, not an "integration" — no server fetch, the widget reads it directly
   alarms: Alarm[];
   worldclock: WorldClockZone[];
   calendars: CalendarFeed[];
@@ -236,6 +248,7 @@ export interface ViewSettings {
   units: Settings["units"];
   lastfm: Settings["lastfm"];
   integrations: Settings["integrations"];
+  embeds: Settings["embeds"];
   alarms: Alarm[];
   worldclock: WorldClockZone[];
   calendars: CalendarFeed[];
@@ -306,6 +319,43 @@ export interface GeocodeResult {
   region: string;
   latitude: number;
   longitude: number;
+}
+
+export interface NavidromeSong {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  duration: number;
+  coverArt: string;
+}
+
+export interface NavidromeAlbum {
+  id: string;
+  name: string;
+  artist: string;
+  coverArt: string;
+  songCount: number;
+}
+
+export interface NavidromePlaylist {
+  id: string;
+  name: string;
+  songCount: number;
+}
+
+export interface NavidromeBrowseData {
+  playlists: NavidromePlaylist[];
+  recentAlbums: NavidromeAlbum[];
+}
+
+export interface NavidromeSearchData {
+  songs: NavidromeSong[];
+  albums: NavidromeAlbum[];
+}
+
+export interface NavidromeTrackListData {
+  songs: NavidromeSong[];
 }
 
 export interface NowPlayingData {

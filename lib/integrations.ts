@@ -8,6 +8,7 @@ import type {
   Settings,
 } from "./types";
 import { expandEvents, parseIcs } from "./ical";
+import { navidromeAlbumSongs, navidromePlaylistSongs, navidromePlaylists, navidromeRecentAlbums, navidromeSearch } from "./navidrome";
 
 // Fetchers read global credentials from Settings, plus the active device's
 // location (hoisted in here so location-aware feeds keep reading `.location`).
@@ -855,6 +856,47 @@ export const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
           categories: wakaItems(d?.categories),
         },
       };
+    },
+  },
+
+  navidrome: {
+    ttl: 60 * 1000,
+    async fetch(settings) {
+      const nd = settings.integrations.navidrome;
+      if (!nd.url) return need("set your navidrome url in settings → accounts");
+      if (!nd.username || !nd.password) return need("set your navidrome username + password in settings → accounts");
+      const [playlists, recentAlbums] = await Promise.all([navidromePlaylists(nd), navidromeRecentAlbums(nd)]);
+      if (!playlists.ok) return need(playlists.reason);
+      if (!recentAlbums.ok) return need(recentAlbums.reason);
+      return { configured: true, data: { playlists: playlists.data, recentAlbums: recentAlbums.data } };
+    },
+    async action(settings, name, payload) {
+      const nd = settings.integrations.navidrome;
+      if (!nd.url) return need("set your navidrome url in settings → accounts");
+      if (!nd.username || !nd.password) return need("set your navidrome username + password in settings → accounts");
+
+      if (name === "search") {
+        const { query } = (payload ?? {}) as { query?: string };
+        if (!query?.trim()) return need("missing query");
+        const res = await navidromeSearch(nd, query.trim());
+        if (!res.ok) return need(res.reason);
+        return { configured: true, data: res.data };
+      }
+      if (name === "album") {
+        const { id } = (payload ?? {}) as { id?: string };
+        if (!id) return need("missing id");
+        const res = await navidromeAlbumSongs(nd, id);
+        if (!res.ok) return need(res.reason);
+        return { configured: true, data: { songs: res.data } };
+      }
+      if (name === "playlist") {
+        const { id } = (payload ?? {}) as { id?: string };
+        if (!id) return need("missing id");
+        const res = await navidromePlaylistSongs(nd, id);
+        if (!res.ok) return need(res.reason);
+        return { configured: true, data: { songs: res.data } };
+      }
+      return need(`unknown navidrome action "${name}"`);
     },
   },
 };

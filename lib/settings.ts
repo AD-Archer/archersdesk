@@ -12,6 +12,7 @@ import {
   type Alarm,
   type CalendarFeed,
   type Device,
+  type EmbedFeed,
   type LayoutRow,
   type Location,
   type Presence,
@@ -84,7 +85,9 @@ export const DEFAULT_SETTINGS: Settings = {
     seerr: { url: "", apiKey: "" },
     qbittorrent: { url: "", apiKey: "", username: "", password: "" },
     transmission: { url: "", username: "", password: "" },
+    navidrome: { url: "", username: "", password: "" },
   },
+  embeds: [],
   alarms: [],
   worldclock: [
     { label: "london", tz: "Europe/London" },
@@ -254,6 +257,25 @@ function sanitizeCalendars(v: unknown): CalendarFeed[] {
   return out;
 }
 
+function sanitizeEmbeds(v: unknown): EmbedFeed[] {
+  if (!Array.isArray(v)) return [];
+  const out: EmbedFeed[] = [];
+  for (const e of v.slice(0, 12)) {
+    if (!isRecord(e)) continue;
+    // bare hosts ("test.com") get https:// assumed; an explicit scheme is
+    // kept as-is (and non-https? schemes then fail sanitizeUrl as before)
+    const raw = str(e.url, "", 500).trim();
+    const url = sanitizeUrl(raw && !/^[a-z][a-z0-9+.-]*:/i.test(raw) ? `https://${raw}` : raw);
+    if (!url) continue;
+    out.push({
+      id: trimmed(e.id, "", 64) || url,
+      name: trimmed(e.name, "embed", 60),
+      url,
+    });
+  }
+  return out;
+}
+
 function sanitizeRowsValue(v: unknown): LayoutRow[] {
   const rows: LayoutRow[] = [];
   if (Array.isArray(v)) {
@@ -354,6 +376,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
   const seerr = isRecord(s.seerr) ? s.seerr : {};
   const qbittorrent = isRecord(s.qbittorrent) ? s.qbittorrent : {};
   const transmission = isRecord(s.transmission) ? s.transmission : {};
+  const navidrome = isRecord(s.navidrome) ? s.navidrome : {};
   const symbols = Array.isArray(stocks.symbols)
     ? stocks.symbols
         .map((x) => String(x).toUpperCase().replace(/[^A-Z0-9.^=-]/g, "").slice(0, 12))
@@ -409,6 +432,11 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
       username: trimmed(transmission.username, "", 80),
       password: str(transmission.password, "", 160),
     },
+    navidrome: {
+      url: sanitizeUrl(str(navidrome.url, "", 200)),
+      username: trimmed(navidrome.username, "", 80),
+      password: str(navidrome.password, "", 160),
+    },
   };
 }
 
@@ -461,6 +489,7 @@ export function sanitizeSettings(input: unknown): Settings {
       apiKey: str(lastfm.apiKey, "", 64),
     },
     integrations: sanitizeIntegrations(s.integrations),
+    embeds: sanitizeEmbeds(s.embeds),
     alarms: sanitizeAlarms(s.alarms, validIds),
     worldclock: sanitizeZones(s.worldclock),
     calendars: sanitizeCalendars(s.calendars),
@@ -525,6 +554,10 @@ export function preserveSavedSecrets(current: Settings, incoming: Settings): Set
         ...next.qbittorrent,
         apiKey: keepWhenStale(next.qbittorrent.apiKey, cur.qbittorrent.apiKey, stale),
         password: keepWhenStale(next.qbittorrent.password, cur.qbittorrent.password, stale),
+      },
+      navidrome: {
+        ...next.navidrome,
+        password: keepWhenStale(next.navidrome.password, cur.navidrome.password, stale),
       },
       transmission: {
         ...next.transmission,

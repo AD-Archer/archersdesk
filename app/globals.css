@@ -2183,6 +2183,400 @@ input {
   color: var(--dim);
 }
 
+/* ── navidrome widget ──────────────────────────────────────────────── */
+
+.navp {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6vmin;
+  position: relative;
+}
+
+.navp-ambient {
+  position: absolute;
+  inset: -22%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(46px) saturate(1.5) brightness(0.62);
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.navp > *:not(.navp-ambient) {
+  z-index: 1;
+}
+
+.navp-art {
+  width: calc(var(--ps) * 0.4);
+  height: calc(var(--ps) * 0.4);
+  border-radius: clamp(10px, 2.4vmin, 18px);
+  object-fit: cover;
+  box-shadow: 0 12px 34px var(--shadow), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  background: var(--bg-2);
+}
+
+.navp-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6vmin;
+  min-width: 0;
+  width: min(88%, calc(var(--ps) * 1.2));
+}
+
+.navp-title {
+  font-weight: 700;
+  font-size: calc(var(--ps) * 0.06);
+  line-height: 1.2;
+  text-align: center;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navp-artist {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: calc(var(--ps) * 0.05);
+  color: var(--cream-dim);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navp-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  cursor: pointer;
+  margin-top: 0.4vmin;
+}
+
+.navp-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--amber);
+}
+
+.navp-time {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: calc(var(--ps) * 0.03);
+  color: var(--dim);
+}
+
+.navp-controls {
+  display: flex;
+  align-items: center;
+  gap: 3vmin;
+}
+
+.navp-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--ps) * 0.09);
+  height: calc(var(--ps) * 0.09);
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--cream-dim);
+  font-size: calc(var(--ps) * 0.06);
+  cursor: pointer;
+}
+
+.navp-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.navp-btn-main {
+  background: var(--amber);
+  color: var(--bg);
+  width: calc(var(--ps) * 0.13);
+  height: calc(var(--ps) * 0.13);
+  font-size: calc(var(--ps) * 0.08);
+}
+
+.panel.wide .navp-wide {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 4vmin;
+  padding: 0 4vmin;
+}
+
+.navp-browse {
+  flex: 1.1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vmin;
+  height: 100%;
+}
+
+.navp-search {
+  display: flex;
+  align-items: center;
+  gap: 1.2vmin;
+  padding: 1vmin 1.4vmin;
+  border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--dim);
+}
+
+.navp-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--cream);
+  font-size: calc(var(--ps) * 0.038);
+}
+
+.navp-lists {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.navp-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2vmin;
+  padding: 1.1vmin 0.4vmin;
+  border-top: 1px solid var(--line);
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.navp-row:first-child {
+  border-top: none;
+}
+
+.navp-row-title {
+  font-size: calc(var(--ps) * 0.04);
+  color: var(--cream-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.navp-row-sub {
+  font-size: calc(var(--ps) * 0.032);
+  color: var(--dim);
+}
+
+.navp-now {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navp-now .navp {
+  gap: 1.4vmin;
+}
+
+/* ── embed widget ──────────────────────────────────────────────────── */
+
+.embed {
+  /* absolute + inset instead of a percentage width/height: percentage
+     sizing through nested flex containers can fail to resolve, which let
+     this clip against the panel's rounded top edge. the larger top inset
+     keeps the frame clear of the w-label chip. */
+  position: absolute;
+  inset: 8vmin 3vmin 3vmin;
+  display: flex;
+}
+
+.embed-frame {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: clamp(12px, 2.6vmin, 18px);
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  overflow: hidden;
+}
+
+.embed-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* floating manage button — quiet until touched, like the app's own gear */
+.embed-gear {
+  position: absolute;
+  top: 1.4vmin;
+  right: 1.4vmin;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(30px, 5vmin, 40px);
+  height: clamp(30px, 5vmin, 40px);
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(10, 8, 6, 0.5);
+  backdrop-filter: blur(8px);
+  color: var(--cream-dim);
+  opacity: 0.55;
+  transition: opacity 0.2s, transform 0.4s;
+}
+
+.embed-gear:hover,
+.embed-gear:active {
+  opacity: 1;
+  transform: rotate(40deg);
+}
+
+.embed-gear svg {
+  width: 55%;
+  height: 55%;
+  display: block;
+}
+
+.embed-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2vmin;
+  padding: 4vmin;
+  color: var(--dim);
+}
+
+.embed-empty svg {
+  width: calc(var(--ps) * 0.15);
+  height: calc(var(--ps) * 0.15);
+  color: var(--amber);
+  opacity: 0.55;
+  margin-bottom: 0.8vmin;
+}
+
+.embed-empty b {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: calc(var(--ps) * 0.058);
+  color: var(--cream-dim);
+}
+
+.embed-empty small {
+  font-size: calc(var(--ps) * 0.036);
+  letter-spacing: 0.04em;
+}
+
+/* the embeds popup — tap a row to play it, the pencil to edit it. no inner
+   max-height: the popup body is the one scroller, nested scroll areas fight
+   each other on touch screens */
+.embed-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1vmin;
+  flex: 0 0 auto;
+}
+
+.embed-row {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-a);
+  overflow: hidden;
+}
+
+.embed-row.on {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 1px var(--amber) inset;
+}
+
+.embed-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3vmin;
+  padding: 1.5vmin 1.8vmin;
+  text-align: left;
+}
+
+.embed-row-main b {
+  color: var(--cream);
+  font-size: clamp(13px, 2.8vmin, 15px);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.embed-row-main small {
+  color: var(--dim);
+  font-size: clamp(10px, 2.2vmin, 12px);
+}
+
+.embed-row-edit {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 1.9vmin;
+  border-left: 1px solid var(--line);
+  color: var(--dim);
+}
+
+.embed-row-edit:hover,
+.embed-row-edit:active {
+  color: var(--cream);
+}
+
+.embed-row-edit svg {
+  width: clamp(14px, 3vmin, 17px);
+  height: clamp(14px, 3vmin, 17px);
+}
+
+.embed-form-head {
+  font-size: clamp(10px, 2.2vmin, 12px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding-top: 1vmin;
+  border-top: 1px solid var(--line);
+}
+
+.embed-hint {
+  color: var(--dim);
+  font-size: clamp(10px, 2.2vmin, 12px);
+  line-height: 1.55;
+}
+
+.embed-error {
+  color: #d76f5a;
+  font-size: clamp(11px, 2.4vmin, 13px);
+  line-height: 1.5;
+}
+
 /* ── alarms widget ─────────────────────────────────────────────────── */
 
 .al-next-time {
@@ -2346,11 +2740,22 @@ input {
 .edit-pop {
   position: relative;
   width: min(92vw, 420px);
+  /* cap to the viewport (minus the layer's 4vmin padding) and scroll the
+     body — a popup with many rows must never outgrow the screen */
+  max-height: calc(100vh - 8vmin);
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line-strong);
   border-radius: clamp(16px, 3.2vmin, 24px);
   background: linear-gradient(165deg, var(--sheet-a), var(--sheet-b));
   box-shadow: 0 30px 90px var(--shadow);
   overflow: hidden;
+}
+
+@supports (height: 1dvh) {
+  .edit-pop {
+    max-height: calc(100dvh - 8vmin);
+  }
 }
 
 .edit-pop-head {
@@ -2375,11 +2780,19 @@ input {
   line-height: 1;
 }
 
+.edit-pop-head,
+.edit-pop-foot {
+  flex: 0 0 auto;
+}
+
 .edit-pop-body {
   display: flex;
   flex-direction: column;
   gap: 2vmin;
   padding: 3vmin;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .edit-field {
@@ -2533,6 +2946,9 @@ input {
 }
 
 .tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid transparent;
   border-radius: 100px;
   padding: 1.1vmin 2.6vmin;

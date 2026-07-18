@@ -17,6 +17,8 @@ import { SeerrWidget } from "./Seerr";
 import { QbittorrentWidget, TransmissionWidget } from "./Torrents";
 import { AgendaWidget } from "./Agenda";
 import { EpicGamesWidget } from "./Epic";
+import { NavidromeWidget } from "./Navidrome";
+import { EmbedWidget } from "./Embed";
 import {
   AwayUntilWidget,
   DoNotDisturbWidget,
@@ -101,6 +103,8 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   transmission: TransmissionWidget,
   agenda: AgendaWidget,
   epicgames: EpicGamesWidget,
+  navidrome: NavidromeWidget,
+  embed: EmbedWidget,
 };
 
 export function MainRow({

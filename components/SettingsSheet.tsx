@@ -1220,6 +1220,26 @@ function AccountsSection({ settings, onChange }: SectionProps) {
         />
       </AccountGroup>
 
+      <AccountGroup title="navidrome" blurb="search + play your library">
+        <AccountField
+          label="server url"
+          value={ig.navidrome?.url}
+          placeholder="https://navidrome.example.com"
+          onValue={(v) => patch({ navidrome: { ...ig.navidrome, url: v } })}
+        />
+        <AccountField
+          label="username"
+          value={ig.navidrome?.username}
+          onValue={(v) => patch({ navidrome: { ...ig.navidrome, username: v } })}
+        />
+        <AccountField
+          label="password"
+          value={ig.navidrome?.password}
+          secret
+          onValue={(v) => patch({ navidrome: { ...ig.navidrome, password: v } })}
+        />
+      </AccountGroup>
+
       <AccountGroup title="anilist" blurb="anime days watched + stats">
         <AccountField
           label="username"
