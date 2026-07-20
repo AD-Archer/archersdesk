@@ -5,6 +5,7 @@
   "packageManager": "pnpm@10.26.1",
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "node -e \"require('node:fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
     "build": "next build",
     "start": "next start",
     "icons": "node tools/make-icons.mjs"

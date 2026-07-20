@@ -75,10 +75,10 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
   },
   {
     name: "accounts",
-    blurb: "github, chess, wakatime",
+    blurb: "github, chess, monkeytype",
     rows: [
       { type: "split", left: "github", right: "chess" },
-      { type: "split", left: "wakatime", right: "stocks" },
+      { type: "split", left: "wakatime", right: "monkeytype" },
       { type: "split", left: "jellyfin", right: "plex" },
       { type: "split", left: "septa", right: "anilist" },
     ],
@@ -110,6 +110,7 @@ export default function SettingsSheet({
   settings,
   username,
   saved,
+  initialTab = "layout",
   activePage,
   deviceId,
   onChooseDevice,
@@ -120,13 +121,18 @@ export default function SettingsSheet({
   settings: ViewSettings;
   username: string;
   saved: boolean;
+  initialTab?: Tab;
   activePage?: number;
   deviceId: string;
   onChooseDevice: (id: string) => void;
   onClose: () => void;
   onChange: (next: ViewSettings) => void;
 }) {
-  const [tab, setTab] = useState<Tab>("layout");
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  useEffect(() => {
+    if (open) setTab(initialTab);
+  }, [initialTab, open]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -983,7 +989,7 @@ function AccountsSection({ settings, onChange }: SectionProps) {
   const ig = settings.integrations;
   const patch = (next: Partial<ViewSettings["integrations"]>) =>
     onChange({ ...settings, integrations: { ...ig, ...next } });
-  const [symbolsDraft, setSymbolsDraft] = useState(ig.stocks.symbols.join(", "));
+  const [symbolsDraft, setSymbolsDraft] = useState((ig.stocks?.symbols ?? []).join(", "));
 
   return (
     <>
@@ -1009,12 +1015,12 @@ function AccountsSection({ settings, onChange }: SectionProps) {
       <AccountGroup title="github" blurb="recent commits and activity">
         <AccountField
           label="username"
-          value={ig.github.username}
+          value={ig.github?.username}
           onValue={(v) => patch({ github: { ...ig.github, username: v } })}
         />
         <AccountField
           label="token (optional — higher rate limit)"
-          value={ig.github.token}
+          value={ig.github?.token}
           secret
           onValue={(v) => patch({ github: { ...ig.github, token: v } })}
         />
@@ -1023,8 +1029,18 @@ function AccountsSection({ settings, onChange }: SectionProps) {
       <AccountGroup title="chess.com" blurb="blitz · rapid · bullet ratings">
         <AccountField
           label="username"
-          value={ig.chess.username}
+          value={ig.chess?.username}
           onValue={(v) => patch({ chess: { username: v } })}
+        />
+      </AccountGroup>
+
+      <AccountGroup title="monkeytype" blurb="personal bests, streak and last test">
+        <AccountField
+          label="ape key"
+          value={ig.monkeytype?.apeKey}
+          secret
+          maxLength={512}
+          onValue={(v) => patch({ monkeytype: { apeKey: v } })}
         />
       </AccountGroup>
 

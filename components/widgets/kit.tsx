@@ -113,7 +113,8 @@ export function useIntegration<T>(
   service: ProxyService,
   settings: ViewSettings,
   ms = 3 * 60 * 1000,
-  refreshKey?: number | string
+  refreshKey?: number | string,
+  enabled = true
 ): IntegrationPayload<T> | null {
   const creds =
     service === "agenda"
@@ -126,7 +127,11 @@ export function useIntegration<T>(
   const url = `/api/integrations/${service}?device=${encodeURIComponent(settings.deviceId)}`;
   // bumping refreshKey changes the poll deps → immediate refetch (used after a
   // write action so the new state shows without waiting out the interval).
-  return usePoll<IntegrationPayload<T>>(url, ms, [JSON.stringify(creds), settings.deviceId, refreshKey]);
+  return usePoll<IntegrationPayload<T>>(enabled ? url : null, ms, [
+    JSON.stringify(creds),
+    settings.deviceId,
+    refreshKey,
+  ]);
 }
 
 /** Fire a write action against a service's proxy (e.g. seerr approve/decline,

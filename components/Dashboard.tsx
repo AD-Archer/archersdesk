@@ -545,15 +545,30 @@ export default function Dashboard({
 
   if (deviceId === "remote") {
     return (
-      <Remote
-        settings={settings}
-        username={username}
-        onChoose={chooseDevice}
-        onBecomeDisplay={chooseLastDisplayDevice}
-        onSaveSettings={saveCanonical}
-        onLogout={logout}
-        onPushed={applyPresence}
-      />
+      <>
+        <Remote
+          settings={settings}
+          username={username}
+          onChoose={chooseDevice}
+          onBecomeDisplay={chooseLastDisplayDevice}
+          onOpenAccounts={() => setSettingsOpen(true)}
+          onSaveSettings={saveCanonical}
+          onLogout={logout}
+          onPushed={applyPresence}
+        />
+        <SettingsSheet
+          open={settingsOpen}
+          settings={view}
+          username={username}
+          saved={saved}
+          initialTab="accounts"
+          activePage={activeWidgetPage}
+          deviceId={activeDevice.id}
+          onChooseDevice={chooseDevice}
+          onClose={() => setSettingsOpen(false)}
+          onChange={updateSettings}
+        />
+      </>
     );
   }
 

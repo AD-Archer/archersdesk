@@ -32,6 +32,10 @@ function need(reason: string): IntegrationPayload {
   return { configured: false, reason };
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 function grab(url: string, headers: Record<string, string> = {}, init: RequestInit = {}) {
   return fetch(url, { ...init, headers: { ...UA, ...headers }, signal: AbortSignal.timeout(9000) });
 }
@@ -129,6 +133,59 @@ function wakaItems(items: unknown, count = 3) {
       text: item.text ?? "",
       percent: typeof item.percent === "number" ? item.percent : null,
     }));
+}
+
+interface MonkeytypeResultLike {
+  wpm?: number;
+  raw?: number;
+  rawWpm?: number;
+  acc?: number;
+  consistency?: number;
+  timestamp?: number;
+  mode?: string;
+  mode2?: string | number;
+  language?: string;
+  isPb?: boolean;
+}
+
+function isMonkeytypeResult(v: unknown): v is MonkeytypeResultLike {
+  return isRecord(v) && typeof v.wpm === "number";
+}
+
+function monkeytypeResults(v: unknown): MonkeytypeResultLike[] {
+  if (isMonkeytypeResult(v)) return [v];
+  if (Array.isArray(v)) return v.flatMap(monkeytypeResults);
+  if (!isRecord(v)) return [];
+  return Object.values(v).flatMap(monkeytypeResults);
+}
+
+function monkeytypeNumber(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+function monkeytypeStreak(data: unknown): { current: number; max: number } | null {
+  if (!isRecord(data)) return null;
+  const current =
+    monkeytypeNumber(data.current) ??
+    monkeytypeNumber(data.currentStreak) ??
+    monkeytypeNumber(data.length) ??
+    monkeytypeNumber(isRecord(data.streak) ? data.streak.current : undefined);
+  const max =
+    monkeytypeNumber(data.max) ??
+    monkeytypeNumber(data.maxStreak) ??
+    monkeytypeNumber(data.maxLength) ??
+    monkeytypeNumber(data.longest) ??
+    monkeytypeNumber(isRecord(data.streak) ? data.streak.max : undefined);
+  if (current === null && max === null) return null;
+  return { current: current ?? 0, max: max ?? current ?? 0 };
+}
+
+function normalizeMonkeytypeApeKey(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^authorization:\s*/i, "")
+    .replace(/^(apekey|bearer)\s+/i, "")
+    .replace(/\s+/g, "");
 }
 
 interface Fetcher {
@@ -854,6 +911,96 @@ export const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
           operatingSystems: wakaItems(d?.operating_systems),
           editors: wakaItems(d?.editors),
           categories: wakaItems(d?.categories),
+        },
+      };
+    },
+  },
+
+  monkeytype: {
+    ttl: 10 * 60 * 1000,
+    async fetch(settings) {
+      const apeKey = normalizeMonkeytypeApeKey(settings.integrations.monkeytype?.apeKey ?? "");
+      if (!apeKey) return need("add your monkeytype ape key in settings → accounts");
+      async function monkeytypeResponseMessage(res: Response) {
+        const body = (await res.json().catch(() => null)) as { message?: unknown; error?: unknown } | null;
+        const msg =
+          typeof body?.message === "string"
+            ? body.message
+            : typeof body?.error === "string"
+              ? body.error
+              : "";
+        return msg ? `: ${msg}` : "";
+      }
+
+      async function mt(path: string) {
+        const res = await grab(`https://api.monkeytype.com${path}`, { Authorization: `ApeKey ${apeKey}` });
+        if (res.ok) return (await res.json()) as { data?: unknown };
+        const detail = await monkeytypeResponseMessage(res);
+        if (res.status === 401 || res.status === 470)
+          throw new Error(`monkeytype rejected that ape key (${res.status}${detail})`);
+        if (res.status === 471)
+          throw new Error(`activate this ape key in monkeytype, then try again${detail}`);
+        if (res.status === 472) throw new Error(`monkeytype says that ape key is malformed${detail}`);
+        if (res.status === 429 || res.status === 479)
+          throw new Error(`monkeytype rate limited that ape key${detail}`);
+        throw new Error(`monkeytype: error ${res.status}${detail}`);
+      }
+
+      let pbBody: { data?: unknown };
+      let statsBody: { data?: unknown } | null = null;
+      let streakBody: { data?: unknown } | null = null;
+      let lastBody: { data?: unknown } | null = null;
+      try {
+        [pbBody, statsBody, streakBody, lastBody] = await Promise.all([
+          mt("/users/personalBests?mode=time&mode2=60"),
+          mt("/users/stats").catch(() => null),
+          mt("/users/streak").catch(() => null),
+          mt("/results/last").catch(() => null),
+        ]);
+      } catch (error) {
+        return need(error instanceof Error ? error.message : "monkeytype unreachable right now");
+      }
+
+      const pbs = monkeytypeResults(pbBody.data);
+      const best = [...pbs].sort((a, b) => (b.wpm ?? 0) - (a.wpm ?? 0))[0] ?? null;
+      const last = monkeytypeResults(lastBody?.data)[0] ?? null;
+      const stats: Record<string, unknown> = isRecord(statsBody?.data) ? statsBody.data : {};
+      const testsByDays = Array.isArray(stats.testsByDays) ? stats.testsByDays : [];
+      const tests = testsByDays.reduce<number>((sum, n) => sum + (typeof n === "number" ? n : 0), 0);
+      const seconds = monkeytypeNumber(stats.timeTyping);
+      const streak = monkeytypeStreak(streakBody?.data);
+
+      if (!best && !last) return need("no monkeytype results found yet");
+      return {
+        configured: true,
+        data: {
+          username: "",
+          best60: best
+            ? {
+                wpm: best.wpm ?? 0,
+                raw: best.raw ?? best.rawWpm ?? null,
+                acc: best.acc ?? null,
+                consistency: best.consistency ?? null,
+                timestamp: best.timestamp ?? null,
+                language: best.language ?? "english",
+              }
+            : null,
+          last: last
+            ? {
+                wpm: last.wpm ?? 0,
+                raw: last.raw ?? last.rawWpm ?? null,
+                acc: last.acc ?? null,
+                mode: last.mode ?? "",
+                mode2: last.mode2 ?? "",
+                timestamp: last.timestamp ?? null,
+                isPb: last.isPb === true,
+              }
+            : null,
+          totals: {
+            tests,
+            hours: seconds === null ? null : seconds / 3600,
+          },
+          streak,
         },
       };
     },

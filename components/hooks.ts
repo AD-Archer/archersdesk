@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 const pollCache = new Map<string, { at: number; data: unknown }>();
 const pollInflight = new Map<string, Promise<unknown>>();
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 /** False during SSR + hydration, true after mount — gate second-precision
  *  output on this so server and client markup can't disagree. */
 export function useMounted(): boolean {
@@ -23,10 +27,16 @@ export function useNow(ms = 1000): Date {
 }
 
 /** Poll a JSON endpoint; refetches on an interval and when the tab wakes. */
-export function usePoll<T>(url: string, ms: number, deps: unknown[] = []): T | null {
+export function usePoll<T>(url: string | null, ms: number, deps: unknown[] = []): T | null {
   const [data, setData] = useState<T | null>(null);
   useEffect(() => {
     let dead = false;
+    if (!url) {
+      setData(null);
+      return () => {
+        dead = true;
+      };
+    }
     const key = `${url}|${JSON.stringify(deps)}`;
     const cached = pollCache.get(key);
     if (cached) setData(cached.data as T);
@@ -41,7 +51,22 @@ export function usePoll<T>(url: string, ms: number, deps: unknown[] = []): T | n
       const req =
         existing ??
         fetch(url)
-          .then((r) => r.json())
+          .then(async (r) => {
+            const text = await r.text();
+            let body: unknown = null;
+            try {
+              body = text ? JSON.parse(text) : null;
+            } catch {
+              body = null;
+            }
+            if (!r.ok) {
+              if (isRecord(body) && typeof body.reason === "string") return body;
+              if (isRecord(body) && typeof body.error === "string")
+                return { ...body, configured: false, reason: body.error };
+              return { configured: false, reason: `request failed (${r.status})` };
+            }
+            return body;
+          })
           .then((d) => {
             pollCache.set(key, { at: Date.now(), data: d });
             return d;

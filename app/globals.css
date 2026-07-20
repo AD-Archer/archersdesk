@@ -1161,6 +1161,32 @@ input {
   font-size: calc(var(--ps) * 0.12);
 }
 
+/* monkeytype hero: keyboard mark above the speed stat */
+.monkeytype-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6vmin;
+  max-width: 88%;
+}
+
+.monkeytype-hero-icon {
+  display: inline-grid;
+  place-items: center;
+  width: calc(var(--ps) * 0.13);
+  height: calc(var(--ps) * 0.115);
+}
+
+.monkeytype-hero-mi {
+  font-size: calc(var(--ps) * 0.095);
+  color: var(--amber);
+  filter: drop-shadow(0 0 2vmin var(--accent-glow));
+}
+
+.monkeytype-hero .kstat-value {
+  font-size: calc(var(--ps) * 0.12);
+}
+
 .click-settings-glyph {
   position: absolute;
   bottom: 0;
@@ -5368,7 +5394,7 @@ input[type="time"]:focus {
 .remote-nav {
   position: static;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   padding: 0;
   border: 0;

@@ -34,6 +34,7 @@ export default function Remote({
   username,
   onChoose,
   onBecomeDisplay,
+  onOpenAccounts,
   onSaveSettings,
   onLogout,
   onPushed,
@@ -42,6 +43,7 @@ export default function Remote({
   username: string;
   onChoose: (id: string) => void; // switch this browser to be a device
   onBecomeDisplay: () => void;
+  onOpenAccounts: () => void;
   onSaveSettings: (next: Settings) => void;
   onLogout: () => void;
   onPushed?: (snap: { version: number; devices: Array<{ id: string; presence: Presence }> }) => void;
@@ -99,6 +101,10 @@ export default function Remote({
           <button onClick={() => setMenu("devices")} aria-label="devices" title="devices">
             <MI name="live_tv" />
             <span className="remote-nav-label">devices</span>
+          </button>
+          <button onClick={onOpenAccounts} aria-label="accounts" title="accounts">
+            <MI name="keyboard" />
+            <span className="remote-nav-label">accounts</span>
           </button>
         </nav>
       )}

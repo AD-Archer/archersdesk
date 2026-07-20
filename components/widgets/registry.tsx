@@ -19,6 +19,7 @@ import { AgendaWidget } from "./Agenda";
 import { EpicGamesWidget } from "./Epic";
 import { NavidromeWidget } from "./Navidrome";
 import { EmbedWidget } from "./Embed";
+import { MonkeytypeWidget } from "./Monkeytype";
 import {
   AwayUntilWidget,
   DoNotDisturbWidget,
@@ -81,6 +82,7 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   stocks: StocksWidget,
   anilist: AnilistWidget,
   wakatime: WakatimeWidget,
+  monkeytype: MonkeytypeWidget,
   dog: DogWidget,
   cat: CatWidget,
   fox: FoxWidget,

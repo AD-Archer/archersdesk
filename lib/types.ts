@@ -25,6 +25,7 @@ export const WIDGETS = [
   "stocks",
   "anilist",
   "wakatime",
+  "monkeytype",
   "dog",
   "cat",
   "fox",
@@ -92,6 +93,7 @@ export const WIDGET_INFO: Record<
   stocks: { label: "stocks", blurb: "tickers you watch", category: "accounts", icon: "trending_up" },
   anilist: { label: "anilist", blurb: "anime + manga stats", category: "accounts", icon: "menu_book" },
   wakatime: { label: "wakatime", blurb: "today's coding time", category: "accounts", icon: "keyboard" },
+  monkeytype: { label: "monkeytype", blurb: "typing speed stats", category: "accounts", icon: "keyboard" },
   dog: { label: "dog cam", blurb: "a fresh dog, often", category: "feeds", icon: "pets" },
   cat: { label: "cat cam", blurb: "cat as a service", category: "feeds", icon: "pets" },
   fox: { label: "fox cam", blurb: "random foxes", category: "feeds", icon: "pets" },
@@ -214,6 +216,7 @@ export interface Settings {
     stocks: { symbols: string[] };
     anilist: { username: string };
     wakatime: { apiKey: string; apiUrl: string }; // apiUrl → wakapi/hackatime
+    monkeytype: { apeKey: string };
     septa: { station: string };
     jellyfin: { url: string; apiKey: string; username: string; password: string };
     plex: { url: string; token: string };

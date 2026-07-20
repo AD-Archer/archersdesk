@@ -76,6 +76,7 @@ export const DEFAULT_SETTINGS: Settings = {
     stocks: { symbols: ["AAPL", "SPY"] },
     anilist: { username: "" },
     wakatime: { apiKey: "", apiUrl: "" },
+    monkeytype: { apeKey: "" },
     septa: { station: "" },
     jellyfin: { url: "", apiKey: "", username: "", password: "" },
     plex: { url: "", token: "" },
@@ -185,6 +186,10 @@ function str(v: unknown, fallback: string, max = 120): string {
 }
 
 function trimmed(v: unknown, fallback: string, max = 120): string {
+  return str(v, fallback, max).trim();
+}
+
+function secret(v: unknown, fallback = "", max = 512): string {
   return str(v, fallback, max).trim();
 }
 
@@ -367,6 +372,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
   const stocks = isRecord(s.stocks) ? s.stocks : {};
   const anilist = isRecord(s.anilist) ? s.anilist : {};
   const wakatime = isRecord(s.wakatime) ? s.wakatime : {};
+  const monkeytype = isRecord(s.monkeytype) ? s.monkeytype : {};
   const septa = isRecord(s.septa) ? s.septa : {};
   const jellyfin = isRecord(s.jellyfin) ? s.jellyfin : {};
   const plex = isRecord(s.plex) ? s.plex : {};
@@ -392,6 +398,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
       apiKey: trimmed(wakatime.apiKey, "", 120),
       apiUrl: sanitizeUrl(str(wakatime.apiUrl, "", 200)),
     },
+    monkeytype: { apeKey: secret(monkeytype.apeKey) },
     septa: { station: trimmed(septa.station, "", 60) },
     jellyfin: {
       url: sanitizeUrl(str(jellyfin.url, "", 200)),
@@ -524,6 +531,10 @@ export function preserveSavedSecrets(current: Settings, incoming: Settings): Set
       wakatime: {
         ...next.wakatime,
         apiKey: keepWhenStale(next.wakatime.apiKey, cur.wakatime.apiKey, stale),
+      },
+      monkeytype: {
+        ...next.monkeytype,
+        apeKey: keepWhenStale(next.monkeytype.apeKey, cur.monkeytype.apeKey, stale),
       },
       jellyfin: {
         ...next.jellyfin,
