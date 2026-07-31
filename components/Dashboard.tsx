@@ -169,6 +169,7 @@ export default function Dashboard({
   }, [presenceSnap]);
 
   function applyPresence(snap: PresenceSnap) {
+    if (!Array.isArray(snap.devices)) return;
     setSettings((prev) => {
       const byId = new Map(snap.devices.map((d) => [d.id, d.presence]));
       let changed = false;

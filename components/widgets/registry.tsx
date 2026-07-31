@@ -20,6 +20,7 @@ import { EpicGamesWidget } from "./Epic";
 import { NavidromeWidget } from "./Navidrome";
 import { EmbedWidget } from "./Embed";
 import { MonkeytypeWidget } from "./Monkeytype";
+import { ArcherHoursWidget } from "./ArcherHours";
 import {
   AwayUntilWidget,
   DoNotDisturbWidget,
@@ -107,6 +108,7 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   epicgames: EpicGamesWidget,
   navidrome: NavidromeWidget,
   embed: EmbedWidget,
+  archerhours: ArcherHoursWidget,
 };
 
 export function MainRow({

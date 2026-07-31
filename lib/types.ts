@@ -50,6 +50,7 @@ export const WIDGETS = [
   "epicgames",
   "navidrome",
   "embed",
+  "archerhours",
 ] as const;
 
 export type WidgetName = (typeof WIDGETS)[number];
@@ -62,6 +63,7 @@ export const WIDGET_CATEGORIES = [
   { key: "status", label: "status signs" },
   { key: "accounts", label: "your accounts" },
   { key: "feeds", label: "feeds & fun" },
+  { key: "archer", label: "archer only" },
 ] as const;
 
 export type WidgetCategory = (typeof WIDGET_CATEGORIES)[number]["key"];
@@ -118,6 +120,7 @@ export const WIDGET_INFO: Record<
   epicgames: { label: "epic free games", blurb: "free this week + next", category: "feeds", icon: "play_circle" },
   navidrome: { label: "navidrome", blurb: "search your library, play anything", category: "accounts", icon: "music_note" },
   embed: { label: "embed", blurb: "youtube, spotify, anything with a url", category: "tools", icon: "live_tv" },
+  archerhours: { label: "archer hours", blurb: "weighted grants + hours shipped", category: "archer", icon: "rocket_launch" },
 };
 
 export const THEMES = ["ember", "moonlight", "meadow", "rose", "paper"] as const;
@@ -279,6 +282,7 @@ export const FEED_SERVICES = [
   "flights",
   "agenda",
   "epicgames",
+  "archerhours",
 ] as const;
 
 export type FeedService = (typeof FEED_SERVICES)[number];

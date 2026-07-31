@@ -1246,6 +1246,26 @@ export const OPEN_FEEDS: Record<FeedService, Fetcher> = {
     },
   },
 
+  archerhours: {
+    ttl: 5 * 60 * 1000,
+    async fetch() {
+      const res = await grab("https://stern.hackclub.com/api/archer/hours");
+      if (!res.ok) return need("archer hours unavailable");
+      const j = await res.json();
+      if (j.error) return need("archer hours unavailable");
+      return {
+        configured: true,
+        data: {
+          name: j.name,
+          weightedGrantsTotal: j.weightedGrantsTotal,
+          hoursPerWeightedGrant: j.hoursPerWeightedGrant,
+          hoursShipped: j.hoursShipped,
+          roundedHoursShipped: j.roundedHoursShipped,
+        },
+      };
+    },
+  },
+
   agenda: {
     ttl: 10 * 60 * 1000,
     async fetch(settings) {

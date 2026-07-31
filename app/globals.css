@@ -1187,6 +1187,35 @@ input {
   font-size: calc(var(--ps) * 0.12);
 }
 
+/* archer hours hero: tap to choose which stat is shown first */
+.archer-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6vmin;
+  max-width: 88%;
+  padding: 0 0 3.8vmin;
+}
+
+.archer-hero:active {
+  opacity: 0.75;
+}
+
+.archer-hero-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: calc(var(--ps) * 0.13);
+  height: calc(var(--ps) * 0.115);
+}
+
+.archer-hero-mi {
+  font-size: calc(var(--ps) * 0.095);
+  color: var(--amber);
+  filter: drop-shadow(0 0 2vmin var(--accent-glow));
+}
+
 .click-settings-glyph {
   position: absolute;
   bottom: 0;
