@@ -178,6 +178,32 @@
   border-radius: calc(var(--t, 96px) * 0.225);
 }
 
+/* a picture or logo never stretches with its key: it stays a square the
+   size of the key's shorter side, in the middle */
+.mpad .mtile.pic img {
+  width: var(--t, 96px);
+  height: var(--t, 96px);
+}
+
+.mpad .mtile.plate img {
+  width: calc(var(--t, 96px) * 0.62);
+  height: calc(var(--t, 96px) * 0.62);
+}
+
+.mpad .mtile.app img {
+  width: var(--t, 96px);
+  height: var(--t, 96px);
+}
+
+/* never blow a small picture up past 1.5× its own size: it sits crisp in
+   the middle of the key instead (--nat: its width, set once it loads) */
+.mpad .mtile.pic img,
+.mpad .mtile.plate img {
+  max-width: calc(var(--nat, 10000px) * 1.5);
+  max-height: calc(var(--nat, 10000px) * 1.5);
+  object-fit: contain;
+}
+
 .mpad-key {
   display: flex;
   flex-direction: column;
@@ -393,6 +419,17 @@
 .mps-ico.pink { background: var(--pink); }
 .mps-ico.green { background: var(--green); }
 .mps-ico.gray { background: var(--gray); }
+
+/* an action's own icon at the start of a row, drawn as the key it makes */
+.mtile.mps-keyicon {
+  --t: 30px;
+  border-radius: 7px;
+  background: #3a3a3c;
+}
+
+.mtile.mps-keyicon .mi {
+  font-size: 19px;
+}
 
 /* rows with an icon indent their separator past it, as in Settings */
 .group-row.bed-item + .group-row.bed-item::before,

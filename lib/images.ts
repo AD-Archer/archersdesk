@@ -6,13 +6,14 @@ import { env } from "./env";
 
 // ── button images ────────────────────────────────────────────────────
 // Every image a macapad button shows (pasted url, upload, website logo) is
-// squeezed here: at most 256px, WebP with its alpha channel kept — usually a
-// tenth of the PNG it came from — and stored per user under DATA_DIR, named
+// squeezed here: at most 512px (a key can be that big on a desktop pad
+// page), WebP with its alpha channel kept — usually a fraction of the PNG it
+// came from — and stored per user under DATA_DIR, named
 // by content hash so the same picture is only kept once. A "-d" suffix marks
 // mostly-dark artwork, which the pad sits on a light plate so it stays visible.
 
 const MAX_INPUT = 12 * 1024 * 1024;
-const SIZE = 256;
+const SIZE = 512;
 
 export const IMAGE_NAME = /^[a-f0-9]{24}(-d)?\.webp$/;
 
@@ -22,9 +23,22 @@ function userDir(userId: number) {
   return dir;
 }
 
+/** An svg, by its markup (sharp would draw it at its own, often tiny, size). */
+function isSvg(input: Buffer) {
+  return input.subarray(0, 1024).toString("utf8").toLowerCase().includes("<svg");
+}
+
 /** Resize + re-encode to WebP, keeping transparency. */
 export async function compressImage(input: Buffer, size = SIZE): Promise<Buffer> {
-  return sharp(input, { limitInputPixels: 40_000_000, animated: false })
+  // svg icons are often drawn at 24–32px: rasterize at the density that makes
+  // them `size` across, so they stay sharp
+  let density: number | undefined;
+  if (isSvg(input)) {
+    const { width = 0, height = 0 } = await sharp(input).metadata();
+    const side = Math.max(width, height) || 24;
+    density = Math.round(Math.min(2400, Math.max(72, (72 * size) / side)));
+  }
+  return sharp(input, { limitInputPixels: 40_000_000, animated: false, ...(density ? { density } : {}) })
     .rotate() // honour exif orientation from phone photos
     .resize(size, size, { fit: "inside", withoutEnlargement: true })
     .webp({ quality: 82, alphaQuality: 90, effort: 5 })

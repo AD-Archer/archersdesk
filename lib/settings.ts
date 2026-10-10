@@ -427,8 +427,9 @@ function sanitizeMacapad(v: unknown, screenKeys: string[]): MacapadPads {
   screenKeys.forEach((key, i) => {
     const raw = rawScreens[key];
     if (isRecord(raw)) {
-      const cols = gridInt(raw.cols, 5, MACAPAD_GRID.minCols, MACAPAD_GRID.maxCols);
-      const rows = gridInt(raw.rows, 3, MACAPAD_GRID.minRows, MACAPAD_GRID.maxRows);
+      const fallback = defaultScreenPad(key);
+      const cols = gridInt(raw.cols, fallback.cols, MACAPAD_GRID.minCols, MACAPAD_GRID.maxCols);
+      const rows = gridInt(raw.rows, fallback.rows, MACAPAD_GRID.minRows, MACAPAD_GRID.maxRows);
       screens[key] = { cols, rows, pages: sanitizePadPages(raw.pages, cols * rows, () => defaultScreenPad(key).pages) };
     } else if (i === 0 && Array.isArray(m.full)) {
       // the pad page was briefly one shared 5×3 pad ("full"): the first screen keeps it

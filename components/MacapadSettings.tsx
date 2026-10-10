@@ -294,6 +294,14 @@ export function MacapadSection({
     }
   }
 
+  async function applyTemplate(t: MacapadTemplate) {
+    const keys = page.buttons.filter(Boolean).length;
+    if (keys && !confirm(`replace the ${keys} key${keys === 1 ? "" : "s"} on "${pageName(page, pageIndex)}" with ${t.name}?`)) return;
+    setArranging(false);
+    setHeld(null);
+    await write("applyTemplate", { page: page.id, template: t.id });
+  }
+
   async function removePage(id: string) {
     const i = pages.findIndex((p) => p.id === id);
     if (i < 0 || !confirm(`delete "${pageName(pages[i], i)}" and its keys?`)) return;
@@ -423,6 +431,20 @@ export function MacapadSection({
           onDelete={removePage}
           onAdd={() => setPicking("page")}
         />
+
+        <h3 className="group-head">Start from a ready-made page</h3>
+        <div className="preset-grid">
+          {MACAPAD_TEMPLATES.map((t) => (
+            <button key={t.id} className="preset" onClick={() => applyTemplate(t)}>
+              <b>{t.name}</b>
+              <small>{t.blurb}</small>
+            </button>
+          ))}
+        </div>
+        <p className="group-foot">
+          Tapping one replaces the keys on &ldquo;{pageName(page, pageIndex)}&rdquo;
+          {kind === "page" ? `, fitted to its ${gridLabel(cols, rows)} grid` : ""}. Add a page first to keep these.
+        </p>
 
         <MacActions />
       </div>
@@ -798,7 +820,13 @@ function imageKind(image: string): "app" | "plate" | "pic" {
  *  key's image filling it. The board, the pad preview and the editor share it. */
 export function KeyTile({ button, className }: { button: Pick<MacapadButton, "icon" | "image">; className?: string }) {
   const [broken, setBroken] = useState(false);
-  useEffect(() => setBroken(false), [button.image]);
+  // the picture's own width: a small logo is never drawn past 1.5× it (css
+  // --nat), so it stays crisp in the middle of a big key instead of blurring
+  const [nat, setNat] = useState<number | null>(null);
+  useEffect(() => {
+    setBroken(false);
+    setNat(null);
+  }, [button.image]);
   const kind = button.image && !broken ? imageKind(button.image) : "glyph";
   return (
     <span className={`mtile ${kind}${className ? ` ${className}` : ""}`}>
@@ -806,7 +834,14 @@ export function KeyTile({ button, className }: { button: Pick<MacapadButton, "ic
         <MI name={button.icon} />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element -- arbitrary remote logos, no next/image config
-        <img src={button.image} alt="" draggable={false} onError={() => setBroken(true)} />
+        <img
+          src={button.image}
+          alt=""
+          draggable={false}
+          style={nat ? ({ "--nat": `${nat}px` } as React.CSSProperties) : undefined}
+          onLoad={(e) => setNat(e.currentTarget.naturalWidth || null)}
+          onError={() => setBroken(true)}
+        />
       )}
     </span>
   );
@@ -855,7 +890,39 @@ function useMacapadCatalog() {
 }
 
 const appIcon = (bundleId: string) => `/api/macapad/app-icon?bundleId=${encodeURIComponent(bundleId)}`;
-const iconOrBolt = (name: string) => (ICONS.includes(name) ? name : "bolt");
+// actions made in the Mac app can carry SF Symbol names ("speaker.wave.2.fill"):
+// the nearest icon in our set, so they don't all turn into a bolt
+const SF_ICONS: Record<string, string> = {
+  play: "play_arrow", "play.circle": "play_arrow", "playpause": "play_pause", forward: "fast_forward",
+  backward: "fast_rewind", "forward.end": "skip_next", "backward.end": "skip_previous",
+  "speaker.wave.1": "volume_down", "speaker.wave.2": "volume_up", "speaker.wave.3": "volume_up",
+  "speaker.slash": "volume_off", speaker: "volume_mute", "music.note": "music_note", "music.note.list": "queue_music",
+  gearshape: "settings", gear: "settings", globe: "language", magnifyingglass: "search", envelope: "mail",
+  moon: "dark_mode", sun: "light_mode", "sun.max": "light_mode", camera: "photo_camera", photo: "photo",
+  doc: "description", "doc.on.doc": "content_copy", "doc.on.clipboard": "content_paste", scissors: "content_cut",
+  trash: "delete", folder: "folder", house: "home", lightbulb: "lightbulb", keyboard: "keyboard",
+  command: "keyboard_command_key", terminal: "terminal", lock: "lock", "lock.open": "lock", bell: "notifications",
+  "bell.slash": "notifications_off", mic: "mic", "mic.slash": "mic_off", video: "videocam", "video.slash": "videocam_off",
+  "arrow.clockwise": "refresh", "arrow.uturn.backward": "undo", "arrow.uturn.forward": "redo", star: "star",
+  heart: "favorite", bolt: "bolt", sparkles: "auto_awesome", "macwindow": "window", "rectangle.split.2x1": "dashboard",
+  "square.grid.2x2": "grid_view", "desktopcomputer": "desktop_mac", laptopcomputer: "laptop", printer: "print",
+  wifi: "wifi", calendar: "calendar_month", clock: "schedule", timer: "timer", person: "person", message: "chat",
+};
+function iconOrBolt(name: string) {
+  if (ICONS.includes(name)) return name;
+  const sf = name.replace(/\.(fill|circle|square)$/g, "").replace(/\.(fill|circle|square)$/g, "");
+  const guess = SF_ICONS[sf] ?? SF_ICONS[name] ?? sf.replace(/\./g, "_");
+  return ICONS.includes(guess) ? guess : "bolt";
+}
+
+/** An action's icon the way it looks on a key: a small dark tile, white glyph. */
+function ActionIcon({ icon }: { icon: string }) {
+  return (
+    <span className="mtile glyph mps-keyicon" aria-hidden>
+      <MI name={iconOrBolt(icon)} />
+    </span>
+  );
+}
 
 const CATEGORY_ORDER = ["media", "system", "windows", "browser", "editing", "custom"];
 function byCategory(actions: MacapadAction[]) {
@@ -873,7 +940,7 @@ function byCategory(actions: MacapadAction[]) {
 // looks" is icon or picture. Every key opens on the full list of choices,
 // with what it does now checked, so all the options stay in view.
 
-type Kind = "mac" | "app" | "web" | "keys" | "shortcut" | "sequence";
+type Kind = "mac" | "custom" | "app" | "web" | "keys" | "shortcut" | "sequence";
 
 const KINDS: Array<{ kind: Kind; icon: string; color: string; title: string; hint: string }> = [
   { kind: "app", icon: "apps", color: "blue", title: "Open an app", hint: "Any app installed on your Mac" },
@@ -881,15 +948,19 @@ const KINDS: Array<{ kind: Kind; icon: string; color: string; title: string; hin
   { kind: "keys", icon: "keyboard", color: "gray", title: "Press a keyboard shortcut", hint: "Like ⌘W or ⌃⌘Space" },
   { kind: "shortcut", icon: "bolt", color: "indigo", title: "Run a shortcut", hint: "From the Shortcuts app" },
   { kind: "mac", icon: "keyboard_command_key", color: "orange", title: "Control your Mac", hint: "Music, volume, windows, screenshots, emoji" },
+  { kind: "custom", icon: "auto_awesome", color: "pink", title: "Your actions", hint: "Ones you've saved on your Mac, or make a new one" },
   { kind: "sequence", icon: "checklist", color: "purple", title: "Do several things", hint: "Steps in a row: type, wait, AppleScript" },
 ];
 
-/** Which panel a button belongs to, from what it already does. */
-function kindOf(steps: MacapadStep[] | undefined): Kind | null {
+/** Which panel a button belongs to, from what it already does (one of your
+ *  own saved actions → "Your actions"). */
+function kindOf(steps: MacapadStep[] | undefined, actions?: MacapadAction[]): Kind | null {
   if (!steps?.length) return null;
   if (steps.length > 1) return "sequence";
-  switch (steps[0].type) {
+  const first = steps[0];
+  switch (first.type) {
     case "action":
+      return actions?.some((a) => a.custom && a.id === first.id) ? "custom" : "mac";
     case "media":
       return "mac";
     case "openApp": return "app";
@@ -918,7 +989,7 @@ function ButtonEditor({
   const [steps, setSteps] = useState<MacapadStep[]>(button?.steps ?? []);
   const [view, setView] = useState<"does" | "looks">("does");
   const [kind, setKind] = useState<Kind | null>(null);
-  const currentKind = kindOf(steps);
+  const currentKind = kindOf(steps, catalog?.actions);
   const [error, setError] = useState<string | null>(null);
   // the label follows each pick until you type your own
   const autoLabel = useRef(button?.label ?? "");
@@ -1072,9 +1143,16 @@ function ButtonEditor({
                   "Asking your Mac…"
                 )}
               </div>
+            ) : kind === "custom" ? (
+              <CustomActionPicker
+                actions={catalog.actions}
+                selected={steps.length === 1 && steps[0].type === "action" ? steps[0].id : ""}
+                onPick={(a) => choose({ label: a.name.toLowerCase(), icon: iconOrBolt(a.icon), steps: [{ type: "action", id: a.id }] })}
+                onChanged={reload}
+              />
             ) : kind === "mac" ? (
               <ActionPicker
-                actions={catalog.actions}
+                actions={catalog.actions.filter((a) => !a.custom)}
                 selected={steps.length === 1 && steps[0].type === "action" ? steps[0].id : ""}
                 onPick={(a) => choose({ label: a.name.toLowerCase(), icon: iconOrBolt(a.icon), steps: [{ type: "action", id: a.id }] })}
               />
@@ -1544,6 +1622,67 @@ function ActionPicker({ actions, selected, onPick }: { actions: MacapadAction[];
   );
 }
 
+/** "Your actions": the ones saved on your Mac (made here or in the Mac app),
+ *  shown with their own icons, plus a way to make a new one — saving it puts
+ *  it straight on the key. */
+function CustomActionPicker({
+  actions,
+  selected,
+  onPick,
+  onChanged,
+}: {
+  actions: MacapadAction[];
+  selected: string;
+  onPick: (a: MacapadAction) => void;
+  onChanged: () => void;
+}) {
+  const mine = actions.filter((a) => a.custom);
+  const [making, setMaking] = useState(false);
+  return (
+    <div className="bed-list">
+      <div className="group">
+        {mine.map((a) => (
+          <button
+            key={a.id}
+            className={`group-row bed-item${a.id === selected ? " on" : ""}`}
+            onClick={() => onPick(a)}
+            aria-pressed={a.id === selected}
+          >
+            <ActionIcon icon={a.icon} />
+            <span className="mps-row-text">
+              {a.name}
+              <small>
+                {a.steps.length} step{a.steps.length === 1 ? "" : "s"}
+              </small>
+            </span>
+            {a.id === selected && <MI name="check" className="mps-check" />}
+          </button>
+        ))}
+        <button className="group-row mps-blue" onClick={() => setMaking(true)}>
+          <MI name="add" /> New action
+        </button>
+      </div>
+      <p className="group-foot">
+        {mine.length
+          ? "Saved on your Mac, so every pad and screen can use them."
+          : "You haven't saved any actions yet. Make one for anything a key should do in several steps."}
+      </p>
+      {making && (
+        <ActionEditor
+          action={null}
+          actions={actions}
+          onClose={() => setMaking(false)}
+          onSaved={(saved) => {
+            setMaking(false);
+            onChanged();
+            if (saved) onPick(saved);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 function AppPicker({ apps, selected, onPick }: { apps: MacapadApp[]; selected: string; onPick: (app: MacapadApp) => void }) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
@@ -1877,9 +2016,7 @@ function MacActions() {
         )}
         {mine.map((a) => (
           <div key={a.id} className="group-row">
-            <span className="mps-ico purple">
-              <MI name={iconOrBolt(a.icon)} />
-            </span>
+            <ActionIcon icon={a.icon} />
             <span className="mps-row-text">
               {a.name}
               <small>
@@ -1929,7 +2066,7 @@ function ActionEditor({
   action: MacapadAction | null;
   actions: MacapadAction[];
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (saved: MacapadAction | null) => void;
 }) {
   const [name, setName] = useState(action?.name ?? "");
   const [icon, setIcon] = useState(action?.icon ?? "bolt");
@@ -1944,12 +2081,12 @@ function ActionEditor({
     const blank = steps.findIndex((st) => stepValue(st)?.trim() === "" || (st.type === "keystroke" && !parseCombo(st.keys).key));
     if (blank >= 0) return setError(`Step ${blank + 1} isn't finished yet.`);
     setSaving(true);
-    const res = await macapadAction("saveAction", {
+    const res = await macapadAction<MacapadAction>("saveAction", {
       action: { id: action?.id ?? "", name: name.trim(), icon, category: action?.category ?? "custom", steps },
     });
     setSaving(false);
     if (res.reason) return setError(res.reason);
-    onSaved();
+    onSaved(res.data?.id ? res.data : null);
   }
 
   return (

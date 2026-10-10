@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 // An iOS-style sheet over the board (rendered via portal): a #1c1c1e sheet
@@ -24,13 +24,17 @@ export default function EditablePopup({
   className?: string; // extra class on the dialog, for popups with their own layout
 }) {
   const [mounted, setMounted] = useState(false);
+  const layer = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      // a popup opened from a popup: Escape closes only the top one
+      const layers = document.querySelectorAll(".edit-pop-layer");
+      if (layers[layers.length - 1] === layer.current) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -39,7 +43,7 @@ export default function EditablePopup({
   if (!mounted || !open) return null;
 
   return createPortal(
-    <div className="edit-pop-layer" role="presentation">
+    <div className="edit-pop-layer" role="presentation" ref={layer}>
       <button className="edit-pop-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
       <section className={`edit-pop${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="edit-pop-head">

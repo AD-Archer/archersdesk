@@ -46,12 +46,12 @@ export function allPadButtons(pads: MacapadPads): MacapadButton[] {
     .filter((b): b is MacapadButton => b !== null);
 }
 
-/** A new screen's pad page: 5×3 (3×5 for the phone remote), music + volume,
- *  then the mac's own shortcuts. Ids carry the screen key, so no two screens
- *  share a key id. */
+/** A new screen's pad page: 4×2, or 2×4 standing up on the phone remote;
+ *  music + volume, then the mac's own shortcuts. Ids carry the screen key, so
+ *  no two screens share a key id. */
 export function defaultScreenPad(key: string): MacapadScreenPad {
-  const cols = key === MACAPAD_REMOTE ? 3 : 5;
-  const rows = key === MACAPAD_REMOTE ? 5 : 3;
+  const cols = key === MACAPAD_REMOTE ? 2 : 4;
+  const rows = key === MACAPAD_REMOTE ? 4 : 2;
   return {
     cols,
     rows,

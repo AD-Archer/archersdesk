@@ -174,7 +174,10 @@ async function macapadApi<T = unknown>(
 // Logo candidates, best first for a square key: apple-touch-icon (square,
 // made for exactly this), svg icons, sized icons largest first, unsized png
 // icons, then og/twitter images (often a wide promo banner, not a logo),
-// then .ico files. All are returned so the editor can offer alternatives.
+// then .ico files. Sites that only ship a tiny favicon (google.com among
+// them) also get Google's 256px favicon for their domain, ranked under any
+// real icon of 150px or more. All are returned so the editor can offer
+// alternatives.
 
 function tagAttrs(tag: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -225,6 +228,8 @@ async function siteMeta(raw: string): Promise<SiteMeta | { error: string }> {
     if (m[1].toLowerCase() === "meta") {
       const key = (a.property || a.name || "").toLowerCase();
       if ((key === "og:image" || key === "og:image:url" || key === "twitter:image") && a.content) add(a.content, 50);
+      // schema.org's logo (google.com puts its 128px "G" here)
+      if ((a.itemprop || "").toLowerCase() === "image" && a.content) add(a.content, 128);
       if (key === "og:title" && a.content) ogTitle = a.content;
       if (key === "og:site_name" && a.content) siteName = a.content;
     } else {
@@ -242,6 +247,7 @@ async function siteMeta(raw: string): Promise<SiteMeta | { error: string }> {
     .replace(/&amp;/g, "&")
     .trim()
     .slice(0, 40);
+  add(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(base.hostname)}&sz=256`, 150);
   add("/favicon.ico", 1);
   const images = found
     .sort((x, y) => y.score - x.score)

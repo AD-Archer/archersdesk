@@ -21,10 +21,10 @@ import { useNow, usePoll, useWakeLock, useWheelStep } from "./hooks";
 import { useWeather } from "./widgets/Weather";
 import { nightState } from "./night";
 
-// 0 = standby, 1..n = widget pages, last = the macapad page. StandBy and the
-// pad page are fixed; only the widget pages in between are laid out.
-const PAGES = 1 + WIDGET_PAGE_COUNT + 1;
-const PAD_PAGE = PAGES - 1;
+// 0 = standby, 1..n = widget pages, then the macapad page once macapad is
+// set up (settings → accounts). StandBy and the pad page are fixed; only the
+// widget pages in between are laid out.
+const LAST_WIDGET_PAGE = WIDGET_PAGE_COUNT;
 const DEVICE_KEY = "archersdesk.deviceId";
 const LAST_DEVICE_KEY = "archersdesk.lastDeviceId";
 type PaneSide = "left" | "right";
@@ -101,6 +101,7 @@ export default function Dashboard({
   const deviceIdRef = useRef<string | null>(deviceId);
   const viewRef = useRef<ViewSettings | null>(null);
   const pageRef = useRef(page);
+  const pageCountRef = useRef(1 + WIDGET_PAGE_COUNT);
   const leftRowsRef = useRef(leftRows);
   const rightRowsRef = useRef(rightRows);
   const activeDualRowsRef = useRef(activeDualRows);
@@ -126,8 +127,14 @@ export default function Dashboard({
   const savedView = toView(savedSettings, activeDeviceOf(savedSettings, deviceId));
   viewRef.current = view;
 
+  // the pad page only exists once macapad is set up — the saved copy, so a
+  // half-typed address doesn't make it flicker in and out
+  const padOn = Boolean(savedView.integrations.macapad?.url && savedView.integrations.macapad?.token);
+  const pageCount = 1 + WIDGET_PAGE_COUNT + (padOn ? 1 : 0);
+  pageCountRef.current = pageCount;
+
   const pages = widgetPages(view);
-  const onWidgetPage = page > 0 && page < PAD_PAGE;
+  const onWidgetPage = page > 0 && page <= LAST_WIDGET_PAGE;
   const activeWidgetPage = Math.min(WIDGET_PAGE_COUNT - 1, Math.max(0, page - 1));
   const activeRows = onWidgetPage ? (pages[activeWidgetPage] ?? []) : [];
 
@@ -256,6 +263,11 @@ export default function Dashboard({
     if (JSON.stringify(rightRows) !== JSON.stringify(nextRight)) setRightRows(nextRight);
     if (JSON.stringify(activeDualRows) !== JSON.stringify(nextDual)) setActiveDualRows(nextDual);
   }, [pages, leftRows, rightRows, activeDualRows]);
+
+  // macapad switched off while its page was showing: step back onto the desk
+  useEffect(() => {
+    if (page > pageCount - 1) setPage(pageCount - 1);
+  }, [page, pageCount]);
 
   // page and row changes flash the dots, like StandBy's stack indicator
   useEffect(() => {
@@ -473,9 +485,9 @@ export default function Dashboard({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
-      if (e.key === "ArrowRight") setPage((p) => Math.min(PAGES - 1, p + 1));
+      if (e.key === "ArrowRight") setPage((p) => Math.min(pageCountRef.current - 1, p + 1));
       if (e.key === "ArrowLeft") setPage((p) => Math.max(0, p - 1));
-      const onRows = pageRef.current > 0 && pageRef.current < PAD_PAGE;
+      const onRows = pageRef.current > 0 && pageRef.current <= LAST_WIDGET_PAGE;
       if (e.key === "ArrowDown" && onRows) moveBothRows(pageRef.current - 1, 1);
       if (e.key === "ArrowUp" && onRows) moveBothRows(pageRef.current - 1, -1);
     };
@@ -524,8 +536,8 @@ export default function Dashboard({
   // takes wheel events itself until it runs out of pages, then hands them up)
   const onWheel = useWheelStep({
     axis: "x",
-    canStep: (dir) => (dir > 0 ? pageRef.current < PAGES - 1 : pageRef.current > 0),
-    onStep: (dir) => setPage((p) => Math.min(PAGES - 1, Math.max(0, p + dir))),
+    canStep: (dir) => (dir > 0 ? pageRef.current < pageCountRef.current - 1 : pageRef.current > 0),
+    onStep: (dir) => setPage((p) => Math.min(pageCountRef.current - 1, Math.max(0, p + dir))),
   });
 
   function onPointerDown(e: React.PointerEvent) {
@@ -582,7 +594,7 @@ export default function Dashboard({
     setDragY(null);
     if (axis === "h") {
       const threshold = Math.min(80, window.innerWidth * 0.1);
-      if (dx < -threshold) setPage((p) => Math.min(PAGES - 1, p + 1));
+      if (dx < -threshold) setPage((p) => Math.min(pageCountRef.current - 1, p + 1));
       else if (dx > threshold) setPage((p) => Math.max(0, p - 1));
     } else if (axis === "v" && onWidgetPage) {
       const threshold = Math.min(70, window.innerHeight * 0.12);
@@ -703,9 +715,11 @@ export default function Dashboard({
               {renderWidgetPage(i)}
             </section>
           ))}
-          <section className="page">
-            <MacapadPage settings={view} integrationSettings={savedView} />
-          </section>
+          {padOn && (
+            <section className="page">
+              <MacapadPage settings={view} integrationSettings={savedView} />
+            </section>
+          )}
         </div>
       </div>
 
@@ -757,7 +771,7 @@ export default function Dashboard({
       </div>
 
       <div className={`dots${hud ? " show" : ""}`} aria-hidden>
-        {Array.from({ length: PAGES }, (_, i) => (
+        {Array.from({ length: pageCount }, (_, i) => (
           <i key={i} className={i === page ? "on" : ""} />
         ))}
       </div>

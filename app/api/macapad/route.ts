@@ -27,6 +27,8 @@ import {
 //   move       {pad, from:{page,index}, to:{page,index}}  swap two slots (any pages)
 //   addPage    {pad, name?, template?}               → also returns {page: newId}
 //              (template: a lib/macapadTemplates id — the page comes filled)
+//   applyTemplate {pad, page, template}             replace a page's keys with a template's
+//              (the page takes the template's name unless it was given its own)
 //   renamePage {pad, page, name}
 //   movePage   {pad, page, by: -1|1} or {pad, page, to: index}  (to: drag / typed position)
 //   removePage {pad, page}                           (a pad keeps at least one page)
@@ -157,6 +159,19 @@ export async function POST(req: NextRequest) {
           ? templateButtons(template, slots, () => crypto.randomUUID())
           : Array(slots).fill(null);
         return [...pages, { id: created, name, buttons }];
+      });
+      break;
+    }
+    case "applyTemplate": {
+      const template = MACAPAD_TEMPLATES.find((t) => t.id === p.template);
+      if (!template) return bad("no such template");
+      settings = edit((pages, slots) => {
+        const page = pages.find((pg) => pg.id === p.page);
+        if (!page) return "that page no longer exists";
+        page.buttons = templateButtons(template, slots, () => crypto.randomUUID());
+        // "page 3" was never really named: it becomes "developer"
+        if (!page.name.trim() || /^page \d+$/i.test(page.name.trim())) page.name = template.name.toLowerCase();
+        return pages;
       });
       break;
     }

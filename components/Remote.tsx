@@ -128,6 +128,8 @@ export default function Remote({
   const [menu, setMenu] = useState<Menu>(null);
 
   const targets = devices.filter((d) => selected.includes(d.id));
+  // the Pad tab only shows once macapad is set up (settings → accounts)
+  const padOn = Boolean(settings.integrations.macapad?.url && settings.integrations.macapad?.token);
   const allOn = devices.length > 0 && targets.length === devices.length;
   const vibes = new Set(targets.map((d) => d.presence.vibe));
   const currentVibe = vibes.size === 1 ? [...vibes][0] : null;
@@ -341,13 +343,13 @@ export default function Remote({
         </div>
       )}
 
-      {menu === "pad" && <RemotePad settings={settings} onClose={() => setMenu(null)} />}
+      {menu === "pad" && padOn && <RemotePad settings={settings} onClose={() => setMenu(null)} />}
       {menu === "alarms" && <AlarmsPage settings={settings} onSaveSettings={onSaveSettings} />}
       {menu === "devices" && <DevicesPage settings={settings} onChoose={onChoose} onSaveSettings={onSaveSettings} />}
 
       {/* the iOS tab bar */}
       <nav className="rm-tabbar" aria-label="Remote sections">
-        {TABS.map((t) => {
+        {TABS.filter((t) => t.id !== "pad" || padOn).map((t) => {
           const on = t.id !== "accounts" && t.id === menu;
           return (
             <button
