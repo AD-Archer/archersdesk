@@ -5,9 +5,10 @@ import type { Alarm, Device, GeocodeResult, LayoutRow, ThemeName, ViewSettings, 
 import { MAX_ROWS, THEME_INFO, THEMES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS, WIDGET_PAGE_COUNT } from "@/lib/types";
 import { dayChips, fmt12 } from "./alarmUtil";
 import { useIntegrationAction } from "./widgets/kit";
+import { MacapadSection, type MacapadFocus } from "./MacapadSettings";
 
-type Tab = "layout" | "theme" | "alarms" | "calendar" | "location" | "devices" | "accounts";
-const TABS: Tab[] = ["layout", "theme", "alarms", "calendar", "location", "devices", "accounts"];
+export type Tab = "layout" | "macapad" | "theme" | "alarms" | "calendar" | "location" | "devices" | "accounts";
+const TABS: Tab[] = ["layout", "macapad", "theme", "alarms", "calendar", "location", "devices", "accounts"];
 
 // swatch previews for the theme cards (mirrors globals.css palettes)
 const SWATCH: Record<ThemeName, { bg: string; accent: string }> = {
@@ -103,6 +104,16 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
       { type: "split", left: "pihole", right: "epicgames" },
     ],
   },
+  {
+    name: "homelab",
+    blurb: "mac pad, media servers, home",
+    rows: [
+      { type: "dual", widget: "macapad" },
+      { type: "split", left: "macapad", right: "navidrome" },
+      { type: "split", left: "jellyfin", right: "plex" },
+      { type: "split", left: "homeassistant", right: "transmission" },
+    ],
+  },
 ];
 
 export default function SettingsSheet({
@@ -112,6 +123,7 @@ export default function SettingsSheet({
   saved,
   initialTab = "layout",
   activePage,
+  macapadFocus,
   deviceId,
   onChooseDevice,
   onClose,
@@ -123,6 +135,7 @@ export default function SettingsSheet({
   saved: boolean;
   initialTab?: Tab;
   activePage?: number;
+  macapadFocus?: MacapadFocus | null;
   deviceId: string;
   onChooseDevice: (id: string) => void;
   onClose: () => void;
@@ -162,6 +175,7 @@ export default function SettingsSheet({
             {tab === "layout" && (
               <LayoutSection settings={settings} onChange={onChange} initialPage={activePage} />
             )}
+            {tab === "macapad" && <MacapadSection settings={settings} onChange={onChange} focus={macapadFocus} />}
             {tab === "theme" && <ThemeSection settings={settings} onChange={onChange} />}
             {tab === "alarms" && <AlarmsSection settings={settings} onChange={onChange} />}
             {tab === "calendar" && <CalendarSection settings={settings} onChange={onChange} />}
@@ -1168,6 +1182,26 @@ function AccountsSection({ settings, onChange }: SectionProps) {
           onValue={(v) => patch({ homeassistant: { ...ig.homeassistant, token: v } })}
         />
         <HomeAssistantEntityPicker settings={settings} patch={patch} />
+      </AccountGroup>
+
+      <AccountGroup title="macapad" blurb="stream-deck buttons that control your mac">
+        <AccountField
+          label="macapad url (menu bar → copy api url)"
+          value={ig.macapad?.url}
+          placeholder="http://100.70.88.101:7317"
+          onValue={(v) => patch({ macapad: { ...ig.macapad, url: v } })}
+        />
+        <AccountField
+          label="api token (menu bar → copy api token)"
+          value={ig.macapad?.token}
+          secret
+          maxLength={200}
+          onValue={(v) => patch({ macapad: { ...ig.macapad, token: v } })}
+        />
+        <p className="sec-note">
+          the desk server calls this url, not your tablet — use an address the server can reach
+          (localhost if they&rsquo;re on the same mac, its tailscale ip otherwise).
+        </p>
       </AccountGroup>
 
       <AccountGroup title="seerr" blurb="jellyseerr / overseerr media requests">

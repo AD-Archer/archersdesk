@@ -19,9 +19,9 @@ const sans = localFont({
   display: "swap",
 });
 
-// Material Symbols subset (see README to regenerate with more icon names)
+// Material Symbols subset — add names in tools/make-icon-font.mjs, then `pnpm icon-font`
 const icons = localFont({
-  src: [{ path: "./fonts/material-symbols.woff2", weight: "100 700", style: "normal" }],
+  src: [{ path: "./fonts/material-symbols.woff2", weight: "400", style: "normal" }],
   variable: "--font-icons",
   display: "block",
 });

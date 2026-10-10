@@ -4,6 +4,9 @@ import path from "node:path";
 import { getDb } from "./db";
 import { env } from "./env";
 import {
+  MACAPAD_MAX_PAGES,
+  MACAPAD_MEDIA_KEYS,
+  MACAPAD_SLOTS,
   MAX_ROWS,
   THEMES,
   VIBES,
@@ -15,6 +18,12 @@ import {
   type EmbedFeed,
   type LayoutRow,
   type Location,
+  type MacapadButton,
+  type MacapadMediaKey,
+  type MacapadPage,
+  type MacapadPads,
+  type MacapadSize,
+  type MacapadStep,
   type Presence,
   type Settings,
   type ThemeName,
@@ -54,6 +63,45 @@ const DEFAULT_LAYOUT: Device["layout"] = {
 
 const DEFAULT_PRESENCE: Presence = { awayUntil: null, awayLocation: "", vibe: "joyful" };
 
+const media = (id: string, label: string, icon: string, key: MacapadMediaKey): MacapadButton => ({
+  id,
+  label,
+  icon,
+  steps: [{ type: "media", key }],
+});
+
+// starter pads: playback on the small one, playback + volume + tabs on the big one
+const DEFAULT_MACAPAD: MacapadPads = {
+  small: [
+    {
+      id: "s-media",
+      name: "media",
+      buttons: [
+        media("s-prev", "previous", "skip_previous", "previous"),
+        media("s-play", "play / pause", "play_pause", "playPause"),
+        media("s-next", "next", "skip_next", "next"),
+        media("s-mute", "mute", "volume_off", "mute"),
+      ],
+    },
+  ],
+  big: [
+    {
+      id: "b-main",
+      name: "main",
+      buttons: [
+        media("b-prev", "previous", "skip_previous", "previous"),
+        media("b-play", "play / pause", "play_pause", "playPause"),
+        media("b-next", "next", "skip_next", "next"),
+        media("b-mute", "mute", "volume_off", "mute"),
+        media("b-down", "volume down", "volume_down", "volumeDown"),
+        media("b-up", "volume up", "volume_up", "volumeUp"),
+        { id: "b-newtab", label: "new tab", icon: "tab", steps: [{ type: "keystroke", keys: "cmd+t" }] },
+        { id: "b-closetab", label: "close tab", icon: "close", steps: [{ type: "keystroke", keys: "cmd+w" }] },
+      ],
+    },
+  ],
+};
+
 export const DEFAULT_SETTINGS: Settings = {
   version: 0,
   devices: [
@@ -87,8 +135,10 @@ export const DEFAULT_SETTINGS: Settings = {
     qbittorrent: { url: "", apiKey: "", username: "", password: "" },
     transmission: { url: "", username: "", password: "" },
     navidrome: { url: "", username: "", password: "" },
+    macapad: { url: "", token: "" },
   },
   embeds: [],
+  macapad: DEFAULT_MACAPAD,
   alarms: [],
   worldclock: [
     { label: "london", tz: "Europe/London" },
@@ -281,6 +331,87 @@ function sanitizeEmbeds(v: unknown): EmbedFeed[] {
   return out;
 }
 
+const MACAPAD_MAX_STEPS = 12;
+
+function sanitizeMacapadStep(v: unknown): MacapadStep | null {
+  if (!isRecord(v)) return null;
+  switch (v.type) {
+    case "media":
+      return (MACAPAD_MEDIA_KEYS as readonly string[]).includes(String(v.key))
+        ? { type: "media", key: v.key as MacapadMediaKey }
+        : null;
+    case "keystroke":
+      return { type: "keystroke", keys: trimmed(v.keys, "", 60) };
+    case "typeText":
+      return { type: "typeText", text: str(v.text, "", 2000) };
+    case "openURL":
+      return { type: "openURL", url: trimmed(v.url, "", 500) };
+    case "openApp":
+      return { type: "openApp", app: trimmed(v.app, "", 120) };
+    case "shortcut":
+      return { type: "shortcut", name: trimmed(v.name, "", 120) };
+    case "appleScript":
+      return { type: "appleScript", source: str(v.source, "", 4000) };
+    case "wait":
+      return { type: "wait", ms: Math.round(num(v.ms, 500, 0, 60_000)) };
+    case "action":
+      return /^[a-z0-9][a-z0-9-]{0,47}$/.test(String(v.id)) ? { type: "action", id: String(v.id) } : null;
+    default:
+      return null;
+  }
+}
+
+/** A button image: an http(s) logo url, or the desk's own app-icon proxy. */
+function macapadImage(v: unknown): string {
+  const s = trimmed(v, "", 500);
+  if (/^\/api\/macapad\/app-icon\?bundleId=[\w.-]+$/.test(s)) return s;
+  if (/^\/api\/macapad\/images\/[a-f0-9]{24}(-d)?\.webp$/.test(s)) return s;
+  return /^https?:\/\/[^\s"'<>]+$/.test(s) ? s : "";
+}
+
+/** A pad button, or null for anything unusable (no steps survive → empty slot). */
+export function sanitizeMacapadButton(v: unknown): MacapadButton | null {
+  if (!isRecord(v)) return null;
+  const steps = (Array.isArray(v.steps) ? v.steps : [])
+    .slice(0, MACAPAD_MAX_STEPS)
+    .map(sanitizeMacapadStep)
+    .filter((st): st is MacapadStep => st !== null);
+  if (!steps.length) return null;
+  const image = macapadImage(v.image);
+  return {
+    id: trimmed(v.id, "", 64) || crypto.randomUUID(),
+    label: trimmed(v.label, "", 40),
+    icon: /^[a-z0-9_]{1,40}$/.test(String(v.icon)) ? String(v.icon) : "bolt",
+    ...(image ? { image } : {}),
+    steps,
+  };
+}
+
+function sanitizeMacapad(v: unknown): MacapadPads {
+  if (!isRecord(v)) return DEFAULT_MACAPAD;
+  const pad = (raw: unknown, size: MacapadSize): MacapadPage[] => {
+    if (!Array.isArray(raw)) return DEFAULT_MACAPAD[size];
+    // the first shape was one flat list of buttons — that becomes page 1
+    const isPage = (x: unknown) => isRecord(x) && Array.isArray(x.buttons);
+    const rawPages = raw.some(isPage) ? raw.filter(isPage) : [{ id: "page-1", name: "page 1", buttons: raw }];
+    const seen = new Set<string>();
+    const pages = rawPages.slice(0, MACAPAD_MAX_PAGES).map((p, i) => {
+      const page = p as Record<string, unknown>;
+      let id = trimmed(page.id, "", 64) || `page-${i + 1}`;
+      while (seen.has(id)) id = `${id}-${i + 1}`;
+      seen.add(id);
+      const buttons = page.buttons as unknown[];
+      return {
+        id,
+        name: trimmed(page.name, "", 30) || `page ${i + 1}`,
+        buttons: Array.from({ length: MACAPAD_SLOTS[size] }, (_, j) => sanitizeMacapadButton(buttons[j])),
+      };
+    });
+    return pages.length ? pages : DEFAULT_MACAPAD[size];
+  };
+  return { small: pad(v.small, "small"), big: pad(v.big, "big") };
+}
+
 function sanitizeRowsValue(v: unknown): LayoutRow[] {
   const rows: LayoutRow[] = [];
   if (Array.isArray(v)) {
@@ -383,6 +514,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
   const qbittorrent = isRecord(s.qbittorrent) ? s.qbittorrent : {};
   const transmission = isRecord(s.transmission) ? s.transmission : {};
   const navidrome = isRecord(s.navidrome) ? s.navidrome : {};
+  const macapad = isRecord(s.macapad) ? s.macapad : {};
   const symbols = Array.isArray(stocks.symbols)
     ? stocks.symbols
         .map((x) => String(x).toUpperCase().replace(/[^A-Z0-9.^=-]/g, "").slice(0, 12))
@@ -444,6 +576,10 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
       username: trimmed(navidrome.username, "", 80),
       password: str(navidrome.password, "", 160),
     },
+    macapad: {
+      url: sanitizeUrl(str(macapad.url, "", 200)),
+      token: secret(macapad.token, "", 200),
+    },
   };
 }
 
@@ -497,6 +633,7 @@ export function sanitizeSettings(input: unknown): Settings {
     },
     integrations: sanitizeIntegrations(s.integrations),
     embeds: sanitizeEmbeds(s.embeds),
+    macapad: sanitizeMacapad(s.macapad),
     alarms: sanitizeAlarms(s.alarms, validIds),
     worldclock: sanitizeZones(s.worldclock),
     calendars: sanitizeCalendars(s.calendars),
@@ -573,6 +710,10 @@ export function preserveSavedSecrets(current: Settings, incoming: Settings): Set
       transmission: {
         ...next.transmission,
         password: keepWhenStale(next.transmission.password, cur.transmission.password, stale),
+      },
+      macapad: {
+        ...next.macapad,
+        token: keepWhenStale(next.macapad.token, cur.macapad.token, stale),
       },
     },
   };

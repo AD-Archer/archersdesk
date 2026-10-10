@@ -1808,6 +1808,1093 @@ input {
   opacity: 0.55;
 }
 
+/* ── macapad (stream-deck pad for the mac) ─────────────────────────── */
+
+/* pages slide sideways inside the panel; one page = one grid */
+.mpad-viewport {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  margin-top: 3.6vmin;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.mpad-track {
+  display: flex;
+  height: 100%;
+}
+
+.mpad-track.animate {
+  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 2×2 in a square panel, 4×2 in a dual row; keys fill the page */
+.mpad {
+  flex: 0 0 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 2.2vmin;
+}
+
+.panel.wide .mpad {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mpad-key {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2vmin;
+  padding: 1.4vmin;
+  border: 1px solid var(--line);
+  border-radius: clamp(14px, 3.4vmin, 28px);
+  background: linear-gradient(158deg, var(--panel-a), var(--panel-b) 80%);
+  color: var(--cream-dim);
+  transition:
+    transform 0.08s,
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
+  touch-action: manipulation;
+}
+
+.mpad-key:active {
+  transform: scale(0.95);
+}
+
+.mpad-icon {
+  font-size: calc(var(--ps) * 0.12);
+  color: var(--amber);
+  filter: drop-shadow(0 0 1.4vmin var(--accent-glow));
+}
+
+.mpad-label {
+  max-width: 100%;
+  font-size: calc(var(--ps) * 0.036);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-align: center;
+  /* narrow keys (a dual row on a phone) wrap to two lines, then ellipsis */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.mpad-key.busy {
+  border-color: var(--amber);
+}
+
+.mpad-key.busy .mpad-icon {
+  animation: mpad-pulse 0.8s ease-in-out infinite alternate;
+}
+
+.mpad-key.ok {
+  border-color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 22%, transparent);
+  color: var(--cream);
+}
+
+.mpad-key.err {
+  border-color: #d9573f;
+  background: rgba(217, 87, 63, 0.2);
+}
+
+@keyframes mpad-pulse {
+  from { opacity: 1; }
+  to { opacity: 0.4; }
+}
+
+.mpad-key.empty {
+  border-style: dashed;
+  background: transparent;
+}
+
+.mpad-key.empty .mpad-icon {
+  color: var(--faint);
+  filter: none;
+}
+
+.mpad-dots {
+  display: flex;
+  justify-content: center;
+  gap: 1.2vmin;
+  margin-top: 1.6vmin;
+}
+
+.mpad-dots button {
+  width: clamp(6px, 1.4vmin, 9px);
+  height: clamp(6px, 1.4vmin, 9px);
+  padding: 0;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.mpad-dots button.on {
+  background: var(--amber);
+  box-shadow: 0 0 1.2vmin var(--accent-glow);
+}
+
+.mpad-viewport.offline .mpad-icon {
+  color: var(--dim);
+  filter: none;
+}
+
+.mpad-msg {
+  position: absolute;
+  left: 4vmin;
+  right: 4vmin;
+  bottom: 1.6vmin;
+  z-index: 2;
+  padding: 1vmin 2vmin;
+  border-radius: 100px;
+  background: var(--sheet-a);
+  border: 1px solid var(--line-strong);
+  color: var(--cream-dim);
+  font-size: calc(var(--ps) * 0.032);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* the label spans the panel and sits above the body — stop it short of the
+   gear, or it swallows the gear's taps */
+.panel:has(.mpad) .w-label {
+  right: calc(2.6vmin + clamp(28px, 4.6vmin, 38px) + 1.4vmin);
+}
+
+/* edit toggle — sits on the label row, quiet until used */
+.mpad-gear {
+  position: absolute;
+  top: 2vmin;
+  right: 2.6vmin;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: clamp(28px, 4.6vmin, 38px);
+  height: clamp(28px, 4.6vmin, 38px);
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  color: var(--dim);
+  font-size: clamp(15px, 2.6vmin, 20px);
+  opacity: 0.6;
+  transition: opacity 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.mpad-gear:active {
+  opacity: 1;
+  color: var(--on-accent);
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+/* editor popup */
+.mpad-section {
+  font-size: clamp(10px, 2.2vmin, 12px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.mpad-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1vmin;
+}
+
+.mpad-picks button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  color: var(--cream-dim);
+  font-size: clamp(12px, 2.4vmin, 13px);
+}
+
+.mpad-picks .mi {
+  font-size: 16px;
+  color: var(--amber);
+}
+
+.mpad-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vmin;
+}
+
+.mpad-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1vmin;
+  padding: 1.4vmin;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-b);
+}
+
+.mpad-step-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mpad-step-head b {
+  min-width: 18px;
+  color: var(--amber);
+  font-size: 13px;
+}
+
+.mpad-step-head select {
+  flex: 1;
+  min-width: 0;
+}
+
+.mpad-step-head button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--dim);
+  font-size: 17px;
+}
+
+.mpad-step-head button:disabled {
+  opacity: 0.3;
+}
+
+.mpad-step select,
+.mpad-step input,
+.mpad-step textarea {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel-a);
+  color: var(--cream);
+  font-size: clamp(14px, 2.8vmin, 15px);
+  padding: 0 12px;
+  color-scheme: inherit;
+}
+
+.mpad-step textarea {
+  min-height: 80px;
+  padding: 10px 12px;
+  resize: vertical;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+}
+
+.mpad-step small {
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mpad-add-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  color: var(--cream-dim);
+  font-size: clamp(12px, 2.5vmin, 14px);
+}
+
+.mpad-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 6px;
+}
+
+.mpad-icons button {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--cream-dim);
+  font-size: 20px;
+}
+
+.mpad-icons button.on {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: var(--panel-a);
+}
+
+/* app icons / site logos on keys */
+.mpad-key .mpad-img {
+  width: calc(var(--ps) * 0.15);
+  height: calc(var(--ps) * 0.15);
+  object-fit: contain;
+  border-radius: 22%;
+  filter: none;
+}
+
+.mps-key .mpad-img {
+  width: clamp(28px, 6vmin, 40px);
+  height: clamp(28px, 6vmin, 40px);
+  object-fit: contain;
+  border-radius: 22%;
+}
+
+/* site logos are often drawn for light pages: sit them on a light plate
+   (app icons bring their own background) */
+.mpad-img.site {
+  background: #f4f1ea;
+  padding: 10%;
+}
+
+/* button editor: preview, pick tabs, pickers */
+/* preview key on the left, label + icon toggle on the right */
+.mpe-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mpe-head .mps-key {
+  width: 92px;
+  flex: 0 0 auto;
+}
+
+.mpe-head-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mpe-head-fields .edit-field {
+  width: 100%;
+}
+
+.mpe-disclose {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--cream-dim);
+  font-size: clamp(12px, 2.4vmin, 13px);
+}
+
+.mpe-disclose .mi {
+  font-size: 15px;
+  color: var(--amber);
+}
+
+/* what the button does, in one sentence */
+.mpe-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--amber) 9%, transparent);
+  color: var(--cream);
+  font-size: clamp(13px, 2.6vmin, 15px);
+  line-height: 1.35;
+}
+
+.mpe-summary .mi {
+  flex: 0 0 auto;
+  font-size: 20px;
+  color: var(--amber);
+}
+
+.mpe-summary.empty {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  background: transparent;
+  color: var(--dim);
+}
+
+.mpe-summary.empty .mi {
+  color: var(--faint);
+}
+
+.mpe-appearance,
+.mpe-iconpick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.mpe-tabs.small button {
+  min-height: 30px;
+}
+
+.mpe-iconpick .mpad-icons {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.mpe-upload {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  color: var(--cream-dim);
+  font-size: clamp(12px, 2.5vmin, 14px);
+  cursor: pointer;
+}
+
+.mpe-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.mpe-upload.busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.mpe-ok {
+  color: var(--amber) !important;
+}
+
+.mpe-chained {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  color: var(--dim);
+  font-size: clamp(12px, 2.4vmin, 13px);
+}
+
+/* keyboard shortcut builder */
+.mpe-keys-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mpe-keys-pane > small {
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.mpe-combo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mpe-mods {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mpe-mods button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.mpe-mods button b {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--cream-dim);
+}
+
+.mpe-mods button.on {
+  border-color: var(--amber);
+  background: var(--amber);
+  color: var(--on-accent);
+}
+
+.mpe-mods button.on b {
+  color: var(--on-accent);
+}
+
+/* tappable keys: special keys always shown, the full board on request */
+.mpe-keyrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mpe-keyrow button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 2px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--panel-a);
+  color: var(--cream-dim);
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.mpe-keyrow button b {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.mpe-keyrow button small {
+  font-size: 9px;
+  color: var(--dim);
+}
+
+.mpe-keyrow button.wide {
+  min-width: 96px;
+}
+
+.mpe-keyrow button.on {
+  border-color: var(--amber);
+  background: var(--amber);
+  color: var(--on-accent);
+}
+
+.mpe-keyrow button.on small {
+  color: var(--on-accent);
+}
+
+.mpe-keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* the board's rows fill the width so all 13 keys fit on a phone */
+.mpe-keyrow.tight {
+  flex-wrap: nowrap;
+  gap: 3px;
+}
+
+.mpe-keyrow.tight button {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  font-size: 12px;
+}
+
+.mpe-keyline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mpe-keyinput {
+  width: 84px;
+  min-height: 38px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel-a);
+  color: var(--cream);
+  font-size: 15px;
+  text-align: center;
+}
+
+.mpe-combo-show {
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--cream);
+}
+
+.mpe-combo-show small {
+  margin-left: 6px;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--dim);
+}
+
+/* advanced: the raw step list, folded away */
+.mpe-advanced-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 2px;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+
+.mpe-advanced-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mpe-advanced-toggle b {
+  font-size: clamp(13px, 2.6vmin, 14px);
+  color: var(--cream-dim);
+}
+
+.mpe-advanced-toggle small {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.mpe-advanced-toggle .mi {
+  color: var(--dim);
+  font-size: 18px;
+}
+
+.mpe-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vmin;
+}
+
+.mpe-link {
+  color: var(--amber);
+  font-size: clamp(12px, 2.4vmin, 13px);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.mpe-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+}
+
+.mpe-tabs button {
+  flex: 1;
+  min-height: 34px;
+  border-radius: 100px;
+  color: var(--dim);
+  font-size: clamp(12px, 2.4vmin, 13px);
+  font-weight: 600;
+}
+
+.mpe-tabs button.on {
+  background: var(--amber);
+  color: var(--on-accent);
+}
+
+/* the popup body scrolls as a flex column, which would otherwise squash
+   these to nothing — they keep their own height and the pane scrolls itself */
+.mpe-head,
+.mpe-summary,
+.mpe-tabs,
+.mpe-pane,
+.mpe-advanced-toggle,
+.mpe-advanced,
+.mpad-icons {
+  flex-shrink: 0;
+}
+
+.mpe-pane {
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vmin;
+  padding: 2px;
+}
+
+/* the keys tab shows its whole board — scrolling inside would hide the modifiers */
+.mpe-pane.fit {
+  max-height: none;
+  overflow: visible;
+}
+
+.mpe-empty {
+  color: var(--dim);
+  font-size: clamp(12px, 2.4vmin, 13px);
+  padding: 2vmin 0;
+}
+
+.mpe-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4vmin;
+}
+
+.mpe-group-name {
+  margin-bottom: 0.8vmin;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.mpe-search {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel-a);
+  color: var(--cream);
+  font-size: clamp(14px, 2.8vmin, 15px);
+  padding: 0 12px;
+}
+
+.mpe-apps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 6px;
+}
+
+.mpe-apps button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--cream-dim);
+  font-size: 11px;
+}
+
+.mpe-apps button:active,
+.mpe-apps button:hover {
+  border-color: var(--line);
+  background: var(--panel-a);
+}
+
+.mpe-apps .mpad-img,
+.mpe-apps .mi {
+  width: 40px;
+  height: 40px;
+  font-size: 34px;
+  object-fit: contain;
+}
+
+.mpe-apps span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mpe-site {
+  display: flex;
+  flex-direction: column;
+  gap: 1vmin;
+}
+
+.mpe-site small {
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.mpe-site-row {
+  display: flex;
+  gap: 8px;
+}
+
+.mpe-site-row .edit-pop-primary {
+  flex: 0 0 auto;
+}
+
+.mpe-logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mpe-logos button {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-a);
+}
+
+.mpe-logos .mpad-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.mps-spot > .mi {
+  color: var(--amber);
+  font-size: 18px;
+}
+
+.mps-spot small {
+  color: var(--dim);
+}
+
+/* settings → macapad */
+.mps-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1vmin;
+  margin-bottom: 1.4vmin;
+}
+
+.mps-pages button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  color: var(--cream-dim);
+  font-size: clamp(12px, 2.4vmin, 14px);
+}
+
+.mps-pages button.on {
+  border-color: var(--amber);
+  color: var(--cream);
+  box-shadow: 0 0 0 1px var(--amber) inset;
+}
+
+.mps-pages button.add {
+  border-style: dashed;
+  color: var(--dim);
+}
+
+.mps-pages .mi {
+  font-size: 16px;
+}
+
+.mps-page-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 1.8vmin;
+}
+
+.mps-page-bar input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel-a);
+  color: var(--cream);
+  font-size: clamp(14px, 2.8vmin, 15px);
+  padding: 0 12px;
+}
+
+.mps-page-bar button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--cream-dim);
+  font-size: 18px;
+}
+
+.mps-page-bar button:disabled {
+  opacity: 0.3;
+}
+
+/* a live preview of the pad page: 2×2 small, 4×2 big */
+.mps-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 1.4vmin;
+}
+
+.mps-grid.small {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 300px;
+}
+
+.mps-grid.big {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 480px;
+}
+
+.mps-key {
+  aspect-ratio: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(158deg, var(--panel-a), var(--panel-b) 80%);
+  color: var(--cream-dim);
+  transition: transform 0.12s, border-color 0.15s;
+}
+
+.mps-key .mi {
+  font-size: clamp(22px, 5vmin, 32px);
+  color: var(--amber);
+}
+
+.mps-key span {
+  max-width: 100%;
+  font-size: clamp(10px, 2vmin, 12px);
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mps-key.empty {
+  border-style: dashed;
+  background: transparent;
+}
+
+.mps-key.empty .mi {
+  color: var(--faint);
+}
+
+.mps-grid.arranging .mps-key {
+  border-style: dashed;
+  border-color: var(--line-strong);
+}
+
+.mps-grid.arranging .mps-key.held {
+  border-style: solid;
+  border-color: var(--amber);
+  transform: scale(1.06);
+  box-shadow: 0 0 0 1px var(--amber) inset, 0 10px 26px var(--shadow);
+}
+
+.mps-tools {
+  display: flex;
+  align-items: center;
+  gap: 1.6vmin;
+  margin-bottom: 2.4vmin;
+}
+
+.mps-tools small {
+  color: var(--dim);
+  font-size: clamp(11px, 2.2vmin, 13px);
+  line-height: 1.4;
+}
+
+.mps-arrange {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  color: var(--cream-dim);
+  font-size: clamp(12px, 2.4vmin, 14px);
+  font-weight: 600;
+}
+
+.mps-arrange.on {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--on-accent);
+}
+
+.mps-arrange .mi {
+  font-size: 17px;
+}
+
+.mps-desk {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vmin;
+  padding-top: 2vmin;
+  border-top: 1px solid var(--line);
+}
+
+.mps-spots,
+.mps-add {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mps-spot,
+.mps-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--cream-dim);
+  font-size: clamp(12px, 2.4vmin, 14px);
+}
+
+.mps-spot span,
+.mps-add-row span {
+  flex: 1;
+}
+
+.mps-spot button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--dim);
+  font-size: 18px;
+}
+
+.mps-add-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 100px;
+  color: var(--cream-dim);
+  font-size: clamp(11px, 2.2vmin, 13px);
+}
+
+.mps-add-row button:disabled {
+  opacity: 0.35;
+}
+
+.mps-add-row .mi {
+  font-size: 15px;
+}
+
 /* ── status signs ──────────────────────────────────────────────────── */
 
 .status {

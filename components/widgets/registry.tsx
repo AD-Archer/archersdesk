@@ -13,6 +13,7 @@ import { AlarmsWidget } from "./Alarms";
 import { TimerWidget } from "./Timer";
 import { QuoteWidget } from "./Quote";
 import { HomeAssistantWidget } from "./HomeAssistant";
+import { MacapadWidget } from "./Macapad";
 import { SeerrWidget } from "./Seerr";
 import { QbittorrentWidget, TransmissionWidget } from "./Torrents";
 import { AgendaWidget } from "./Agenda";
@@ -101,6 +102,7 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   adguard: AdguardWidget,
   pihole: PiholeWidget,
   homeassistant: HomeAssistantWidget,
+  macapad: MacapadWidget,
   seerr: SeerrWidget,
   qbittorrent: QbittorrentWidget,
   transmission: TransmissionWidget,

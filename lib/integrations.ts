@@ -4,6 +4,10 @@ import type {
   IntegrationPayload,
   IntegrationService,
   Location,
+  MacapadAction,
+  MacapadApp,
+  MacapadCatalog,
+  SiteMeta,
   ProxyService,
   Settings,
 } from "./types";
@@ -113,6 +117,136 @@ async function haFetchStates(url: string, token: string): Promise<{ error: strin
   if (!(res.headers.get("content-type") ?? "").includes("application/json"))
     return { error: "home assistant returned a login page, not data — its url is behind an sso proxy; use a direct/bypass url" };
   return { states: (await res.json()) as HaState[] };
+}
+
+// POST /api/run on the mac. macapad answers {ok, error} for step failures and
+// {error:{message}} for bad requests; a 401 means the token is wrong.
+async function macapadRun(url: string, token: string, steps: unknown[]): Promise<{ ok: true } | { ok: false; error: string }> {
+  let res: Response;
+  try {
+    res = await fetch(`${url}/api/run`, {
+      method: "POST",
+      headers: { ...UA, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ steps }),
+      // a button can chain waits, so allow longer than a normal fetch
+      signal: AbortSignal.timeout(steps.length ? 60_000 : 5000),
+    });
+  } catch {
+    return { ok: false, error: "can't reach your mac — is macapad running?" };
+  }
+  if (res.status === 401) return { ok: false, error: "macapad rejected the token — copy it again from the menu bar" };
+  const body = (await res.json().catch(() => null)) as { ok?: boolean; error?: string | { message?: string } } | null;
+  if (res.ok && body?.ok) return { ok: true };
+  const message = typeof body?.error === "string" ? body.error : body?.error?.message;
+  return { ok: false, error: message || `macapad: error ${res.status}` };
+}
+
+// any other macapad endpoint: json in/out, macapad's {error:{message}} surfaced
+async function macapadApi<T = unknown>(
+  url: string,
+  token: string,
+  path: string,
+  opts: { method?: string; body?: unknown; timeout?: number } = {}
+): Promise<{ ok: true; data: T } | { ok: false; error: string; status?: number }> {
+  let res: Response;
+  try {
+    res = await fetch(`${url}${path}`, {
+      method: opts.method ?? "GET",
+      headers: {
+        ...UA,
+        Authorization: `Bearer ${token}`,
+        ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      signal: AbortSignal.timeout(opts.timeout ?? 8000),
+    });
+  } catch {
+    return { ok: false, error: "can't reach your mac — is macapad running?" };
+  }
+  if (res.status === 401) return { ok: false, error: "macapad rejected the token — copy it again from the menu bar", status: 401 };
+  const body = (await res.json().catch(() => null)) as (T & { error?: { message?: string } }) | null;
+  if (res.ok && body) return { ok: true, data: body };
+  return { ok: false, error: body?.error?.message || `macapad: error ${res.status}`, status: res.status };
+}
+
+// ── website buttons: title + logo from the page's own markup ──────────
+// Logo candidates, best first for a square key: apple-touch-icon (square,
+// made for exactly this), svg icons, sized icons largest first, unsized png
+// icons, then og/twitter images (often a wide promo banner, not a logo),
+// then .ico files. All are returned so the editor can offer alternatives.
+
+function tagAttrs(tag: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const m of tag.matchAll(/([a-zA-Z_:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g))
+    out[m[1].toLowerCase()] = (m[2] ?? m[3] ?? m[4] ?? "").replace(/&amp;/g, "&").trim();
+  return out;
+}
+
+async function siteMeta(raw: string): Promise<SiteMeta | { error: string }> {
+  let page: URL;
+  try {
+    page = new URL(/^[a-z][a-z0-9+.-]*:/i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`);
+  } catch {
+    return { error: "that doesn't look like a web address" };
+  }
+  if (page.protocol !== "https:" && page.protocol !== "http:") return { error: "only http(s) sites have logos" };
+
+  let html = "";
+  let base = page;
+  try {
+    const res = await fetch(page, {
+      // some sites only serve full markup to browsers
+      headers: { "User-Agent": "Mozilla/5.0 (Macintosh) AppleWebKit/537.36 Chrome/120 Safari/537.36", Accept: "text/html" },
+      signal: AbortSignal.timeout(8000),
+      redirect: "follow",
+    });
+    base = new URL(res.url || page.href);
+    if ((res.headers.get("content-type") ?? "").includes("html")) html = (await res.text()).slice(0, 600_000);
+  } catch {
+    // unreachable from the server: still offer /favicon.ico
+  }
+
+  const abs = (href: string) => {
+    try {
+      const u = new URL(href, base);
+      return u.protocol === "https:" || u.protocol === "http:" ? u.href : "";
+    } catch {
+      return "";
+    }
+  };
+
+  const found: Array<{ href: string; score: number }> = [];
+  const add = (href: string, score: number) => found.push({ href: abs(href), score });
+  let ogTitle = "";
+  let siteName = "";
+  for (const m of html.matchAll(/<(meta|link)\b[^>]*>/gi)) {
+    const a = tagAttrs(m[0]);
+    if (m[1].toLowerCase() === "meta") {
+      const key = (a.property || a.name || "").toLowerCase();
+      if ((key === "og:image" || key === "og:image:url" || key === "twitter:image") && a.content) add(a.content, 50);
+      if (key === "og:title" && a.content) ogTitle = a.content;
+      if (key === "og:site_name" && a.content) siteName = a.content;
+    } else {
+      const rel = (a.rel || "").toLowerCase().split(/\s+/);
+      if (!a.href) continue;
+      if (rel.includes("apple-touch-icon") || rel.includes("apple-touch-icon-precomposed")) add(a.href, 1000);
+      else if (rel.includes("icon")) {
+        const path = a.href.split("?")[0].toLowerCase();
+        const size = parseInt(a.sizes ?? "", 10);
+        add(a.href, path.endsWith(".svg") || a.type === "image/svg+xml" ? 900 : size > 0 ? Math.min(size, 512) : path.endsWith(".ico") ? 16 : 64);
+      }
+    }
+  }
+  const title = (siteName || ogTitle || html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] || base.hostname.replace(/^www\./, ""))
+    .replace(/&amp;/g, "&")
+    .trim()
+    .slice(0, 40);
+  add("/favicon.ico", 1);
+  const images = found
+    .sort((x, y) => y.score - x.score)
+    .map((f) => f.href)
+    .filter((u, i, all) => u && all.indexOf(u) === i);
+  return { url: page.href, title, image: images[0] ?? "", images };
 }
 
 const WAKATIME_DEFAULT_API = "https://api.wakatime.com/api/v1";
@@ -782,6 +916,69 @@ export const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
       }
 
       return need(`unknown home assistant action "${name}"`);
+    },
+  },
+
+  macapad: {
+    ttl: 15 * 1000,
+    // status only: an empty run checks the mac is up and the token works
+    async fetch(settings) {
+      const { url, token } = settings.integrations.macapad;
+      if (!url || !token) return need("set your macapad url + token in settings → accounts");
+      const result = await macapadRun(url, token, []);
+      if (!result.ok) return { configured: true, reason: result.error };
+      return { configured: true, data: { online: true } };
+    },
+    //   press        {id}      run a *saved* button — the browser never sends raw steps
+    //   catalog                what the mac offers: actions, installed apps, shortcuts
+    //   saveAction   {action}  add/replace one of your own actions on the mac
+    //   deleteAction {id}
+    //   siteMeta     {url}     a website's title + logo candidates, for website buttons
+    async action(settings, name, payload) {
+      const { url, token } = settings.integrations.macapad;
+      if (!url || !token) return need("set your macapad url + token in settings → accounts");
+      const p = (payload ?? {}) as Record<string, unknown>;
+      const fail = (reason: string): IntegrationPayload => ({ configured: true, reason });
+
+      switch (name) {
+        case "press": {
+          const button = [...settings.macapad.small, ...settings.macapad.big]
+            .flatMap((page) => page.buttons)
+            .find((b) => b?.id === p.id);
+          if (!button) return fail("that button no longer exists");
+          const result = await macapadRun(url, token, button.steps);
+          return result.ok ? { configured: true, data: { ok: true } } : fail(result.error);
+        }
+        case "catalog": {
+          const [actions, apps, shortcuts] = await Promise.all([
+            macapadApi<{ actions: MacapadAction[] }>(url, token, "/api/actions"),
+            macapadApi<{ apps: MacapadApp[] }>(url, token, "/api/apps"),
+            macapadApi<{ shortcuts: string[] }>(url, token, "/api/shortcuts", { timeout: 15_000 }),
+          ]);
+          if (!actions.ok) return fail(actions.status === 404 ? "update macapad on your mac (needs 0.2+)" : actions.error);
+          const catalog: MacapadCatalog = {
+            actions: actions.data.actions,
+            apps: apps.ok ? apps.data.apps.map((a) => ({ name: a.name, bundleId: a.bundleId })) : [],
+            shortcuts: shortcuts.ok ? shortcuts.data.shortcuts : [],
+          };
+          return { configured: true, data: catalog };
+        }
+        case "saveAction": {
+          const result = await macapadApi<MacapadAction>(url, token, "/api/actions", { method: "POST", body: p.action });
+          return result.ok ? { configured: true, data: result.data } : fail(result.error);
+        }
+        case "deleteAction": {
+          if (typeof p.id !== "string") return fail("missing action id");
+          const result = await macapadApi(url, token, `/api/actions/${encodeURIComponent(p.id)}`, { method: "DELETE" });
+          return result.ok ? { configured: true, data: { ok: true } } : fail(result.error);
+        }
+        case "siteMeta": {
+          const meta = await siteMeta(String(p.url ?? ""));
+          return "error" in meta ? fail(meta.error) : { configured: true, data: meta };
+        }
+        default:
+          return need(`unknown macapad action "${name}"`);
+      }
     },
   },
 

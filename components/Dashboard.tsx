@@ -6,7 +6,8 @@ import type { Alarm, Device, LayoutRow, Presence, Settings, ViewSettings } from 
 import { fromView, toView } from "@/lib/view";
 import { MainRow, WidgetPanel } from "./widgets/registry";
 import Standby from "./Standby";
-import SettingsSheet from "./SettingsSheet";
+import SettingsSheet, { type Tab as SheetTab } from "./SettingsSheet";
+import type { MacapadFocus } from "./MacapadSettings";
 import AlarmOverlay from "./AlarmOverlay";
 import AwayOverlay from "./AwayOverlay";
 import DevicePicker from "./DevicePicker";
@@ -68,6 +69,9 @@ export default function Dashboard({
   const [drag, setDrag] = useState<number | null>(null); // horizontal px
   const [dragY, setDragY] = useState<{ pageIndex: number; side: PaneSide; dy: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // which tab the sheet opens on; widgets can ask for one (see the listener below)
+  const [sheetTab, setSheetTab] = useState<SheetTab>("layout");
+  const [macapadFocus, setMacapadFocus] = useState<MacapadFocus | null>(null);
   const [saved, setSaved] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
@@ -402,6 +406,19 @@ export default function Dashboard({
     return () => clearInterval(id);
   }, []);
 
+  // widgets ask for the sheet on a tab via a window event (e.g. the macapad
+  // gear → settings → macapad, pointed at that pad and page)
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const detail = (e as CustomEvent<{ tab?: SheetTab; macapad?: MacapadFocus }>).detail ?? {};
+      setSheetTab(detail.tab ?? "layout");
+      setMacapadFocus(detail.macapad ?? null);
+      setSettingsOpen(true);
+    };
+    window.addEventListener("archersdesk:open-settings", onOpen);
+    return () => window.removeEventListener("archersdesk:open-settings", onOpen);
+  }, []);
+
   // arrow keys on desktop: ←→ pages, ↑↓ rows
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -615,7 +632,14 @@ export default function Dashboard({
         remote
       </button>
 
-      <button className="gear" onClick={() => setSettingsOpen(true)} aria-label="settings">
+      <button
+        className="gear"
+        onClick={() => {
+          setSheetTab("layout");
+          setSettingsOpen(true);
+        }}
+        aria-label="settings"
+      >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
           <circle cx="12" cy="12" r="3.2" />
           <path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.4z" />
@@ -650,7 +674,9 @@ export default function Dashboard({
         settings={view}
         username={username}
         saved={saved}
+        initialTab={sheetTab}
         activePage={activeWidgetPage}
+        macapadFocus={macapadFocus}
         deviceId={activeDevice.id}
         onChooseDevice={chooseDevice}
         onClose={() => setSettingsOpen(false)}

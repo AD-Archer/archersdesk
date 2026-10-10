@@ -43,6 +43,7 @@ export const WIDGETS = [
   "adguard",
   "pihole",
   "homeassistant",
+  "macapad",
   "seerr",
   "qbittorrent",
   "transmission",
@@ -113,6 +114,7 @@ export const WIDGET_INFO: Record<
   adguard: { label: "adguard home", blurb: "dns queries blocked today", category: "accounts", icon: "shield" },
   pihole: { label: "pi-hole", blurb: "dns queries blocked today", category: "accounts", icon: "shield" },
   homeassistant: { label: "home assistant", blurb: "entities you pick, tap to toggle", category: "accounts", icon: "home" },
+  macapad: { label: "macapad", blurb: "stream-deck buttons for your mac", category: "accounts", icon: "keyboard_command_key" },
   seerr: { label: "seerr", blurb: "jellyseerr / overseerr requests", category: "accounts", icon: "movie" },
   qbittorrent: { label: "qbittorrent", blurb: "torrents, speed & ratio", category: "accounts", icon: "download" },
   transmission: { label: "transmission", blurb: "torrents, speed & ratio", category: "accounts", icon: "download" },
@@ -170,6 +172,84 @@ export interface EmbedFeed {
   name: string;
   url: string; // youtube/spotify/soundcloud/etc — rewritten to an /embed/ form where needed
 }
+
+/** One thing a macapad button does on the mac — mirrors macapad's step json. */
+export type MacapadStep =
+  | { type: "media"; key: MacapadMediaKey }
+  | { type: "keystroke"; keys: string } // "cmd+shift+t"
+  | { type: "typeText"; text: string }
+  | { type: "openURL"; url: string }
+  | { type: "openApp"; app: string } // name or bundle id
+  | { type: "shortcut"; name: string } // a macos shortcuts.app shortcut
+  | { type: "appleScript"; source: string }
+  | { type: "wait"; ms: number }
+  | { type: "action"; id: string }; // a built-in or custom action on the mac
+
+export const MACAPAD_MEDIA_KEYS = ["playPause", "next", "previous", "volumeUp", "volumeDown", "mute"] as const;
+export type MacapadMediaKey = (typeof MACAPAD_MEDIA_KEYS)[number];
+export const MACAPAD_STEP_TYPES = [
+  "media",
+  "keystroke",
+  "typeText",
+  "openURL",
+  "openApp",
+  "shortcut",
+  "appleScript",
+  "wait",
+  "action",
+] as const;
+
+/** A pad button: runs its steps in order on the mac when pressed. */
+export interface MacapadButton {
+  id: string;
+  label: string;
+  icon: string; // material symbols name (must be in the font subset)
+  image?: string; // shown instead of the icon: /api/macapad/images/<name> (stored, compressed), /api/macapad/app-icon?bundleId=…, or an http(s) url
+  steps: MacapadStep[];
+}
+
+/** What the mac offers, fetched live from macapad for the button editor. */
+export interface MacapadAction {
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+  steps: MacapadStep[];
+  custom: boolean;
+}
+
+export interface MacapadApp {
+  name: string;
+  bundleId: string;
+}
+
+export interface MacapadCatalog {
+  actions: MacapadAction[];
+  apps: MacapadApp[];
+  shortcuts: string[];
+}
+
+export interface SiteMeta {
+  url: string;
+  title: string;
+  image: string; // best logo found ("" when none)
+  images: string[]; // every candidate, best first
+}
+
+/** Square panels show the small pad (4 slots a page), dual rows the big one
+ *  (8). Each pad has its own pages; empty slots are null so buttons keep
+ *  their positions (that's how you space them out). */
+export const MACAPAD_SLOTS = { small: 4, big: 8 } as const;
+export const MACAPAD_MAX_PAGES = 8;
+export type MacapadSize = keyof typeof MACAPAD_SLOTS;
+
+export interface MacapadPage {
+  id: string;
+  name: string;
+  buttons: (MacapadButton | null)[]; // always MACAPAD_SLOTS[size] long
+}
+
+export type MacapadPads = Record<MacapadSize, MacapadPage[]>; // never empty
 
 /** One vertically-swipeable row of the main view: two squares or one wide. */
 export type LayoutRow =
@@ -230,8 +310,10 @@ export interface Settings {
     qbittorrent: { url: string; apiKey: string; username: string; password: string };
     transmission: { url: string; username: string; password: string };
     navidrome: { url: string; username: string; password: string };
+    macapad: { url: string; token: string };
   };
   embeds: EmbedFeed[]; // top-level, not an "integration" — no server fetch, the widget reads it directly
+  macapad: MacapadPads; // owned by /api/macapad; full settings writes never change it
   alarms: Alarm[];
   worldclock: WorldClockZone[];
   calendars: CalendarFeed[];
@@ -255,6 +337,7 @@ export interface ViewSettings {
   lastfm: Settings["lastfm"];
   integrations: Settings["integrations"];
   embeds: Settings["embeds"];
+  macapad: MacapadPads;
   alarms: Alarm[];
   worldclock: WorldClockZone[];
   calendars: CalendarFeed[];
