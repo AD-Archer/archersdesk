@@ -253,7 +253,8 @@
 .panel[data-widget="flights"],
 .panel[data-widget="septa"],
 .panel[data-widget="macapad"],
-.panel[data-widget="qbittorrent"] {
+.panel[data-widget="qbittorrent"],
+.panel[data-widget="lichess"] {
   --tint: var(--blue);
 }
 

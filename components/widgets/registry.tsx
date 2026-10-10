@@ -31,6 +31,7 @@ import {
 import {
   AnilistWidget,
   ChessWidget,
+  LichessWidget,
   GithubWidget,
   JellyfinWidget,
   PlexWidget,
@@ -81,6 +82,7 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   vibe: VibeWidget,
   github: GithubWidget,
   chess: ChessWidget,
+  lichess: LichessWidget,
   stocks: StocksWidget,
   anilist: AnilistWidget,
   wakatime: WakatimeWidget,

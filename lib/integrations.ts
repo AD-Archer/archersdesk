@@ -330,7 +330,68 @@ interface Fetcher {
   action?(settings: IntCtx, name: string, payload: unknown): Promise<IntegrationPayload>;
 }
 
-export const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
+export // ── chess helpers (chess.com + lichess share one data shape) ──────────
+type RatingPoint = [number, number]; // [epoch ms, rating]
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** last point per day inside the last ~4 months — reaching further back
+ *  until there are at least 40 days of games, so someone who hasn't played
+ *  lately still gets a real line — thinned to ≤ 90 points */
+function shapeHistory(points: RatingPoint[]): RatingPoint[] {
+  const sorted = [...points].sort((a, b) => a[0] - b[0]);
+  const byDay = new Map<number, RatingPoint>();
+  for (const p of sorted) byDay.set(Math.floor(p[0] / DAY_MS), p);
+  const daily = [...byDay.values()];
+  const since = Date.now() - 120 * DAY_MS;
+  let out = daily.filter((p) => p[0] >= since);
+  if (out.length < 40) out = daily.slice(-40);
+  if (out.length > 90) {
+    const step = Math.ceil(out.length / 90);
+    out = out.filter((_, i) => i % step === 0 || i === out.length - 1);
+  }
+  return out;
+}
+
+/** rating change over the last 30 days, from the history */
+function monthDelta(history: RatingPoint[]): number | null {
+  if (history.length < 2) return null;
+  const now = history[history.length - 1];
+  const cutoff = now[0] - 30 * DAY_MS;
+  const base = [...history].reverse().find((p) => p[0] <= cutoff) ?? history[0];
+  return now[1] - base[1];
+}
+
+/** chess.com: ratings per time class from the last three monthly archives */
+async function chessComHistory(username: string): Promise<Record<string, RatingPoint[]>> {
+  try {
+    const res = await grab(`https://api.chess.com/pub/player/${encodeURIComponent(username.toLowerCase())}/games/archives`);
+    if (!res.ok) return {};
+    const urls: string[] = ((await res.json())?.archives ?? []).slice(-3);
+    const months = await Promise.all(
+      urls.map(async (u) => {
+        try {
+          const r = await grab(u);
+          return r.ok ? ((await r.json())?.games ?? []) : [];
+        } catch {
+          return [];
+        }
+      })
+    );
+    const me = username.toLowerCase();
+    const out: Record<string, RatingPoint[]> = {};
+    for (const g of months.flat()) {
+      if (!g?.rated || g.rules !== "chess" || !g.end_time) continue;
+      const side = g.white?.username?.toLowerCase() === me ? g.white : g.black?.username?.toLowerCase() === me ? g.black : null;
+      if (!side || typeof side.rating !== "number") continue;
+      (out[g.time_class] ??= []).push([g.end_time * 1000, side.rating]);
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
   github: {
     ttl: 5 * 60 * 1000,
     async fetch(settings) {
@@ -1004,10 +1065,91 @@ export const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
           rating: m.v.last.rating as number,
           best: (m.v.best?.rating as number) ?? null,
           record: m.v.record ? `${m.v.record.win}w ${m.v.record.loss}l ${m.v.record.draw}d` : "",
+          results: m.v.record
+            ? { win: m.v.record.win as number, loss: m.v.record.loss as number, draw: m.v.record.draw as number }
+            : null,
+          streak: null,
+          history: [] as RatingPoint[],
+          delta: null as number | null,
         }));
       if (!modes.length) return need(`no rated games for "${username}" yet`);
+      const hist = await chessComHistory(username);
+      for (const m of modes) {
+        m.history = shapeHistory(hist[m.mode] ?? []);
+        m.delta = monthDelta(m.history);
+      }
       const top = [...modes].sort((a, b) => b.rating - a.rating)[0];
       return { configured: true, data: { username, top, modes, puzzles: s.tactics?.highest?.rating ?? null } };
+    },
+  },
+
+  // lichess: public profile, no key. Same shape as chess.com so one widget
+  // draws both. Per-mode win/loss isn't in this endpoint, so the record is a
+  // game count.
+  lichess: {
+    ttl: 5 * 60 * 1000,
+    async fetch(settings) {
+      const { username } = settings.integrations.lichess;
+      if (!username) return need("add your lichess username in settings → accounts");
+      const res = await grab(`https://lichess.org/api/user/${encodeURIComponent(username)}`, {
+        Accept: "application/json",
+      });
+      if (res.status === 404) return need(`lichess user "${username}" not found`);
+      if (res.status === 429) return need("lichess is busy, trying again shortly");
+      if (!res.ok) return need(`lichess: error ${res.status}`);
+      const u = await res.json();
+      if (u.disabled) return need(`lichess account "${username}" is closed`);
+      const perfs = u.perfs ?? {};
+      const modes = ["rapid", "blitz", "bullet", "classical", "correspondence"]
+        .map((key) => ({ key, v: perfs[key] }))
+        .filter((m) => m.v?.games > 0 && typeof m.v.rating === "number")
+        .map((m) => ({
+          mode: m.key,
+          rating: m.v.rating as number,
+          best: null,
+          delta: typeof m.v.prog === "number" ? (m.v.prog as number) : null,
+          record: `${(m.v.games as number).toLocaleString("en-US")} ${m.v.games === 1 ? "game" : "games"}`,
+        }));
+      if (!modes.length) return need(`no rated games for "${username}" yet`);
+      // rating history (one call) and each mode's win/loss/draw + streak
+      // (one call per mode). Recent games need a sign-in on lichess now, so
+      // the totals stand in for a game-by-game strip.
+      const name = encodeURIComponent(username);
+      const [histRes, perfStats] = await Promise.all([
+        grab(`https://lichess.org/api/user/${name}/rating-history`).catch(() => null),
+        Promise.all(
+          modes.map((m) =>
+            grab(`https://lichess.org/api/user/${name}/perf/${m.mode}`)
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null)
+          )
+        ),
+      ]);
+      const histJson = histRes?.ok ? await histRes.json().catch(() => []) : [];
+      const histByMode: Record<string, RatingPoint[]> = {};
+      for (const h of Array.isArray(histJson) ? histJson : []) {
+        const key = String(h?.name ?? "").toLowerCase();
+        histByMode[key] = (h?.points ?? []).map((p: number[]) => [Date.UTC(p[0], p[1], p[2]), p[3]] as RatingPoint);
+      }
+      const rich = modes.map((m, i) => {
+        const stat = perfStats[i]?.stat;
+        const c = stat?.count;
+        const cur = stat?.resultStreak;
+        const winCur = cur?.win?.cur?.v ?? 0;
+        const lossCur = cur?.loss?.cur?.v ?? 0;
+        const history = shapeHistory(histByMode[m.mode] ?? []);
+        return {
+          ...m,
+          results: c ? { win: c.win as number, loss: c.loss as number, draw: c.draw as number } : null,
+          streak: winCur > 1 ? { kind: "win", n: winCur } : lossCur > 1 ? { kind: "loss", n: lossCur } : null,
+          history,
+          delta: monthDelta(history) ?? m.delta,
+        };
+      });
+      modes.splice(0, modes.length, ...rich);
+      const top = [...modes].sort((a, b) => b.rating - a.rating)[0];
+      const puzzle = perfs.puzzle?.games > 0 ? (perfs.puzzle.rating as number) : null;
+      return { configured: true, data: { username: u.username ?? username, top, modes, puzzles: puzzle } };
     },
   },
 

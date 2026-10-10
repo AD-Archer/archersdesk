@@ -22,6 +22,7 @@ export const WIDGETS = [
   "vibe",
   "github",
   "chess",
+  "lichess",
   "stocks",
   "anilist",
   "wakatime",
@@ -93,6 +94,7 @@ export const WIDGET_INFO: Record<
   nowplaying: { label: "now playing", blurb: "last.fm / navidrome", category: "accounts", icon: "music_note" },
   github: { label: "github", blurb: "your recent activity", category: "accounts", icon: "code" },
   chess: { label: "chess.com", blurb: "ratings at a glance", category: "accounts", icon: "chess" },
+  lichess: { label: "lichess", blurb: "ratings at a glance", category: "accounts", icon: "chess" },
   stocks: { label: "stocks", blurb: "tickers you watch", category: "accounts", icon: "trending_up" },
   anilist: { label: "anilist", blurb: "anime + manga stats", category: "accounts", icon: "menu_book" },
   wakatime: { label: "wakatime", blurb: "today's coding time", category: "accounts", icon: "keyboard" },
@@ -293,6 +295,7 @@ export interface Settings {
   integrations: {
     github: { username: string; token: string };
     chess: { username: string };
+    lichess: { username: string };
     stocks: { symbols: string[] };
     anilist: { username: string };
     wakatime: { apiKey: string; apiUrl: string }; // apiUrl → wakapi/hackatime

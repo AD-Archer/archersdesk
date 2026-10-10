@@ -43,7 +43,7 @@ const TINTS: Record<string, WidgetName[]> = {
   indigo: ["moon", "dnd", "seerr"],
   pink: ["nowplaying", "navidrome", "vibe"],
   purple: ["spacenews", "jellyfin"],
-  blue: ["anilist", "wakatime", "flights", "septa", "macapad", "qbittorrent"],
+  blue: ["anilist", "wakatime", "flights", "septa", "macapad", "qbittorrent", "lichess"],
   mint: ["epicgames", "dog", "cat"],
 };
 const TINT_OF = new Map<string, string>(
@@ -1418,6 +1418,14 @@ function AccountsSection({ settings, onChange }: SectionProps) {
             label="Username"
             value={ig.chess?.username}
             onValue={(v) => patch({ chess: { username: v } })}
+          />
+        </AccountGroup>
+
+        <AccountGroup title="Lichess" blurb="Rapid, blitz, bullet and puzzle ratings" {...w("lichess")} done={!!ig.lichess?.username}>
+          <AccountField
+            label="Username"
+            value={ig.lichess?.username}
+            onValue={(v) => patch({ lichess: { username: v } })}
           />
         </AccountGroup>
 

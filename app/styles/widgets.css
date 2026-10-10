@@ -2289,6 +2289,7 @@
 
 .panel.wide[data-widget="github"] .w-body,
 .panel.wide[data-widget="chess"] .w-body,
+.panel.wide[data-widget="lichess"] .w-body,
 .panel.wide[data-widget="anilist"] .w-body,
 .panel.wide[data-widget="jellyfin"] .w-body,
 .panel.wide[data-widget="plex"] .w-body,
@@ -2315,6 +2316,7 @@
 
 .panel.wide[data-widget="github"] .w-body > *,
 .panel.wide[data-widget="chess"] .w-body > *,
+.panel.wide[data-widget="lichess"] .w-body > *,
 .panel.wide[data-widget="anilist"] .w-body > *,
 .panel.wide[data-widget="jellyfin"] .w-body > *,
 .panel.wide[data-widget="plex"] .w-body > *,
@@ -2334,6 +2336,7 @@
 
 .panel.wide[data-widget="github"] .w-body > .klist,
 .panel.wide[data-widget="chess"] .w-body > .klist,
+.panel.wide[data-widget="lichess"] .w-body > .klist,
 .panel.wide[data-widget="anilist"] .w-body > .klist,
 .panel.wide[data-widget="jellyfin"] .w-body > .klist,
 .panel.wide[data-widget="plex"] .w-body > .klist,
@@ -2349,6 +2352,7 @@
 .panel.wide[data-widget="transmission"] .w-body > .klist,
 .panel.wide[data-widget="github"] .w-body > .swipe-carousel,
 .panel.wide[data-widget="chess"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="lichess"] .w-body > .swipe-carousel,
 .panel.wide[data-widget="anilist"] .w-body > .swipe-carousel,
 .panel.wide[data-widget="jellyfin"] .w-body > .swipe-carousel,
 .panel.wide[data-widget="plex"] .w-body > .swipe-carousel,
@@ -2372,6 +2376,7 @@
 /* nothing to list: the hero takes the middle */
 .panel.wide[data-widget="github"] .w-body > :only-child,
 .panel.wide[data-widget="chess"] .w-body > :only-child,
+.panel.wide[data-widget="lichess"] .w-body > :only-child,
 .panel.wide[data-widget="anilist"] .w-body > :only-child,
 .panel.wide[data-widget="jellyfin"] .w-body > :only-child,
 .panel.wide[data-widget="plex"] .w-body > :only-child,
@@ -2387,6 +2392,7 @@
 .panel.wide[data-widget="transmission"] .w-body > :only-child,
 .panel.wide[data-widget="github"] .w-body > .w-empty-state,
 .panel.wide[data-widget="chess"] .w-body > .w-empty-state,
+.panel.wide[data-widget="lichess"] .w-body > .w-empty-state,
 .panel.wide[data-widget="anilist"] .w-body > .w-empty-state,
 .panel.wide[data-widget="jellyfin"] .w-body > .w-empty-state,
 .panel.wide[data-widget="plex"] .w-body > .w-empty-state,
@@ -2402,6 +2408,7 @@
 .panel.wide[data-widget="transmission"] .w-body > .w-empty-state,
 .panel.wide[data-widget="github"] .w-body > .w-empty,
 .panel.wide[data-widget="chess"] .w-body > .w-empty,
+.panel.wide[data-widget="lichess"] .w-body > .w-empty,
 .panel.wide[data-widget="anilist"] .w-body > .w-empty,
 .panel.wide[data-widget="jellyfin"] .w-body > .w-empty,
 .panel.wide[data-widget="plex"] .w-body > .w-empty,
@@ -2421,6 +2428,7 @@
 /* wide hero figures get bigger */
 .panel.wide[data-widget="github"] .w-body .kstat-value,
 .panel.wide[data-widget="chess"] .w-body .kstat-value,
+.panel.wide[data-widget="lichess"] .w-body .kstat-value,
 .panel.wide[data-widget="anilist"] .w-body .kstat-value,
 .panel.wide[data-widget="jellyfin"] .w-body .kstat-value,
 .panel.wide[data-widget="plex"] .w-body .kstat-value,
@@ -2462,5 +2470,288 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+  }
+}
+
+/* ── chess / lichess, wide: the leading mode's rating, its chart, results ── */
+.panel.wide .w-body > .chess-wide {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  justify-self: stretch;
+  align-self: stretch;
+}
+
+.chess-wide {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.5fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  column-gap: calc(var(--ps) * 0.08);
+  row-gap: calc(var(--ps) * 0.05);
+  padding: calc(var(--ps) * 0.03) calc(var(--ps) * 0.02) 0;
+}
+
+.chess-wide-head {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+/* above the rating: the big figure's line box reaches up over this row */
+.chess-wide-mode {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border-radius: 12px;
+  font-size: max(17px, calc(var(--ps) * 0.058));
+  font-weight: 700;
+  color: var(--label);
+}
+
+.chess-wide-mode:active {
+  background: var(--fill-1);
+}
+
+.chess-wide-rating {
+  font-family: var(--round);
+  font-weight: 900;
+  /* four digits must fit the left column */
+  font-size: min(calc(var(--ps) * 0.3), calc(var(--pw) * 0.24));
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tint);
+}
+
+.chess-trend {
+  margin-top: calc(var(--ps) * 0.02);
+  font-size: max(14px, calc(var(--ps) * 0.042));
+  font-weight: 500;
+  color: var(--label-2);
+}
+
+.chess-trend-n {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chess-trend-n.up { color: var(--green); }
+.chess-trend-n.down { color: var(--red); }
+
+.chess-wide-others {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: calc(var(--ps) * 0.05);
+}
+
+.chess-other {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 36px;
+  font-size: max(14px, calc(var(--ps) * 0.04));
+  color: var(--label-2);
+}
+
+.chess-other b {
+  font-weight: 700;
+  color: var(--label);
+  font-variant-numeric: tabular-nums;
+}
+
+/* the chart: one series, recessive guides, labels in text colors */
+.chess-chart {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.chess-chart.empty {
+  align-items: center;
+  justify-content: center;
+  font-size: max(14px, calc(var(--ps) * 0.04));
+  color: var(--label-3);
+}
+
+.chess-plot {
+  position: relative;
+  flex: 1;
+  min-height: 90px;
+  margin-right: 48px; /* room for the high / low labels */
+}
+
+.chess-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.chess-guide {
+  stroke: var(--fill-3);
+  stroke-width: 1;
+}
+
+.chess-area {
+  fill: var(--tint);
+  opacity: 0.12;
+}
+
+.chess-line {
+  fill: none;
+  stroke: var(--tint);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chess-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--tint);
+  box-shadow: 0 0 0 2px var(--black);
+}
+
+.chess-tick {
+  position: absolute;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--label-2);
+}
+
+.chess-x {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 48px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-3);
+}
+
+/* results: one split bar, 2px gaps, keyed by letter as well as color */
+.chess-results {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chess-bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+
+.chess-seg {
+  flex-basis: 0;
+  min-width: 4px;
+  border-radius: 2px;
+}
+
+.chess-seg:first-child { border-radius: 5px 2px 2px 5px; }
+.chess-seg:last-child { border-radius: 2px 5px 5px 2px; }
+.chess-seg:only-child { border-radius: 5px; }
+
+.chess-seg.win,
+.chess-key-mark.win { background: var(--green); }
+.chess-seg.loss,
+.chess-key-mark.loss { background: var(--red); }
+.chess-seg.draw,
+.chess-key-mark.draw { background: var(--gray); }
+
+.chess-keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+  font-size: max(14px, calc(var(--ps) * 0.038));
+  color: var(--label-2);
+}
+
+.chess-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.chess-key b {
+  font-weight: 700;
+  color: var(--label);
+  font-variant-numeric: tabular-nums;
+}
+
+.chess-key-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  color: #000;
+}
+
+.chess-streak {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--label);
+}
+
+.chess-who {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-3);
+}
+
+/* a phone's wide panel: stacked — rating, chart, results */
+@media (orientation: portrait) {
+  .chess-wide {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  /* half a phone screen is short: drop the other modes (the picker has
+     them) and keep the chart compact so everything fits */
+  .chess-wide {
+    height: auto;
+    row-gap: 12px;
+  }
+
+  .chess-wide-rating {
+    font-size: calc(var(--pw) * 0.16);
+  }
+
+  .chess-wide-others {
+    display: none;
+  }
+
+  .chess-chart {
+    height: min(calc(var(--pw) * 0.34), calc(var(--ph) * 0.34));
+  }
+
+  .chess-plot {
+    min-height: 0;
+  }
+
+  .chess-wide-others {
+    margin-top: 8px;
   }
 }

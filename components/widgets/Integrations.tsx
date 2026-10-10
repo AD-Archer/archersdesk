@@ -69,11 +69,28 @@ export function GithubWidget({ settings, integrationSettings, wide }: WidgetProp
 interface ChessData {
   username: string;
   top: { mode: string; rating: number };
-  modes: Array<{ mode: string; rating: number; record: string }>;
+  modes: Array<{
+    mode: string;
+    rating: number;
+    record: string;
+    best?: number | null;
+    delta?: number | null;
+    results?: { win: number; loss: number; draw: number } | null;
+    streak?: { kind: "win" | "loss"; n: number } | null;
+    history?: Array<[number, number]>;
+  }>;
   puzzles: number | null;
 }
 
-const CHESS_MODE_KEY = "archersdesk.chessMode";
+const capWord = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// which mode leads, remembered per site
+const CHESS_MODE_KEY: Record<ChessSite, string> = {
+  chess: "archersdesk.chessMode",
+  lichess: "archersdesk.lichessMode",
+};
+type ChessSite = "chess" | "lichess";
+const CHESS_SITE_NAME: Record<ChessSite, string> = { chess: "Chess.com", lichess: "Lichess" };
 
 /** The small round "choose" mark on tap-to-pick heroes (iOS menu chevrons). */
 export function ClickSettingsGlyph() {
@@ -86,33 +103,91 @@ export function ClickSettingsGlyph() {
   );
 }
 
-export function ChessWidget({ settings, integrationSettings }: WidgetProps) {
-  const payload = useIntegration<ChessData>("chess", integrationSettings ?? settings);
+export const ChessWidget = (p: WidgetProps) => <ChessRatingsWidget {...p} site="chess" />;
+export const LichessWidget = (p: WidgetProps) => <ChessRatingsWidget {...p} site="lichess" />;
+
+/** Ratings from Chess.com or Lichess: the leading mode big, the rest listed.
+ *  Tap the rating to choose which mode leads. */
+function ChessRatingsWidget({ settings, integrationSettings, site, wide }: WidgetProps & { site: ChessSite }) {
+  const payload = useIntegration<ChessData>(site, integrationSettings ?? settings);
+  const name = CHESS_SITE_NAME[site];
   const [pref, setPref] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const gate = integrationGate(payload, "setting up the board…");
 
   useEffect(() => {
-    setPref(window.localStorage.getItem(CHESS_MODE_KEY));
-  }, []);
+    setPref(window.localStorage.getItem(CHESS_MODE_KEY[site]));
+  }, [site]);
 
   if (gate)
     return (
-      <Shell icon={WIDGET_INFO.chess.icon} label="Chess.com">
+      <Shell icon={WIDGET_INFO[site].icon} label={name}>
         {gate}
       </Shell>
     );
   const d = payload!.data!;
-  const hero = d.modes.find((m) => m.mode === pref) ?? d.top;
+  const hero = d.modes.find((m) => m.mode === pref) ?? d.modes.find((m) => m.mode === d.top.mode) ?? d.modes[0];
+
+  const modePicker = (
+  <EditablePopup open={open} title="Show first" onClose={() => setOpen(false)}>
+    <div className="mood-grid">
+      {d.modes.map((m) => (
+        <button
+          key={m.mode}
+          className={`mood-card${hero.mode === m.mode ? " on" : ""}`}
+          onClick={() => pick(m.mode)}
+        >
+          <b>{m.mode}</b>
+          <small>
+            {m.rating} · {m.record}
+          </small>
+        </button>
+      ))}
+    </div>
+  </EditablePopup>
+  );
+
+  // wide: the leading mode's story — rating, its last months as a chart,
+  // and how its games have gone; the other modes sit underneath as a row
+  if (wide) {
+    const others = d.modes.filter((m) => m.mode !== hero.mode);
+    return (
+      <Shell icon={WIDGET_INFO[site].icon} label={`${name} · ${d.username}`}>
+        <div className="chess-wide">
+          <div className="chess-wide-head">
+            <button className="chess-wide-mode" onClick={() => setOpen(true)} aria-label="choose mode">
+              {capWord(hero.mode)}
+              <ClickSettingsGlyph />
+            </button>
+            <div className="chess-wide-rating">{hero.rating}</div>
+            <ChessTrend mode={hero} />
+            {others.length > 0 && (
+              <div className="chess-wide-others">
+                {others.map((m) => (
+                  <button key={m.mode} className="chess-other" onClick={() => pick(m.mode)}>
+                    <span>{capWord(m.mode)}</span>
+                    <b>{m.rating}</b>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <ChessChart history={hero.history ?? []} mode={hero.mode} />
+          <ChessResults mode={hero} who={`${d.username} on ${name}`} />
+        </div>
+        {modePicker}
+      </Shell>
+    );
+  }
 
   function pick(mode: string) {
-    window.localStorage.setItem(CHESS_MODE_KEY, mode);
+    window.localStorage.setItem(CHESS_MODE_KEY[site], mode);
     setPref(mode);
     setOpen(false);
   }
 
   return (
-    <Shell icon={WIDGET_INFO.chess.icon} label={`Chess.com · ${d.username}`}>
+    <Shell icon={WIDGET_INFO[site].icon} label={`${name} · ${d.username}`}>
       <button className="chess-hero" onClick={() => setOpen(true)} aria-label="choose mode">
         <BigStat
           value={hero.rating}
@@ -138,23 +213,125 @@ export function ChessWidget({ settings, integrationSettings }: WidgetProps) {
             ),
           }))}
       />
-      <EditablePopup open={open} title="Show first" onClose={() => setOpen(false)}>
-        <div className="mood-grid">
-          {d.modes.map((m) => (
-            <button
-              key={m.mode}
-              className={`mood-card${hero.mode === m.mode ? " on" : ""}`}
-              onClick={() => pick(m.mode)}
-            >
-              <b>{m.mode}</b>
-              <small>
-                {m.rating} · {m.record}
-              </small>
-            </button>
-          ))}
-        </div>
-      </EditablePopup>
+      {modePicker}
     </Shell>
+  );
+}
+
+const MONTH_SHORT = new Intl.DateTimeFormat("en-US", { month: "short" });
+const MONTH_YEAR = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" });
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** How the rating moved: over the last 30 days if they've played lately,
+ *  otherwise when they last played. */
+function ChessTrend({ mode }: { mode: ChessData["modes"][number] }) {
+  const h = mode.history ?? [];
+  const last = h[h.length - 1];
+  if (!last) return null;
+  const recent = Date.now() - last[0] < 45 * DAY_MS;
+  if (!recent) return <div className="chess-trend">Last played {MONTH_YEAR.format(last[0])}</div>;
+  if (typeof mode.delta !== "number" || mode.delta === 0) return <div className="chess-trend">Steady this month</div>;
+  return (
+    <div className="chess-trend">
+      <span className={`chess-trend-n ${mode.delta > 0 ? "up" : "down"}`}>
+        {mode.delta > 0 ? "+" : "−"}
+        {Math.abs(mode.delta)}
+      </span>{" "}
+      in the last 30 days
+    </div>
+  );
+}
+
+/** One series, so no legend: a 2px line in the tint over a faint wash, the
+ *  high and low as quiet guides, and a dot on today's rating. */
+function ChessChart({ history, mode }: { history: Array<[number, number]>; mode: string }) {
+  if (history.length < 2) {
+    return <div className="chess-chart empty">Not enough recent games for a chart</div>;
+  }
+  const W = 600;
+  const H = 200;
+  const t0 = history[0][0];
+  const t1 = history[history.length - 1][0];
+  const ratings = history.map((p) => p[1]);
+  const lo = Math.min(...ratings);
+  const hi = Math.max(...ratings);
+  const pad = Math.max(6, (hi - lo) * 0.14);
+  const y0 = lo - pad;
+  const y1 = hi + pad;
+  const x = (t: number) => (t1 === t0 ? W : ((t - t0) / (t1 - t0)) * W);
+  const y = (r: number) => H - ((r - y0) / (y1 - y0)) * H;
+  const line = history.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ");
+  const area = `${line} L${W},${H} L0,${H} Z`;
+  const end = history[history.length - 1];
+  const pct = (v: number, of: number) => `${(v / of) * 100}%`;
+  return (
+    <figure
+      className="chess-chart"
+      role="img"
+      aria-label={`${capWord(mode)} rating from ${history[0][1]} to ${end[1]}, ${MONTH_SHORT.format(t0)} to now; high ${hi}, low ${lo}`}
+    >
+      <div className="chess-plot">
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
+          <line className="chess-guide" x1="0" x2={W} y1={y(hi)} y2={y(hi)} vectorEffect="non-scaling-stroke" />
+          <line className="chess-guide" x1="0" x2={W} y1={y(lo)} y2={y(lo)} vectorEffect="non-scaling-stroke" />
+          <path className="chess-area" d={area} />
+          <path className="chess-line" d={line} vectorEffect="non-scaling-stroke" />
+        </svg>
+        <span className="chess-dot" style={{ left: pct(x(end[0]), W), top: pct(y(end[1]), H) }} />
+        <span className="chess-tick" style={{ top: pct(y(hi), H) }}>{hi}</span>
+        {hi !== lo && <span className="chess-tick" style={{ top: pct(y(lo), H) }}>{lo}</span>}
+      </div>
+      <figcaption className="chess-x">
+        <span>{MONTH_SHORT.format(t0)}</span>
+        <span>{Date.now() - t1 < 2 * DAY_MS ? "Today" : MONTH_SHORT.format(t1)}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
+/** Won / lost / drawn as one split bar, each part keyed by a letter as well
+ *  as its color (red and green alone fail for color-blind readers and in
+ *  night mode), with the counts and any current streak beside it. */
+function ChessResults({ mode, who }: { mode: ChessData["modes"][number]; who: string }) {
+  const r = mode.results;
+  const total = r ? r.win + r.loss + r.draw : 0;
+  const parts = r
+    ? ([
+        { key: "win", letter: "W", label: "won", n: r.win },
+        { key: "loss", letter: "L", label: "lost", n: r.loss },
+        { key: "draw", letter: "D", label: "drawn", n: r.draw },
+      ] as const)
+    : [];
+  return (
+    <div className="chess-results">
+      {total > 0 && (
+        <>
+          <div className="chess-bar" role="img" aria-label={parts.map((p) => `${p.n} ${p.label}`).join(", ")}>
+            {parts
+              .filter((p) => p.n > 0)
+              .map((p) => (
+                <span key={p.key} className={`chess-seg ${p.key}`} style={{ flexGrow: p.n }} />
+              ))}
+          </div>
+          <div className="chess-keys">
+            {parts.map((p) => (
+              <span key={p.key} className="chess-key">
+                <i className={`chess-key-mark ${p.key}`} aria-hidden>
+                  {p.letter}
+                </i>
+                <b>{p.n.toLocaleString("en-US")}</b> {p.label}
+              </span>
+            ))}
+            {mode.streak && (
+              <span className="chess-streak">
+                {mode.streak.n} {mode.streak.kind === "win" ? "wins" : "losses"} in a row
+              </span>
+            )}
+          </div>
+        </>
+      )}
+      <p className="chess-who">{who}</p>
+    </div>
   );
 }
 

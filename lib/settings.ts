@@ -119,6 +119,7 @@ export const DEFAULT_SETTINGS: Settings = {
   integrations: {
     github: { username: "", token: "" },
     chess: { username: "" },
+    lichess: { username: "" },
     stocks: { symbols: ["AAPL", "SPY"] },
     anilist: { username: "" },
     wakatime: { apiKey: "", apiUrl: "" },
@@ -504,6 +505,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
   const s = isRecord(v) ? v : {};
   const github = isRecord(s.github) ? s.github : {};
   const chess = isRecord(s.chess) ? s.chess : {};
+  const lichess = isRecord(s.lichess) ? s.lichess : {};
   const stocks = isRecord(s.stocks) ? s.stocks : {};
   const anilist = isRecord(s.anilist) ? s.anilist : {};
   const wakatime = isRecord(s.wakatime) ? s.wakatime : {};
@@ -528,6 +530,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
   return {
     github: { username: trimmed(github.username, "", 60), token: trimmed(github.token, "", 120) },
     chess: { username: trimmed(chess.username, "", 60) },
+    lichess: { username: trimmed(lichess.username, "", 60) },
     stocks: { symbols },
     anilist: { username: trimmed(anilist.username, "", 60) },
     wakatime: {
