@@ -6,6 +6,7 @@ import { VIBES } from "@/lib/types";
 import { alarmsForDevice, dayChips, fmt12, nextAlarm } from "./alarmUtil";
 import { pushPresence } from "./presence";
 import { useNow } from "./hooks";
+import { RemotePad } from "./MacapadRemote";
 import { MI } from "./widgets/kit";
 
 // The phone control screen. A browser acting as "remote" renders this instead
@@ -53,7 +54,7 @@ export default function Remote({
   const [selected, setSelected] = useState<string[]>(() => devices.map((d) => d.id));
   const [awayTime, setAwayTime] = useState(() => toInputValue(new Date(Date.now() + 60 * 60_000)));
   const [awayLoc, setAwayLoc] = useState("");
-  const [menu, setMenu] = useState<null | "alarms" | "devices">(null);
+  const [menu, setMenu] = useState<null | "pad" | "alarms" | "devices">(null);
 
   function toggle(id: string) {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -93,6 +94,10 @@ export default function Remote({
           <button className="on" aria-current="page" aria-label="control" title="control">
             <MI name="keyboard" />
             <span className="remote-nav-label">control</span>
+          </button>
+          <button onClick={() => setMenu("pad")} aria-label="pad" title="pad">
+            <MI name="keyboard_command_key" />
+            <span className="remote-nav-label">pad</span>
           </button>
           <button onClick={() => setMenu("alarms")} aria-label="alarms" title="alarms">
             <MI name="alarm" />
@@ -191,6 +196,7 @@ export default function Remote({
         </div>
       </section>
 
+      {menu === "pad" && <RemotePad settings={settings} onClose={() => setMenu(null)} />}
       {menu === "alarms" && (
         <AlarmsMenu settings={settings} onSaveSettings={onSaveSettings} onClose={() => setMenu(null)} />
       )}

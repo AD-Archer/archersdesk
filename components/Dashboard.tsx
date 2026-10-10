@@ -569,7 +569,10 @@ export default function Dashboard({
           username={username}
           onChoose={chooseDevice}
           onBecomeDisplay={chooseLastDisplayDevice}
-          onOpenAccounts={() => setSettingsOpen(true)}
+          onOpenAccounts={() => {
+            setSheetTab("accounts");
+            setSettingsOpen(true);
+          }}
           onSaveSettings={saveCanonical}
           onLogout={logout}
           onPushed={applyPresence}
@@ -579,8 +582,9 @@ export default function Dashboard({
           settings={view}
           username={username}
           saved={saved}
-          initialTab="accounts"
+          initialTab={sheetTab}
           activePage={activeWidgetPage}
+          macapadFocus={macapadFocus}
           deviceId={activeDevice.id}
           onChooseDevice={chooseDevice}
           onClose={() => setSettingsOpen(false)}

@@ -9,12 +9,14 @@ export default function EditablePopup({
   children,
   footer,
   onClose,
+  className,
 }: {
   open: boolean;
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   onClose: () => void;
+  className?: string; // extra class on the dialog, for popups with their own layout
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -34,7 +36,7 @@ export default function EditablePopup({
   return createPortal(
     <div className="edit-pop-layer" role="presentation">
       <button className="edit-pop-scrim" aria-label="close editor" onClick={onClose} />
-      <section className="edit-pop" role="dialog" aria-modal="true" aria-label={title}>
+      <section className={`edit-pop${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="edit-pop-head">
           <b>{title}</b>
           <button className="edit-pop-close" onClick={onClose} aria-label="close">

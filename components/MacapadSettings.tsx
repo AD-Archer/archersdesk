@@ -8,7 +8,7 @@
 // sit on the desk's own pages. Writes go through /api/macapad; the updated
 // pads are pushed back up through onChange so the widget redraws right away.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   MACAPAD_MAX_PAGES,
   MACAPAD_STEP_TYPES,
@@ -272,92 +272,98 @@ export function MacapadSection({
         — swipe between them on the widget, or tap its dots.
       </p>
 
-      <div className="page-seg">
-        {(Object.keys(SIZE_INFO) as MacapadSize[]).map((s) => (
-          <button key={s} className={s === size ? "on" : ""} onClick={() => chooseSize(s)}>
-            {SIZE_INFO[s].label}
-          </button>
-        ))}
-      </div>
+      {/* controls beside the board on short landscape screens (Echo Show) */}
+      <div className="mps-top">
+        <div className="mps-controls">
+          <div className="page-seg">
+            {(Object.keys(SIZE_INFO) as MacapadSize[]).map((s) => (
+              <button key={s} className={s === size ? "on" : ""} onClick={() => chooseSize(s)}>
+                {SIZE_INFO[s].label}
+              </button>
+            ))}
+          </div>
 
-      <div className="mps-pages">
-        {pages.map((p, i) => (
-          <button key={p.id} className={p.id === page.id ? "on" : ""} onClick={() => setPageId(p.id)}>
-            {p.name || `page ${i + 1}`}
-          </button>
-        ))}
-        {pages.length < MACAPAD_MAX_PAGES && (
-          <button className="add" onClick={addPage}>
-            <MI name="add" /> page
-          </button>
-        )}
-      </div>
+          <div className="mps-pages">
+            {pages.map((p, i) => (
+              <button key={p.id} className={p.id === page.id ? "on" : ""} onClick={() => setPageId(p.id)}>
+                {p.name || `page ${i + 1}`}
+              </button>
+            ))}
+            {pages.length < MACAPAD_MAX_PAGES && (
+              <button className="add" onClick={addPage}>
+                <MI name="add" /> page
+              </button>
+            )}
+          </div>
 
-      <div className="mps-page-bar">
-        <input
-          key={page.id}
-          defaultValue={page.name}
-          maxLength={30}
-          placeholder={`page ${pageIndex + 1}`}
-          aria-label="page name"
-          onBlur={(e) => {
-            const name = e.target.value.trim();
-            if (name !== page.name) write("renamePage", { page: page.id, name });
-          }}
-          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-        />
-        <button onClick={() => write("movePage", { page: page.id, by: -1 })} disabled={pageIndex === 0} aria-label="move page earlier">
-          <MI name="arrow_back" />
-        </button>
-        <button
-          onClick={() => write("movePage", { page: page.id, by: 1 })}
-          disabled={pageIndex === pages.length - 1}
-          aria-label="move page later"
-        >
-          <MI name="arrow_forward" />
-        </button>
-        <button onClick={removePage} disabled={pages.length === 1} aria-label="delete page">
-          <MI name="delete" />
-        </button>
-      </div>
-
-      <div className={`mps-grid ${size}${arranging ? " arranging" : ""}`}>
-        {slots.map((b, i) => {
-          const isHeld = held?.page === page.id && held.index === i;
-          return (
-            <button
-              key={b?.id ?? `empty-${i}`}
-              className={`mps-key${b ? "" : " empty"}${isHeld ? " held" : ""}`}
-              onClick={() => tapSlot(i)}
-              aria-label={b ? `${arranging ? "move" : "edit"} ${b.label || "button"}` : arranging ? "drop here" : "add a button"}
-            >
-              {b ? <KeyFace button={b} /> : <MI name={arranging && held ? "arrow_downward" : "add"} />}
-              {b?.label && <span>{b.label}</span>}
+          <div className="mps-page-bar">
+            <input
+              key={page.id}
+              defaultValue={page.name}
+              maxLength={30}
+              placeholder={`page ${pageIndex + 1}`}
+              aria-label="page name"
+              onBlur={(e) => {
+                const name = e.target.value.trim();
+                if (name !== page.name) write("renamePage", { page: page.id, name });
+              }}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+            />
+            <button onClick={() => write("movePage", { page: page.id, by: -1 })} disabled={pageIndex === 0} aria-label="move page earlier">
+              <MI name="arrow_back" />
             </button>
-          );
-        })}
-      </div>
+            <button
+              onClick={() => write("movePage", { page: page.id, by: 1 })}
+              disabled={pageIndex === pages.length - 1}
+              aria-label="move page later"
+            >
+              <MI name="arrow_forward" />
+            </button>
+            <button onClick={removePage} disabled={pages.length === 1} aria-label="delete page">
+              <MI name="delete" />
+            </button>
+          </div>
+        </div>
+        <div className="mps-board">
+          <div className={`mps-grid ${size}${arranging ? " arranging" : ""}`}>
+            {slots.map((b, i) => {
+              const isHeld = held?.page === page.id && held.index === i;
+              return (
+                <button
+                  key={b?.id ?? `empty-${i}`}
+                  className={`mps-key${b ? "" : " empty"}${isHeld ? " held" : ""}`}
+                  onClick={() => tapSlot(i)}
+                  aria-label={b ? `${arranging ? "move" : "edit"} ${b.label || "button"}` : arranging ? "drop here" : "add a button"}
+                >
+                  {b ? <KeyFace button={b} /> : <MI name={arranging && held ? "arrow_downward" : "add"} />}
+                  {b?.label && <span>{b.label}</span>}
+                </button>
+              );
+            })}
+          </div>
 
-      <div className="mps-tools">
-        <button
-          className={`mps-arrange${arranging ? " on" : ""}`}
-          onClick={() => {
-            setArranging((a) => !a);
-            setHeld(null);
-          }}
-          aria-pressed={arranging}
-        >
-          <MI name={arranging ? "check" : "grid_view"} /> {arranging ? "done arranging" : "arrange"}
-        </button>
-        <small>
-          {arranging
-            ? held
-              ? "now tap where it goes — any page, any slot. an empty slot leaves a gap."
-              : "tap a button to pick it up."
-            : "tap a slot to set what it does."}
-        </small>
+          <div className="mps-tools">
+            <button
+              className={`mps-arrange${arranging ? " on" : ""}`}
+              onClick={() => {
+                setArranging((a) => !a);
+                setHeld(null);
+              }}
+              aria-pressed={arranging}
+            >
+              <MI name={arranging ? "check" : "grid_view"} /> {arranging ? "done arranging" : "arrange"}
+            </button>
+            <small>
+              {arranging
+                ? held
+                  ? "now tap where it goes — any page, any slot. an empty slot leaves a gap."
+                  : "tap a button to pick it up."
+                : "tap a slot to set what it does."}
+            </small>
+          </div>
+          {error && <p className="embed-error">{error}</p>}
+        </div>
       </div>
-      {error && <p className="embed-error">{error}</p>}
 
       <MacActions />
 
@@ -533,11 +539,38 @@ function byCategory(actions: MacapadAction[]) {
 }
 
 // ── button editor ────────────────────────────────────────────────────
+// One question at a time. The key itself is the hero: its preview sits on
+// top and changes as you go. Below it, "what it does" asks for a kind first
+// (a list of plain choices), then shows only that kind's panel; "how it
+// looks" is icon or picture. A button that already does something opens
+// straight on its own panel.
 
-type PickTab = "actions" | "apps" | "keys" | "shortcuts" | "website";
+type Kind = "mac" | "app" | "web" | "keys" | "shortcut" | "sequence";
 
-// steps the pickers can't make — a button using these opens in advanced mode
-const ADVANCED_ONLY: StepType[] = ["typeText", "appleScript", "wait"];
+const KINDS: Array<{ kind: Kind; icon: string; title: string; hint: string }> = [
+  { kind: "mac", icon: "keyboard_command_key", title: "Control your Mac", hint: "Media, windows, screenshots, tabs, emoji" },
+  { kind: "app", icon: "apps", title: "Open an app", hint: "Any app installed on your Mac" },
+  { kind: "web", icon: "language", title: "Open a website", hint: "In your default browser, with its logo" },
+  { kind: "keys", icon: "keyboard", title: "Press a keyboard shortcut", hint: "Like ⌘W or ⌃⌘Space" },
+  { kind: "shortcut", icon: "bolt", title: "Run a shortcut", hint: "From the Shortcuts app" },
+  { kind: "sequence", icon: "checklist", title: "Build a sequence", hint: "Several steps in a row, typing, AppleScript" },
+];
+
+/** Which panel a button belongs to, from what it already does. */
+function kindOf(steps: MacapadStep[] | undefined): Kind | null {
+  if (!steps?.length) return null;
+  if (steps.length > 1) return "sequence";
+  switch (steps[0].type) {
+    case "action":
+    case "media":
+      return "mac";
+    case "openApp": return "app";
+    case "openURL": return "web";
+    case "keystroke": return "keys";
+    case "shortcut": return "shortcut";
+    default: return "sequence";
+  }
+}
 
 function ButtonEditor({
   button,
@@ -555,225 +588,195 @@ function ButtonEditor({
   const [icon, setIcon] = useState(button?.icon ?? "bolt");
   const [image, setImage] = useState(button?.image ?? "");
   const [steps, setSteps] = useState<MacapadStep[]>(button?.steps ?? []);
-  const [tab, setTab] = useState<PickTab>(() => tabFor(button?.steps));
-  const [advanced, setAdvanced] = useState(
-    () => (button?.steps.length ?? 0) > 1 || Boolean(button?.steps.some((st) => ADVANCED_ONLY.includes(st.type)))
-  );
-  const [iconsOpen, setIconsOpen] = useState(false);
+  const [view, setView] = useState<"does" | "looks">("does");
+  const [kind, setKind] = useState<Kind | null>(() => kindOf(button?.steps));
   const [error, setError] = useState<string | null>(null);
+  // the label follows each pick until you type your own
+  const autoLabel = useRef(button?.label ?? "");
+  // a small press on the preview whenever its face changes
+  const [pressed, setPressed] = useState(false);
+  const press = () => {
+    setPressed(true);
+    setTimeout(() => setPressed(false), 160);
+  };
 
-  function fill(next: { label: string; icon?: string; image?: string; steps: MacapadStep[] }) {
-    setLabel(next.label);
+  function choose(next: { label: string; icon?: string; image?: string; steps: MacapadStep[] }) {
+    if (!label.trim() || label === autoLabel.current) {
+      setLabel(next.label);
+      autoLabel.current = next.label;
+    }
     setIcon(next.icon ?? "bolt");
     setImage(next.image ?? "");
     setSteps(next.steps);
     setError(null);
-  }
-
-  function updateStep(i: number, st: MacapadStep) {
-    setSteps((cur) => cur.map((x, j) => (j === i ? st : x)));
-    setError(null);
-  }
-
-  function moveStep(i: number, d: number) {
-    setSteps((cur) => {
-      const next = [...cur];
-      [next[i], next[i + d]] = [next[i + d], next[i]];
-      return next;
-    });
+    press();
   }
 
   function save() {
-    if (!steps.length) return setError("pick something for it to do");
+    if (!steps.length) return setError("Choose what this key does first.");
     const cleaned = steps.map((st) =>
       // macapad needs a full url; assume https for bare hosts
       st.type === "openURL" && st.url.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(st.url.trim())
         ? { ...st, url: `https://${st.url.trim()}` }
         : st
     );
-    // a shortcut needs a key, not just modifiers
-    const blank = cleaned.findIndex((st) => stepValue(st)?.trim() === "" || (st.type === "keystroke" && !parseCombo(st.keys).key));
-    if (blank >= 0) return setError(steps.length > 1 ? `step ${blank + 1} isn't finished` : "finish setting it up first");
+    const unfinished = cleaned.findIndex(
+      (st) => stepValue(st)?.trim() === "" || (st.type === "keystroke" && !parseCombo(st.keys).key)
+    );
+    if (unfinished >= 0)
+      return setError(cleaned.length > 1 ? `Step ${unfinished + 1} isn't finished yet.` : "Finish setting this up first.");
     onSave({ id: button?.id ?? newId(), label: label.trim(), icon, ...(image ? { image } : {}), steps: cleaned });
   }
 
-  const keysStep = steps.length === 1 && steps[0].type === "keystroke" ? steps[0] : null;
+  const kindInfo = KINDS.find((k) => k.kind === kind);
 
   return (
     <EditablePopup
       open
-      title={button ? "edit button" : "new button"}
+      title={button ? "edit key" : "new key"}
       onClose={onClose}
+      className="bed-pop"
       footer={
         <>
           {button && (
             <button className="edit-pop-muted" onClick={onClear}>
-              clear
+              Remove key
             </button>
           )}
           <span style={{ flex: 1 }} />
           <button className="edit-pop-primary" onClick={save}>
-            save
+            Save
           </button>
         </>
       }
     >
-      <div className="mpe-head">
-        <div className="mps-key">
-          <KeyFace button={{ icon, image }} />
-          {label && <span>{label}</span>}
+      {/* side: the key and the toggle. main: the current question. Stacked on
+          phones; side by side on short landscape screens (Echo Show). */}
+      <div className="bed-side">
+        <div className="bed-hero">
+          <div className={`bed-key${pressed ? " pressed" : ""}`} aria-hidden>
+            <KeyFace button={{ icon, image }} />
+            <span>{label || " "}</span>
+          </div>
+          <div className="bed-hero-text">
+            <input
+              className="bed-label"
+              value={label}
+              maxLength={40}
+              placeholder="Name this key"
+              aria-label="Key label"
+              onChange={(e) => setLabel(e.target.value)}
+            />
+            <p className={`bed-does${steps.length ? "" : " empty"}`}>{summarize(steps, catalog)}</p>
+          </div>
         </div>
-        <div className="mpe-head-fields">
-          <label className="edit-field">
-            <span>label</span>
-            <input value={label} maxLength={40} placeholder="optional" onChange={(e) => setLabel(e.target.value)} />
-          </label>
-          <button className="mpe-disclose" onClick={() => setIconsOpen((o) => !o)} aria-expanded={iconsOpen}>
-            <MI name={iconsOpen ? "arrow_upward" : "palette"} /> {iconsOpen ? "done" : "change icon or image"}
+
+        <div className="bed-seg" role="tablist">
+          <button role="tab" aria-selected={view === "does"} className={view === "does" ? "on" : ""} onClick={() => setView("does")}>
+            What it does
+          </button>
+          <button role="tab" aria-selected={view === "looks"} className={view === "looks" ? "on" : ""} onClick={() => setView("looks")}>
+            How it looks
           </button>
         </div>
       </div>
-      {iconsOpen && (
-        <Appearance
-          icon={icon}
-          image={image}
-          onIcon={(name) => {
-            setIcon(name);
-            setImage("");
-          }}
-          onImage={setImage}
-        />
-      )}
 
-      <div className={`mpe-summary${steps.length ? "" : " empty"}`}>
-        <MI name={steps.length ? "bolt" : "add"} />
-        <span>{summarize(steps, catalog)}</span>
-      </div>
-
-      {steps.length > 1 ? (
-        // a chain: the pickers would replace every step, so keep them out of reach
-        <div className="mpe-chained">
-          <span>this button chains steps — edit them under advanced.</span>
-          <button
-            className="mpe-link"
-            onClick={() => {
-              setSteps([]);
-              setAdvanced(false);
+      <div className="bed-main">
+        {view === "looks" ? (
+          <Appearance
+            icon={icon}
+            image={image}
+            onIcon={(name) => {
+              setIcon(name);
+              setImage("");
+              press();
             }}
-          >
-            start over
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="mpe-tabs" role="tablist">
-            {(["actions", "apps", "keys", "shortcuts", "website"] as PickTab[]).map((t) => (
-              <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-                {t}
+            onImage={(url) => {
+              setImage(url);
+              press();
+            }}
+          />
+        ) : !kindInfo ? (
+          <div className="bed-kinds">
+            {KINDS.map((k) => (
+              <button key={k.kind} className="bed-kind" onClick={() => setKind(k.kind)}>
+                <span className="bed-kind-icon">
+                  <MI name={k.icon} />
+                </span>
+                <span className="bed-kind-text">
+                  <b>{k.title}</b>
+                  <small>{k.hint}</small>
+                </span>
+                <MI name="chevron_right" className="bed-kind-go" />
               </button>
             ))}
           </div>
-          <div className={`mpe-pane${tab === "keys" ? " fit" : ""}`}>
-            {tab === "website" ? (
-              <WebsitePicker onPick={fill} />
-            ) : tab === "keys" ? (
-              <div className="mpe-keys-pane">
-                <KeyCombo
-                  value={keysStep?.keys ?? ""}
-                  onChange={(keys) =>
-                    fill({ label: keysStep || !label ? prettyCombo(keys) : label, icon: "keyboard", steps: [{ type: "keystroke", keys }] })
-                  }
-                />
-                <small>tap any modifiers (⌃ ⌥ ⇧ ⌘ fn, together if you like), then tap the key — or press the real shortcut on a keyboard.</small>
-              </div>
+        ) : (
+          <div className="bed-panel">
+            <button className="bed-back" onClick={() => setKind(null)}>
+              <MI name="chevron_left" /> {kindInfo.title}
+            </button>
+
+            {kind === "keys" ? (
+              <ShortcutComposer
+                value={steps.length === 1 && steps[0].type === "keystroke" ? steps[0].keys : ""}
+                onChange={(keys) => choose({ label: prettyCombo(keys), icon: "keyboard", steps: [{ type: "keystroke", keys }] })}
+              />
+            ) : kind === "web" ? (
+              <WebsitePicker
+                current={steps.length === 1 && steps[0].type === "openURL" ? steps[0].url : ""}
+                onPick={choose}
+              />
+            ) : kind === "sequence" ? (
+              <SequenceEditor steps={steps} actions={catalog?.actions} onChange={setSteps} />
             ) : !catalog ? (
               <div className="mpe-empty">
                 {catalogError ? (
                   <>
                     {catalogError}{" "}
                     <button className="mpe-link" onClick={reload}>
-                      try again
+                      Try again
                     </button>
                   </>
                 ) : (
-                  "asking your mac…"
+                  "Asking your Mac…"
                 )}
               </div>
-            ) : tab === "actions" ? (
+            ) : kind === "mac" ? (
               <ActionPicker
                 actions={catalog.actions}
-                onPick={(a) => fill({ label: a.name.toLowerCase(), icon: iconOrBolt(a.icon), steps: [{ type: "action", id: a.id }] })}
+                selected={steps.length === 1 && steps[0].type === "action" ? steps[0].id : ""}
+                onPick={(a) => choose({ label: a.name.toLowerCase(), icon: iconOrBolt(a.icon), steps: [{ type: "action", id: a.id }] })}
               />
-            ) : tab === "apps" ? (
+            ) : kind === "app" ? (
               <AppPicker
                 apps={catalog.apps}
+                selected={steps.length === 1 && steps[0].type === "openApp" ? steps[0].app : ""}
                 onPick={(app) =>
-                  fill({ label: app.name.toLowerCase(), icon: "apps", image: appIcon(app.bundleId), steps: [{ type: "openApp", app: app.bundleId }] })
+                  choose({ label: app.name.toLowerCase(), icon: "apps", image: appIcon(app.bundleId), steps: [{ type: "openApp", app: app.bundleId }] })
                 }
               />
             ) : (
               <ShortcutPicker
                 shortcuts={catalog.shortcuts}
-                onPick={(name) => fill({ label: name.toLowerCase(), icon: "bolt", steps: [{ type: "shortcut", name }] })}
+                selected={steps.length === 1 && steps[0].type === "shortcut" ? steps[0].name : ""}
+                onPick={(name) => choose({ label: name.toLowerCase(), icon: "bolt", steps: [{ type: "shortcut", name }] })}
               />
             )}
           </div>
-        </>
-      )}
+        )}
 
-      <button className="mpe-advanced-toggle" onClick={() => setAdvanced((a) => !a)} aria-expanded={advanced}>
-        <span>
-          <b>advanced</b>
-          <small>chain steps, type text, applescript, waits</small>
-        </span>
-        <MI name={advanced ? "arrow_upward" : "arrow_downward"} />
-      </button>
-      {advanced && (
-        <div className="mpe-advanced">
-          {steps.length > 0 && (
-            <ol className="mpad-steps">
-              {steps.map((st, i) => (
-                <StepRow
-                  key={i}
-                  step={st}
-                  number={i + 1}
-                  actions={catalog?.actions}
-                  canUp={i > 0}
-                  canDown={i < steps.length - 1}
-                  onChange={(next) => updateStep(i, next)}
-                  onUp={() => moveStep(i, -1)}
-                  onDown={() => moveStep(i, 1)}
-                  onRemove={() => setSteps((cur) => cur.filter((_, j) => j !== i))}
-                />
-              ))}
-            </ol>
-          )}
-          <button className="mpad-add-step" onClick={() => setSteps((cur) => [...cur, defaultStep(cur.length ? "wait" : "action")])}>
-            <MI name="add" /> {steps.length ? "then do another thing" : "add a step"}
-          </button>
-        </div>
-      )}
-
-      {error && <p className="embed-error">{error}</p>}
+        {error && <p className="embed-error">{error}</p>}
+      </div>
     </EditablePopup>
   );
 }
 
-/** Open the picker tab that matches what a button already does. */
-function tabFor(steps: MacapadStep[] | undefined): PickTab {
-  const first = steps?.length === 1 ? steps[0] : null;
-  if (first?.type === "openApp") return "apps";
-  if (first?.type === "keystroke") return "keys";
-  if (first?.type === "shortcut") return "shortcuts";
-  if (first?.type === "openURL") return "website";
-  return "actions";
-}
-
 /** One plain sentence for what a button does. */
 function summarize(steps: MacapadStep[], catalog: MacapadCatalog | null): string {
-  if (!steps.length) return "pick what it does below";
+  if (!steps.length) return "Doesn't do anything yet";
   const parts = steps.map((st) => describeStep(st, catalog));
-  if (parts.length === 1) return parts[0];
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
   return `${parts.length} steps: ${parts.join(", then ")}`;
 }
 
@@ -781,7 +784,10 @@ function describeStep(st: MacapadStep, catalog: MacapadCatalog | null): string {
   switch (st.type) {
     case "action": {
       const a = catalog?.actions.find((x) => x.id === st.id);
-      return st.id ? `runs ${a ? a.name.toLowerCase() : st.id}` : "runs an action (not chosen yet)";
+      if (!st.id) return "an action (not chosen yet)";
+      if (!a) return st.id;
+      const keys = a.steps.length === 1 && a.steps[0].type === "keystroke" ? `, ${prettyCombo(a.steps[0].keys)}` : "";
+      return `${a.name.toLowerCase()}${keys}`;
     }
     case "openApp": {
       const app = catalog?.apps.find((x) => x.bundleId === st.app || x.name.toLowerCase() === st.app.toLowerCase());
@@ -794,22 +800,22 @@ function describeStep(st: MacapadStep, catalog: MacapadCatalog | null): string {
         return "opens a website (not set yet)";
       }
     }
-    case "keystroke": return st.keys ? `presses ${prettyCombo(st.keys)}` : "presses a shortcut (not set yet)";
-    case "shortcut": return st.name ? `runs the shortcut “${st.name}”` : "runs a shortcut (not chosen yet)";
+    case "keystroke": return parseCombo(st.keys).key ? `presses ${prettyCombo(st.keys)}` : "presses a shortcut (not set yet)";
+    case "shortcut": return st.name ? `runs “${st.name}”` : "runs a shortcut (not chosen yet)";
     case "media": return MEDIA_LABELS[st.key] ?? st.key;
     case "typeText": return st.text ? `types “${st.text.length > 24 ? `${st.text.slice(0, 24)}…` : st.text}”` : "types text";
-    case "appleScript": return "runs applescript";
+    case "appleScript": return "runs AppleScript";
     case "wait": return `waits ${st.ms} ms`;
   }
 }
 
-// ── keyboard shortcut builder ────────────────────────────────────────
+// ── keyboard shortcuts ───────────────────────────────────────────────
 
 const MODIFIERS = [
-  { key: "ctrl", symbol: "⌃" },
-  { key: "opt", symbol: "⌥" },
-  { key: "shift", symbol: "⇧" },
-  { key: "cmd", symbol: "⌘" },
+  { key: "ctrl", symbol: "⌃", name: "control" },
+  { key: "opt", symbol: "⌥", name: "option" },
+  { key: "shift", symbol: "⇧", name: "shift" },
+  { key: "cmd", symbol: "⌘", name: "command" },
 ] as const;
 
 const KEY_SYMBOLS: Record<string, string> = {
@@ -818,6 +824,14 @@ const KEY_SYMBOLS: Record<string, string> = {
 };
 
 const MOD_ALIASES: Record<string, string> = { command: "cmd", option: "opt", alt: "opt", control: "ctrl" };
+
+// every key name macapad understands
+const KNOWN_KEYS = new Set([
+  ..."abcdefghijklmnopqrstuvwxyz0123456789".split(""),
+  "-", "=", "[", "]", "\\", ";", "'", ",", ".", "/", "`",
+  ...Object.keys(KEY_SYMBOLS), "enter", "backspace", "escape",
+  ...Array.from({ length: 20 }, (_, i) => `f${i + 1}`),
+]);
 
 function parseCombo(combo: string): { mods: Set<string>; key: string } {
   const mods = new Set<string>();
@@ -831,15 +845,24 @@ function parseCombo(combo: string): { mods: Set<string>; key: string } {
 }
 
 function buildCombo(mods: Set<string>, key: string): string {
-  return [...MODIFIERS.map((m) => m.key).filter((m) => mods.has(m)), ...(mods.has("fn") ? ["fn"] : []), key]
+  return [...(mods.has("fn") ? ["fn"] : []), ...MODIFIERS.map((m) => m.key).filter((m) => mods.has(m)), key]
     .filter(Boolean)
     .join("+");
 }
 
-function prettyCombo(combo: string): string {
+/** The parts of a combo as they're printed on keycaps: ⌃ ⌥ ⌘ T. */
+function comboCaps(combo: string): string[] {
   const { mods, key } = parseCombo(combo);
-  const symbols = MODIFIERS.filter((m) => mods.has(m.key)).map((m) => m.symbol).join("");
-  return `${mods.has("fn") ? "fn " : ""}${symbols}${KEY_SYMBOLS[key] ?? key.toUpperCase()}`;
+  return [
+    ...(mods.has("fn") ? ["fn"] : []),
+    ...MODIFIERS.filter((m) => mods.has(m.key)).map((m) => m.symbol),
+    ...(key ? [KEY_SYMBOLS[key] ?? key.toUpperCase()] : []),
+  ];
+}
+
+function prettyCombo(combo: string): string {
+  const caps = comboCaps(combo);
+  return caps[0] === "fn" ? `fn ${caps.slice(1).join("")}` : caps.join("");
 }
 
 // browser KeyboardEvent.key → macapad key names
@@ -849,23 +872,14 @@ const BROWSER_KEYS: Record<string, string> = {
   Home: "home", End: "end", PageUp: "pageup", PageDown: "pagedown",
 };
 
-// the on-screen keyboard: every key macapad knows, tappable (no typing on a tablet)
-const SPECIAL_KEYS = [
-  "space", "return", "tab", "esc", "delete", "forwarddelete",
-  "left", "up", "down", "right", "home", "end", "pageup", "pagedown",
-];
-const KEY_ROWS = [
-  ["`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="],
-  ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "[", "]", "\\"],
-  ["a", "s", "d", "f", "g", "h", "j", "k", "l", ";", "'"],
-  ["z", "x", "c", "v", "b", "n", "m", ",", ".", "/"],
-];
-const F_KEYS = Array.from({ length: 12 }, (_, i) => `f${i + 1}`);
-const KEY_CAPTIONS: Record<string, string> = { forwarddelete: "fwd del", pageup: "pg up", pagedown: "pg dn" };
+// the keys you can't type into a text field on a tablet
+const TAP_KEYS = ["space", "return", "tab", "esc", "delete", "left", "up", "down", "right"];
 
-function KeyCombo({ value, onChange }: { value: string; onChange: (combo: string) => void }) {
+function ShortcutComposer({ value, onChange }: { value: string; onChange: (combo: string) => void }) {
   const { mods, key } = parseCombo(value);
-  const [showKeyboard, setShowKeyboard] = useState(false);
+  const [draft, setDraft] = useState(key && !KEY_SYMBOLS[key] ? key : "");
+  const caps = comboCaps(value);
+  const unknown = key !== "" && !KNOWN_KEYS.has(key);
 
   function toggle(mod: string) {
     const next = new Set(mods);
@@ -874,14 +888,22 @@ function KeyCombo({ value, onChange }: { value: string; onChange: (combo: string
     onChange(buildCombo(next, key));
   }
 
-  const setKey = (k: string) => onChange(buildCombo(mods, k));
+  function setKey(k: string) {
+    setDraft(KEY_SYMBOLS[k] ? "" : k);
+    onChange(buildCombo(mods, k));
+  }
 
-  // a physical keyboard: take the whole combo from one keypress
+  // on a computer: click the field and press the real shortcut
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (["Shift", "Meta", "Control", "Alt", "CapsLock", "Fn"].includes(e.key)) return;
-    const name = BROWSER_KEYS[e.key] ?? (/^F\d{1,2}$/.test(e.key) ? e.key.toLowerCase() : e.code.startsWith("Key") ? e.code.slice(3).toLowerCase() : e.code.startsWith("Digit") ? e.code.slice(5) : e.key.length === 1 ? e.key.toLowerCase() : "");
+    const name =
+      BROWSER_KEYS[e.key] ??
+      (/^F\d{1,2}$/.test(e.key) ? e.key.toLowerCase()
+        : e.code.startsWith("Key") ? e.code.slice(3).toLowerCase()
+        : e.code.startsWith("Digit") ? e.code.slice(5)
+        : e.key.length === 1 ? e.key.toLowerCase() : "");
     if (!name) return;
-    // a bare letter typed on a soft keyboard falls through to onChange instead
+    // a plain letter from a soft keyboard is just typing — let onChange take it
     if (!e.metaKey && !e.ctrlKey && !e.altKey && name.length === 1 && !BROWSER_KEYS[e.key]) return;
     e.preventDefault();
     const next = new Set<string>();
@@ -889,83 +911,80 @@ function KeyCombo({ value, onChange }: { value: string; onChange: (combo: string
     if (e.shiftKey) next.add("shift");
     if (e.altKey) next.add("opt");
     if (e.ctrlKey) next.add("ctrl");
+    setDraft(KEY_SYMBOLS[name] ? "" : name);
     onChange(buildCombo(next.size ? next : mods, name));
   }
 
-  const keyButton = (k: string, wide = false) => (
-    <button
-      key={k}
-      className={`${k === key ? "on" : ""}${wide ? " wide" : ""}`}
-      onClick={() => setKey(k === key ? "" : k)}
-      aria-pressed={k === key}
-      aria-label={k}
-    >
-      {KEY_SYMBOLS[k] ? (
-        <>
-          <b>{KEY_SYMBOLS[k]}</b>
-          {k.length > 2 && KEY_SYMBOLS[k].length <= 2 ? <small>{KEY_CAPTIONS[k] ?? k}</small> : null}
-        </>
-      ) : (
-        k.toUpperCase()
-      )}
-    </button>
-  );
-
   return (
-    <div className="mpe-combo">
-      <div className="mpe-mods">
-        {MODIFIERS.map((m) => (
-          <button key={m.key} className={mods.has(m.key) ? "on" : ""} onClick={() => toggle(m.key)} aria-pressed={mods.has(m.key)}>
-            <b>{m.symbol}</b>
-            {m.key}
-          </button>
-        ))}
-        <button className={mods.has("fn") ? "on" : ""} onClick={() => toggle("fn")} aria-pressed={mods.has("fn")}>
-          <b>🌐</b>fn
-        </button>
+    <div className="bed-keys">
+      <div className="bed-caps" aria-live="polite">
+        {caps.length ? (
+          caps.map((c, i) => (
+            <kbd key={i} className={c.length > 1 ? "wide" : ""}>
+              {c}
+            </kbd>
+          ))
+        ) : (
+          <span className="bed-caps-empty">Choose the keys below</span>
+        )}
       </div>
 
-      <div className="mpe-keyrow">{SPECIAL_KEYS.map((k) => keyButton(k, k === "space"))}</div>
-
-      {showKeyboard ? (
-        <div className="mpe-keyboard">
-          {KEY_ROWS.map((row, i) => (
-            <div key={i} className="mpe-keyrow tight">
-              {row.map((k) => keyButton(k))}
-            </div>
+      <div className="bed-row">
+        <span className="bed-row-name">Hold</span>
+        <div className="bed-chips">
+          {MODIFIERS.map((m) => (
+            <button key={m.key} className={mods.has(m.key) ? "on" : ""} onClick={() => toggle(m.key)} aria-pressed={mods.has(m.key)}>
+              <b>{m.symbol}</b> {m.name}
+            </button>
           ))}
-          <div className="mpe-keyrow tight">{F_KEYS.map((k) => keyButton(k))}</div>
-        </div>
-      ) : (
-        <div className="mpe-keyline">
-          <input
-            className="mpe-keyinput"
-            value={key}
-            maxLength={13}
-            placeholder="key"
-            aria-label="key"
-            autoCapitalize="off"
-            autoCorrect="off"
-            onKeyDown={onKeyDown}
-            onChange={(e) => {
-              const typed = e.target.value;
-              setKey(typed === " " ? "space" : typed.trim().toLowerCase());
-            }}
-          />
-          <button className="mpe-link" onClick={() => setShowKeyboard(true)}>
-            or tap it on a keyboard
+          <button className={mods.has("fn") ? "on" : ""} onClick={() => toggle("fn")} aria-pressed={mods.has("fn")}>
+            fn
           </button>
         </div>
-      )}
+      </div>
 
-      {value && (
-        <div className="mpe-combo-show">
-          {prettyCombo(value)} <small>{value}</small>
+      <div className="bed-row">
+        <span className="bed-row-name">Then</span>
+        <div className="bed-then">
+          <input
+            className="bed-keyfield"
+            value={draft}
+            maxLength={3}
+            placeholder="A letter, number or F5"
+            aria-label="Key"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            onKeyDown={onKeyDown}
+            onChange={(e) => setKey(e.target.value === " " ? "space" : e.target.value.trim().toLowerCase())}
+          />
+          <div className="bed-chips">
+            {TAP_KEYS.map((k) => (
+              <button
+                key={k}
+                className={k === key ? "on" : ""}
+                onClick={() => setKey(k === key ? "" : k)}
+                aria-pressed={k === key}
+                aria-label={k}
+              >
+                {KEY_SYMBOLS[k]}
+                {k.length > 1 && KEY_SYMBOLS[k].length === 1 && !["up", "down", "left", "right"].includes(k) ? ` ${k}` : ""}
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
+
+      {unknown ? (
+        <p className="embed-error">“{key}” isn&rsquo;t a key Macapad knows. Use a letter, a number, a symbol like / or ; , or F1–F20.</p>
+      ) : (
+        <p className="bed-note">On a computer, click the box and press the whole shortcut.</p>
       )}
     </div>
   );
 }
+
+// ── how it looks ─────────────────────────────────────────────────────
 
 interface SavedImage {
   url?: string;
@@ -988,7 +1007,7 @@ async function saveImage(input: File | string): Promise<SavedImage> {
     const res = await fetch("/api/macapad/images", init);
     return await res.json().catch(() => ({ error: `error ${res.status}` }));
   } catch {
-    return { error: "couldn't reach the desk" };
+    return { error: "Couldn't reach the desk." };
   }
 }
 
@@ -1005,15 +1024,16 @@ function Appearance({
   onIcon: (name: string) => void;
   onImage: (url: string) => void;
 }) {
-  const [mode, setMode] = useState<"icon" | "image">(image ? "image" : "icon");
+  const [mode, setMode] = useState<"icon" | "picture">(image ? "picture" : "icon");
   return (
-    <div className="mpe-appearance">
-      <div className="mpe-tabs small" role="tablist">
-        {(["icon", "image"] as const).map((m) => (
-          <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? "on" : ""} onClick={() => setMode(m)}>
-            {m}
-          </button>
-        ))}
+    <div className="bed-panel">
+      <div className="bed-chips bed-mode">
+        <button className={mode === "icon" ? "on" : ""} onClick={() => setMode("icon")} aria-pressed={mode === "icon"}>
+          <MI name="star" /> Icon
+        </button>
+        <button className={mode === "picture" ? "on" : ""} onClick={() => setMode("picture")} aria-pressed={mode === "picture"}>
+          <MI name="image" /> Picture
+        </button>
       </div>
       {mode === "icon" ? <IconGrid value={image ? null : icon} onPick={onIcon} /> : <ImagePicker image={image} onImage={onImage} />}
     </div>
@@ -1032,30 +1052,19 @@ function ImagePicker({ image, onImage }: { image: string; onImage: (url: string)
     setNote(null);
     const res = await saveImage(input);
     setBusy(false);
-    if (!res.url) return setError(res.error ?? "couldn't use that image");
+    if (!res.url) return setError(res.error ?? "Couldn't use that picture.");
     onImage(res.url);
-    if (res.originalBytes && res.bytes) setNote(`compressed ${kb(res.originalBytes)} → ${kb(res.bytes)}, transparency kept`);
+    if (res.originalBytes && res.bytes) setNote(`Shrunk from ${kb(res.originalBytes)} to ${kb(res.bytes)}. Transparency is kept.`);
   }
 
   return (
-    <div className="mpe-site">
-      <div className="mpe-site-row">
-        <input
-          className="mpe-search"
-          value={link}
-          placeholder="paste an image link"
-          inputMode="url"
-          autoCapitalize="off"
-          autoCorrect="off"
-          onChange={(e) => setLink(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && link.trim() && use(link.trim())}
-        />
-        <button className="edit-pop-primary" onClick={() => use(link.trim())} disabled={busy || !link.trim()}>
-          use link
-        </button>
-      </div>
-      <label className={`mpe-upload${busy ? " busy" : ""}`}>
-        <MI name="upload" /> {busy ? "compressing…" : "upload an image"}
+    <div className="bed-picture">
+      <label className={`bed-upload${busy ? " busy" : ""}`}>
+        <MI name="upload" />
+        <span>
+          <b>{busy ? "Shrinking…" : "Upload a picture"}</b>
+          <small>PNG, JPG, WebP, GIF or SVG</small>
+        </span>
         <input
           type="file"
           accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
@@ -1066,11 +1075,30 @@ function ImagePicker({ image, onImage }: { image: string; onImage: (url: string)
           }}
         />
       </label>
-      <small>png, jpg, webp, gif or svg. it&rsquo;s shrunk to 256px webp and kept on the desk.</small>
-      {note && <small className="mpe-ok">{note}</small>}
+      <form
+        className="bed-inline"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (link.trim()) use(link.trim());
+        }}
+      >
+        <input
+          className="bed-field"
+          value={link}
+          placeholder="…or paste a picture link"
+          inputMode="url"
+          autoCapitalize="off"
+          autoCorrect="off"
+          onChange={(e) => setLink(e.target.value)}
+        />
+        <button className="bed-go" type="submit" disabled={busy || !link.trim()}>
+          Use
+        </button>
+      </form>
+      {note && <p className="bed-note ok">{note}</p>}
       {image && (
         <button className="mpe-link" onClick={() => onImage("")}>
-          remove the image
+          Remove the picture
         </button>
       )}
       {error && <p className="embed-error">{error}</p>}
@@ -1083,15 +1111,8 @@ function IconGrid({ value, onPick }: { value: string | null; onPick: (name: stri
   const q = query.trim().toLowerCase();
   const shown = q ? ICONS.filter((name) => iconMatches(name, q)) : ICONS;
   return (
-    <div className="mpe-iconpick">
-      <input
-        className="mpe-search"
-        value={query}
-        placeholder={`search ${ICONS.length} icons — music, browser, robot…`}
-        onChange={(e) => setQuery(e.target.value)}
-        autoCapitalize="off"
-        autoCorrect="off"
-      />
+    <div className="bed-iconpick">
+      <SearchField value={query} onChange={setQuery} placeholder="Search icons: music, browser, robot…" />
       <div className="mpad-icons">
         {shown.map((name) => (
           <button
@@ -1106,104 +1127,124 @@ function IconGrid({ value, onPick }: { value: string | null; onPick: (name: stri
           </button>
         ))}
       </div>
-      {shown.length === 0 && <div className="mpe-empty">no icons match “{query}”</div>}
+      {shown.length === 0 && <div className="mpe-empty">No icons match “{query}”.</div>}
     </div>
   );
 }
 
-function ActionPicker({ actions, onPick }: { actions: MacapadAction[]; onPick: (a: MacapadAction) => void }) {
-  const [query, setQuery] = useState("");
-  const q = query.trim().toLowerCase();
-  const shown = q
-    ? actions.filter((a) => `${a.name} ${a.id} ${a.category}`.toLowerCase().includes(q))
-    : actions;
+// ── what it does: the pickers ────────────────────────────────────────
+
+/** Scroll a list so its current choice is in view when it first opens. */
+function useRevealSelected() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = ref.current;
+    const on = box?.querySelector<HTMLElement>(".on");
+    if (box && on) box.scrollTop = on.offsetTop - box.offsetTop - box.clientHeight / 2 + on.clientHeight / 2;
+  }, []);
+  return ref;
+}
+
+function SearchField({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
-    <>
+    <label className="bed-search">
+      <MI name="search" />
       <input
-        className="mpe-search"
-        value={query}
-        placeholder={`search ${actions.length} actions`}
-        onChange={(e) => setQuery(e.target.value)}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
         autoCapitalize="off"
         autoCorrect="off"
+        spellCheck={false}
       />
-      <div className="mpe-groups">
+    </label>
+  );
+}
+
+const CATEGORY_NAMES: Record<string, string> = {
+  media: "Media", system: "System", windows: "Windows", browser: "Browser", editing: "Editing", custom: "Your actions",
+};
+
+function ActionPicker({ actions, selected, onPick }: { actions: MacapadAction[]; selected: string; onPick: (a: MacapadAction) => void }) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const shown = q ? actions.filter((a) => `${a.name} ${a.id} ${a.category}`.toLowerCase().includes(q)) : actions;
+  const list = useRevealSelected();
+  return (
+    <>
+      <SearchField value={query} onChange={setQuery} placeholder={`Search ${actions.length} actions`} />
+      <div className="bed-list" ref={list}>
         {byCategory(shown).map(([category, list]) => (
-          <div key={category}>
-            <div className="mpe-group-name">{category}</div>
-            <div className="mpad-picks">
-              {list.map((a) => (
-                <button key={a.id} onClick={() => onPick(a)}>
-                  <MI name={iconOrBolt(a.icon)} />
-                  {a.name.toLowerCase()}
-                </button>
-              ))}
-            </div>
+          <div key={category} className="bed-group">
+            <div className="bed-group-name">{CATEGORY_NAMES[category] ?? category}</div>
+            {list.map((a) => (
+              <button key={a.id} className={`bed-item${a.id === selected ? " on" : ""}`} onClick={() => onPick(a)}>
+                <MI name={iconOrBolt(a.icon)} />
+                <span>{a.name}</span>
+                {a.steps.length === 1 && a.steps[0].type === "keystroke" && <kbd>{prettyCombo(a.steps[0].keys)}</kbd>}
+                {a.id === selected && <MI name="check" className="bed-item-check" />}
+              </button>
+            ))}
           </div>
         ))}
-        {shown.length === 0 && <div className="mpe-empty">no actions match</div>}
+        {shown.length === 0 && <div className="mpe-empty">No actions match “{query}”.</div>}
       </div>
     </>
   );
 }
 
-function AppPicker({ apps, onPick }: { apps: MacapadApp[]; onPick: (app: MacapadApp) => void }) {
+function AppPicker({ apps, selected, onPick }: { apps: MacapadApp[]; selected: string; onPick: (app: MacapadApp) => void }) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const shown = q ? apps.filter((a) => a.name.toLowerCase().includes(q) || a.bundleId.toLowerCase().includes(q)) : apps;
+  const list = useRevealSelected();
   return (
     <>
-      <input
-        className="mpe-search"
-        value={query}
-        placeholder={`search ${apps.length} apps`}
-        onChange={(e) => setQuery(e.target.value)}
-        autoCapitalize="off"
-        autoCorrect="off"
-      />
-      <div className="mpe-apps">
+      <SearchField value={query} onChange={setQuery} placeholder={`Search ${apps.length} apps`} />
+      <div className="mpe-apps bed-scroll" ref={list}>
         {shown.map((app) => (
-          <button key={app.bundleId} onClick={() => onPick(app)} title={app.bundleId}>
+          <button key={app.bundleId} className={app.bundleId === selected ? "on" : ""} onClick={() => onPick(app)} title={app.bundleId}>
             <KeyFace button={{ icon: "apps", image: appIcon(app.bundleId) }} />
             <span>{app.name}</span>
           </button>
         ))}
-        {shown.length === 0 && <div className="mpe-empty">no apps match</div>}
+        {shown.length === 0 && <div className="mpe-empty">No apps match “{query}”.</div>}
       </div>
     </>
   );
 }
 
-function ShortcutPicker({ shortcuts, onPick }: { shortcuts: string[]; onPick: (name: string) => void }) {
+function ShortcutPicker({ shortcuts, selected, onPick }: { shortcuts: string[]; selected: string; onPick: (name: string) => void }) {
   const [query, setQuery] = useState("");
-  if (!shortcuts.length) return <div className="mpe-empty">no shortcuts found in the shortcuts app.</div>;
+  const list = useRevealSelected();
+  if (!shortcuts.length) return <div className="mpe-empty">Your Shortcuts app has no shortcuts yet.</div>;
   const q = query.trim().toLowerCase();
   const shown = q ? shortcuts.filter((name) => name.toLowerCase().includes(q)) : shortcuts;
   return (
     <>
-      <input
-        className="mpe-search"
-        value={query}
-        placeholder={`search ${shortcuts.length} shortcuts`}
-        onChange={(e) => setQuery(e.target.value)}
-        autoCapitalize="off"
-        autoCorrect="off"
-      />
-      <div className="mpad-picks">
+      <SearchField value={query} onChange={setQuery} placeholder={`Search ${shortcuts.length} shortcuts`} />
+      <div className="bed-list" ref={list}>
         {shown.map((name) => (
-          <button key={name} onClick={() => onPick(name)}>
+          <button key={name} className={`bed-item${name === selected ? " on" : ""}`} onClick={() => onPick(name)}>
             <MI name="bolt" />
-            {name}
+            <span>{name}</span>
+            {name === selected && <MI name="check" className="bed-item-check" />}
           </button>
         ))}
+        {shown.length === 0 && <div className="mpe-empty">No shortcuts match “{query}”.</div>}
       </div>
-      {shown.length === 0 && <div className="mpe-empty">no shortcuts match</div>}
     </>
   );
 }
 
-function WebsitePicker({ onPick }: { onPick: (b: { label: string; image?: string; icon?: string; steps: MacapadStep[] }) => void }) {
-  const [url, setUrl] = useState("");
+function WebsitePicker({
+  current,
+  onPick,
+}: {
+  current: string;
+  onPick: (b: { label: string; image?: string; icon?: string; steps: MacapadStep[] }) => void;
+}) {
+  const [url, setUrl] = useState(current);
   const [meta, setMeta] = useState<SiteMeta | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1215,7 +1256,7 @@ function WebsitePicker({ onPick }: { onPick: (b: { label: string; image?: string
     const res = await macapadAction<SiteMeta>("siteMeta", { url });
     if (!res.data) {
       setBusy(false);
-      return setError(res.reason ?? "couldn't read that site");
+      return setError(res.reason ?? "Couldn't read that site.");
     }
     setMeta(res.data);
     await use(res.data, res.data.image);
@@ -1239,29 +1280,35 @@ function WebsitePicker({ onPick }: { onPick: (b: { label: string; image?: string
   }
 
   return (
-    <div className="mpe-site">
-      <div className="mpe-site-row">
+    <div className="bed-picture">
+      <form
+        className="bed-inline"
+        onSubmit={(e) => {
+          e.preventDefault();
+          find();
+        }}
+      >
         <input
-          className="mpe-search"
+          className="bed-field"
           value={url}
           placeholder="hackclub.com"
           inputMode="url"
           autoCapitalize="off"
           autoCorrect="off"
+          spellCheck={false}
           onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && find()}
         />
-        <button className="edit-pop-primary" onClick={find} disabled={busy || !url.trim()}>
-          {busy ? "looking…" : "use site"}
+        <button className="bed-go" type="submit" disabled={busy || !url.trim()}>
+          {busy ? "Finding…" : "Find"}
         </button>
-      </div>
-      <small>opens in the mac&rsquo;s default browser. the logo comes from the site itself.</small>
+      </form>
+      <p className="bed-note">Opens in your Mac&rsquo;s default browser. The logo comes from the site itself.</p>
       {meta && meta.images.length > 1 && (
         <>
-          <div className="mpe-group-name">other logos on {new URL(meta.url).hostname}</div>
+          <div className="bed-group-name">Other logos on {new URL(meta.url).hostname.replace(/^www\./, "")}</div>
           <div className="mpe-logos">
             {meta.images.slice(0, 8).map((src) => (
-              <button key={src} onClick={() => use(meta, src)} aria-label="use this logo" disabled={busy}>
+              <button key={src} onClick={() => use(meta, src)} aria-label="Use this logo" disabled={busy}>
                 <KeyFace button={{ icon: "language", image: src }} />
               </button>
             ))}
@@ -1269,6 +1316,48 @@ function WebsitePicker({ onPick }: { onPick: (b: { label: string; image?: string
         </>
       )}
       {error && <p className="embed-error">{error}</p>}
+    </div>
+  );
+}
+
+/** The step list for buttons that do several things. */
+function SequenceEditor({
+  steps,
+  actions,
+  onChange,
+}: {
+  steps: MacapadStep[];
+  actions?: MacapadAction[];
+  onChange: (steps: MacapadStep[]) => void;
+}) {
+  const move = (i: number, d: number) => {
+    const next = [...steps];
+    [next[i], next[i + d]] = [next[i + d], next[i]];
+    onChange(next);
+  };
+  return (
+    <div className="bed-sequence">
+      {steps.length > 0 && (
+        <ol className="mpad-steps">
+          {steps.map((st, i) => (
+            <StepRow
+              key={i}
+              step={st}
+              number={i + 1}
+              actions={actions}
+              canUp={i > 0}
+              canDown={i < steps.length - 1}
+              onChange={(next) => onChange(steps.map((x, j) => (j === i ? next : x)))}
+              onUp={() => move(i, -1)}
+              onDown={() => move(i, 1)}
+              onRemove={() => onChange(steps.filter((_, j) => j !== i))}
+            />
+          ))}
+        </ol>
+      )}
+      <button className="mpad-add-step" onClick={() => onChange([...steps, defaultStep(steps.length ? "wait" : "action")])}>
+        <MI name="add" /> {steps.length ? "Add another step" : "Add the first step"}
+      </button>
     </div>
   );
 }
@@ -1354,7 +1443,7 @@ function StepRow({
           {step.id && !actions.some((a) => a.id === step.id) && <option value={step.id}>{step.id} (missing)</option>}
         </select>
       )}
-      {step.type === "keystroke" && <KeyCombo value={step.keys} onChange={(keys) => onChange({ ...step, keys })} />}
+      {step.type === "keystroke" && <ShortcutComposer value={step.keys} onChange={(keys) => onChange({ ...step, keys })} />}
       {step.type === "appleScript" && (
         <textarea
           value={step.source}
