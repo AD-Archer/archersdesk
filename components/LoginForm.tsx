@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 
-export default function LoginForm() {
+// Sign in (or make an account) on the lander. Once it works, the form slides
+// away (the page gets .leaving) before the desk opens, so the clock reads as
+// handing over to the standby screen; with reduced motion it opens at once.
+
+export default function LoginForm({ canRegister }: { canRegister: boolean }) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -23,47 +27,66 @@ export default function LoginForm() {
       if (!res.ok) {
         const msg = String(data.error ?? "Something went wrong");
         setError(msg.charAt(0).toUpperCase() + msg.slice(1));
-      } else {
-        location.href = "/";
+        setBusy(false);
+        return;
       }
+      const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      document.querySelector(".lander")?.classList.add("leaving");
+      setTimeout(() => (location.href = "/"), still ? 0 : 420);
     } catch {
       setError("Can’t reach the desk. Check your connection.");
-    } finally {
       setBusy(false);
     }
   }
 
+  const registering = mode === "register";
+
   return (
     <>
-      <form className="login-form" onSubmit={submit}>
+      <p className="lander-say">
+        {registering ? "Make an account, then set up your desk from here." : "Sign in to turn this screen into your desk."}
+      </p>
+      <form className="lander-form" onSubmit={submit}>
         <input
+          aria-label="Username"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="username"
+          required
         />
         <input
+          aria-label="Password"
           placeholder="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          autoComplete={mode === "login" ? "current-password" : "new-password"}
+          autoComplete={registering ? "new-password" : "current-password"}
+          required
         />
-        <button className="btn-amber" type="submit" disabled={busy}>
-          {busy ? "…" : mode === "login" ? "Sign in" : "Create account"}
+        <button className="btn-primary" type="submit" disabled={busy}>
+          {busy ? (registering ? "Creating account…" : "Signing in…") : registering ? "Create account" : "Sign in"}
         </button>
-        <div className="login-error" role="alert">
+        <p className="lander-error" role="alert">
           {error}
-        </div>
+        </p>
       </form>
-      <div className="login-switch">
-        {mode === "login" ? "First time here?" : "Already have a desk?"}
-        <button onClick={() => setMode(mode === "login" ? "register" : "login")}>
-          {mode === "login" ? "Create an account" : "Sign in"}
-        </button>
-      </div>
+      {canRegister && (
+        <p className="lander-switch">
+          {registering ? "Already have an account?" : "First time here?"}
+          <button
+            type="button"
+            onClick={() => {
+              setMode(registering ? "login" : "register");
+              setError("");
+            }}
+          >
+            {registering ? "Sign in" : "Create an account"}
+          </button>
+        </p>
+      )}
     </>
   );
 }

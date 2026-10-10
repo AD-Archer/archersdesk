@@ -265,6 +265,9 @@ The frame every widget lives in: content centered straight on black, no card. Th
 ### Standby Clock (signature)
 Rounded 900 digits in two greens (a light #5fe08a and a deep #23934b, alternating digit by digit), overlapping by 0.05em, with two 90% white dots for the colon set over the join. Elsewhere, toned time uses the widget's tint and a 58% tint-into-black mix for the second tone. am/pm hangs under the minutes in 20px sans label-2.
 
+### Sign-in (the lander)
+What a signed-out screen shows, and the first thing anyone sees on a new device. The hero is the desk itself: the live StandBy clock in its two greens, with the colon given its own 0.24em so the dots never sit on a digit, and today's date top left. Landscape puts the clock in the left space (sized to the room beside the form, centred in it) and the sign-in straight on black to its right, no card: the wordmark in rounded 900 (plain white, no accented word), one label-2 line saying what signing in does, two 50px fields, one blue pill. Portrait is a lock screen: hours stacked over minutes at the top, the sign-in at the bottom. After a successful sign-in the form fades and slides aside for 0.35s before the desk opens (skipped with reduced motion). "Create an account" only shows when registration is on.
+
 ### Now Playing
 Square art at 0.6 × the panel (0.86 × height when wide) with a small radius, title 700 clamped to two lines, artist in label-2. A small dark circular badge in the art's top-right corner shows status (animated pink bars when playing, a pause mark when paused); it is a status, not a button. With nothing playing: a pink glyph disc over one sentence.
 
