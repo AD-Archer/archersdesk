@@ -215,10 +215,12 @@ export function useIntegration<T>(
 }
 
 /** Fire a write action against a service's proxy (e.g. seerr approve/decline,
- *  home assistant toggle). Not polled — call it from an event handler. */
-export function useIntegrationAction(service: ProxyService) {
+ *  home assistant toggle). Not polled — call it from an event handler. `screen`
+ *  (a device id or "remote") says which screen pressed, for macapad's schedules. */
+export function useIntegrationAction(service: ProxyService, screen?: string) {
   return async (action: string, payload?: unknown): Promise<IntegrationPayload> => {
-    const res = await fetch(`/api/integrations/${service}`, {
+    const query = screen ? `?device=${encodeURIComponent(screen)}` : "";
+    const res = await fetch(`/api/integrations/${service}${query}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, payload }),

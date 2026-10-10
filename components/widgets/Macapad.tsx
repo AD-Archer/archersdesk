@@ -51,8 +51,9 @@ function MacapadPad({
   settings: ViewSettings;
   integrationSettings?: ViewSettings;
 }) {
+  // status and presses both name this screen to the mac, which may keep it on a schedule
   const status = useIntegration<{ online: boolean }>("macapad", integrationSettings ?? settings, 30 * 1000);
-  const act = useIntegrationAction("macapad");
+  const act = useIntegrationAction("macapad", (integrationSettings ?? settings).deviceId);
 
   const found = padOf(settings.macapad, pad);
   const pages = found?.pages ?? [];

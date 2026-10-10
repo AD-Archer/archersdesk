@@ -11,8 +11,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ service: st
   if (!isProxyService(service))
     return NextResponse.json({ error: `unknown integration "${service}"` }, { status: 404 });
 
-  const { settings, device } = getDeviceSettings(user.id, req.nextUrl.searchParams.get("device"));
-  const body = await runIntegration(service, user.id, settings, device.location);
+  const screen = req.nextUrl.searchParams.get("device");
+  const { settings, device } = getDeviceSettings(user.id, screen);
+  const body = await runIntegration(service, user.id, settings, device.location, screen);
   return NextResponse.json(body);
 }
 
@@ -27,7 +28,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ service: s
   const { action, payload } = (await req.json().catch(() => ({}))) as { action?: string; payload?: unknown };
   if (!action) return NextResponse.json({ error: "missing action" }, { status: 400 });
 
-  const { settings, device } = getDeviceSettings(user.id, req.nextUrl.searchParams.get("device"));
-  const body = await runIntegrationAction(service, user.id, settings, device.location, action, payload);
+  const screen = req.nextUrl.searchParams.get("device");
+  const { settings, device } = getDeviceSettings(user.id, screen);
+  const body = await runIntegrationAction(service, user.id, settings, device.location, screen, action, payload);
   return NextResponse.json(body);
 }

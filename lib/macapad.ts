@@ -12,6 +12,20 @@ import {
   type MacapadScreenPad,
 } from "./types";
 
+/** Who's pressing, as macapad's X-Macapad-Client headers: each screen (and the
+ *  phone remote) is its own client on the mac, so each can follow its own
+ *  schedule there. The id keeps that schedule when a screen is renamed. */
+export function macapadClientHeaders(
+  devices: Array<{ id: string; name: string }>,
+  screen: string | null | undefined
+): Record<string, string> {
+  const device = screen === MACAPAD_REMOTE ? null : (devices.find((d) => d.id === screen) ?? devices[0]);
+  const id = device ? device.id : MACAPAD_REMOTE;
+  const name = device ? device.name.trim() || "Screen" : "Remote";
+  // header values are ascii-only; macapad decodes the name
+  return { "X-Macapad-Client": encodeURIComponent(name.slice(0, 60)), "X-Macapad-Client-Id": `archersdesk-${id}`.slice(0, 64) };
+}
+
 /** The pad id for a screen's pad page (a device id, or MACAPAD_REMOTE). */
 export const screenPad = (key: string): MacapadPadId => `screen:${key}`;
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isUser, requireUser } from "@/lib/api";
 import { compressImage } from "@/lib/images";
+import { macapadClientHeaders } from "@/lib/macapad";
 import { getUserSettings } from "@/lib/settings";
 
 const g = globalThis as typeof globalThis & { __macapadIcons?: Map<string, Buffer> };
@@ -23,12 +24,14 @@ export async function GET(req: NextRequest) {
   const hit = cache.get(`${user.id}|${bundleId}`);
   if (hit) return new NextResponse(new Uint8Array(hit), { headers });
 
-  const { url, token } = getUserSettings(user.id).integrations.macapad;
+  const settings = getUserSettings(user.id);
+  const { url, token } = settings.integrations.macapad;
   if (!url || !token) return NextResponse.json({ error: "macapad isn't set up" }, { status: 404 });
 
   try {
     const res = await fetch(`${url}/api/apps/icon?bundleId=${encodeURIComponent(bundleId)}&size=512`, {
-      headers: { Authorization: `Bearer ${token}` },
+      // icons aren't per screen; this just names a screen, as macapad requires
+      headers: { ...macapadClientHeaders(settings.devices, req.nextUrl.searchParams.get("device")), Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return NextResponse.json({ error: `macapad: error ${res.status}` }, { status: res.status === 404 ? 404 : 502 });

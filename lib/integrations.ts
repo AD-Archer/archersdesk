@@ -12,12 +12,13 @@ import type {
   Settings,
 } from "./types";
 import { expandEvents, parseIcs } from "./ical";
-import { allPadButtons } from "./macapad";
+import { allPadButtons, macapadClientHeaders } from "./macapad";
 import { navidromeAlbumSongs, navidromePlaylistSongs, navidromePlaylists, navidromeRecentAlbums, navidromeSearch } from "./navidrome";
 
 // Fetchers read global credentials from Settings, plus the active device's
-// location (hoisted in here so location-aware feeds keep reading `.location`).
-type IntCtx = Settings & { location: Location };
+// location (hoisted in here so location-aware feeds keep reading `.location`)
+// and the screen that asked (a device id or "remote"; macapad names it to the mac).
+type IntCtx = Settings & { location: Location; screen: string | null };
 
 // ── integration fetchers ─────────────────────────────────────────────
 // Each service is one entry: { ttl, fetch(settings) } returning the standard
@@ -121,13 +122,19 @@ async function haFetchStates(url: string, token: string): Promise<{ error: strin
 }
 
 // POST /api/run on the mac. macapad answers {ok, error} for step failures and
-// {error:{message}} for bad requests; a 401 means the token is wrong.
-async function macapadRun(url: string, token: string, steps: unknown[]): Promise<{ ok: true } | { ok: false; error: string }> {
+// {error:{message}} for bad requests (and 423s outside the screen's schedule);
+// a 401 means the token is wrong. `client` is macapadClientHeaders().
+async function macapadRun(
+  url: string,
+  token: string,
+  client: Record<string, string>,
+  steps: unknown[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
   let res: Response;
   try {
     res = await fetch(`${url}/api/run`, {
       method: "POST",
-      headers: { ...UA, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: { ...UA, ...client, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ steps }),
       // a button can chain waits, so allow longer than a normal fetch
       signal: AbortSignal.timeout(steps.length ? 60_000 : 5000),
@@ -146,6 +153,7 @@ async function macapadRun(url: string, token: string, steps: unknown[]): Promise
 async function macapadApi<T = unknown>(
   url: string,
   token: string,
+  client: Record<string, string>,
   path: string,
   opts: { method?: string; body?: unknown; timeout?: number } = {}
 ): Promise<{ ok: true; data: T } | { ok: false; error: string; status?: number }> {
@@ -155,6 +163,7 @@ async function macapadApi<T = unknown>(
       method: opts.method ?? "GET",
       headers: {
         ...UA,
+        ...client,
         Authorization: `Bearer ${token}`,
         ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}),
       },
@@ -998,7 +1007,7 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
     async fetch(settings) {
       const { url, token } = settings.integrations.macapad;
       if (!url || !token) return need("set your macapad url + token in settings → accounts");
-      const result = await macapadRun(url, token, []);
+      const result = await macapadRun(url, token, macapadClientHeaders(settings.devices, settings.screen), []);
       if (!result.ok) return { configured: true, reason: result.error };
       return { configured: true, data: { online: true } };
     },
@@ -1012,19 +1021,20 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
       if (!url || !token) return need("set your macapad url + token in settings → accounts");
       const p = (payload ?? {}) as Record<string, unknown>;
       const fail = (reason: string): IntegrationPayload => ({ configured: true, reason });
+      const client = macapadClientHeaders(settings.devices, settings.screen);
 
       switch (name) {
         case "press": {
           const button = allPadButtons(settings.macapad).find((b) => b.id === p.id);
           if (!button) return fail("that button no longer exists");
-          const result = await macapadRun(url, token, button.steps);
+          const result = await macapadRun(url, token, client, button.steps);
           return result.ok ? { configured: true, data: { ok: true } } : fail(result.error);
         }
         case "catalog": {
           const [actions, apps, shortcuts] = await Promise.all([
-            macapadApi<{ actions: MacapadAction[] }>(url, token, "/api/actions"),
-            macapadApi<{ apps: MacapadApp[] }>(url, token, "/api/apps"),
-            macapadApi<{ shortcuts: string[] }>(url, token, "/api/shortcuts", { timeout: 15_000 }),
+            macapadApi<{ actions: MacapadAction[] }>(url, token, client, "/api/actions"),
+            macapadApi<{ apps: MacapadApp[] }>(url, token, client, "/api/apps"),
+            macapadApi<{ shortcuts: string[] }>(url, token, client, "/api/shortcuts", { timeout: 15_000 }),
           ]);
           if (!actions.ok) return fail(actions.status === 404 ? "update macapad on your mac (needs 0.2+)" : actions.error);
           const catalog: MacapadCatalog = {
@@ -1035,12 +1045,12 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
           return { configured: true, data: catalog };
         }
         case "saveAction": {
-          const result = await macapadApi<MacapadAction>(url, token, "/api/actions", { method: "POST", body: p.action });
+          const result = await macapadApi<MacapadAction>(url, token, client, "/api/actions", { method: "POST", body: p.action });
           return result.ok ? { configured: true, data: result.data } : fail(result.error);
         }
         case "deleteAction": {
           if (typeof p.id !== "string") return fail("missing action id");
-          const result = await macapadApi(url, token, `/api/actions/${encodeURIComponent(p.id)}`, { method: "DELETE" });
+          const result = await macapadApi(url, token, client, `/api/actions/${encodeURIComponent(p.id)}`, { method: "DELETE" });
           return result.ok ? { configured: true, data: { ok: true } } : fail(result.error);
         }
         case "siteMeta": {
@@ -1731,32 +1741,40 @@ export async function runIntegrationAction(
   userId: number,
   settings: Settings,
   location: Location,
+  screen: string | null,
   name: string,
   payload: unknown
 ): Promise<IntegrationPayload> {
-  const ctx: IntCtx = { ...settings, location };
+  const ctx: IntCtx = { ...settings, location, screen };
   const result = await INTEGRATIONS[service].action!(ctx, name, payload);
-  const creds = settings.integrations[service];
-  cache.delete(`${userId}|${service}|${JSON.stringify(creds)}`);
+  cache.delete(cacheKey(userId, service, settings, location, screen));
   return result;
+}
+
+// credentials/config are part of the key so edits refetch immediately; macapad
+// answers per screen (each follows its own schedule on the mac)
+function cacheKey(userId: number, service: ProxyService, settings: Settings, location: Location, screen: string | null) {
+  const creds =
+    service === "agenda"
+      ? { calendars: settings.calendars, epic: settings.showEpicInAgenda }
+      : service === "macapad"
+        ? { ...settings.integrations.macapad, screen }
+        : service in INTEGRATIONS
+          ? settings.integrations[service as IntegrationService]
+          : location;
+  return `${userId}|${service}|${JSON.stringify(creds)}`;
 }
 
 export async function runIntegration(
   service: ProxyService,
   userId: number,
   settings: Settings,
-  location: Location
+  location: Location,
+  screen: string | null
 ): Promise<IntegrationPayload> {
-  const ctx: IntCtx = { ...settings, location };
+  const ctx: IntCtx = { ...settings, location, screen };
   const entry = ALL_SERVICES[service];
-  // credentials/config are part of the key so edits refetch immediately
-  const creds =
-    service === "agenda"
-      ? { calendars: settings.calendars, epic: settings.showEpicInAgenda }
-      : service in INTEGRATIONS
-        ? settings.integrations[service as IntegrationService]
-        : location;
-  const key = `${userId}|${service}|${JSON.stringify(creds)}`;
+  const key = cacheKey(userId, service, settings, location, screen);
   if (cache.size > 500) cache.clear();
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < entry.ttl) return hit.body;

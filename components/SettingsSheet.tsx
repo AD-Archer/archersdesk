@@ -1590,6 +1590,10 @@ function AccountsSection({ settings, onChange }: SectionProps) {
             The desk&rsquo;s server calls this address, not this screen, so use one the server can
             reach: localhost if they&rsquo;re on the same Mac, otherwise its Tailscale address.
           </p>
+          <p className="acct-note">
+            Each screen shows up under its own name in Macapad&rsquo;s settings on the Mac, where you can
+            give it a schedule, like work hours for the office screen.
+          </p>
         </AccountGroup>
 
         <AccountGroup title="Seerr" blurb="Jellyseerr or Overseerr requests" {...w("seerr")} done={!!ig.seerr?.url}>

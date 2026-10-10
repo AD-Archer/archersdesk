@@ -178,7 +178,7 @@ export function Sheet({ title, onDone, children }: { title: string; onDone: () =
 /* ── the pad ──────────────────────────────────────────────────────────── */
 
 export function RemotePad({ settings, onClose }: { settings: Settings; onClose: () => void }) {
-  const act = useIntegrationAction("macapad");
+  const act = useIntegrationAction("macapad", MACAPAD_REMOTE);
   const has = (s: MacapadPadId) => padOf(settings.macapad, s)?.pages.some((p) => p.buttons.some(Boolean)) ?? false;
   const [size, setSize] = useState<MacapadPadId>(() => PAD_ORDER.find(has) ?? REMOTE_PAD);
   const [pageIndex, setPageIndex] = useState(0);
