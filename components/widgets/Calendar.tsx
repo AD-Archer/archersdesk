@@ -4,45 +4,55 @@ import { useNow } from "../hooks";
 import type { WidgetProps } from "./registry";
 
 const DOW = ["S", "M", "T", "W", "T", "F", "S"];
+const DOW_SHORT = new Intl.DateTimeFormat("en-US", { weekday: "short" });
+const MONTH_SHORT = new Intl.DateTimeFormat("en-US", { month: "short" });
+const MONTH_LONG = new Intl.DateTimeFormat("en-US", { month: "long" });
 
-export function CalendarWidget(_: WidgetProps) {
+/** StandBy's month: a red month name over the grid, today in a red disc.
+ *  Wide, it adds the big "Sat Oct / 10" date on the left like StandBy. */
+export function CalendarWidget({ wide }: WidgetProps) {
   const now = useNow(60_000);
   const year = now.getFullYear();
   const month = now.getMonth();
   const today = now.getDate();
 
-  const first = new Date(year, month, 1);
+  const lead = new Date(year, month, 1).getDay(); // sunday-start
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const daysInPrev = new Date(year, month, 0).getDate();
-  const lead = first.getDay(); // sunday-start
-
-  const cells: Array<{ n: number; out: boolean; today: boolean }> = [];
-  for (let i = lead - 1; i >= 0; i--) cells.push({ n: daysInPrev - i, out: true, today: false });
-  for (let d = 1; d <= daysInMonth; d++) cells.push({ n: d, out: false, today: d === today });
-  while (cells.length % 7 !== 0) cells.push({ n: cells.length - lead - daysInMonth + 1, out: true, today: false });
+  const cells: Array<number | null> = [
+    ...Array.from({ length: lead }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
 
   return (
-    <>
-      <span className="w-label">calendar</span>
-      <div className="w-body">
-        <div className="cal">
-          <div className="cal-head">
-            {now.toLocaleDateString("en-US", { month: "long" })} <span>{year}</span>
+    <div className={`hero-cal${wide ? " wide" : ""}`} suppressHydrationWarning>
+      {wide && (
+        <div className="hero-date">
+          <div className="hero-date-head">
+            <span className="hero-date-dow">{DOW_SHORT.format(now)}</span>{" "}
+            <span className="hero-date-mon">{MONTH_SHORT.format(now)}</span>
           </div>
-          <div className="cal-grid">
-            {DOW.map((d, i) => (
-              <div key={`h${i}`} className="cal-dow">
-                {d}
-              </div>
-            ))}
-            {cells.map((c, i) => (
-              <div key={i} className={`cal-day${c.out ? " out" : ""}${c.today ? " today" : ""}`}>
-                {c.n}
-              </div>
-            ))}
-          </div>
+          <div className="hero-date-num">{today}</div>
+        </div>
+      )}
+      <div className="cal">
+        <div className="cal-head">{MONTH_LONG.format(now)}</div>
+        <div className="cal-grid">
+          {DOW.map((d, i) => (
+            <div key={`h${i}`} className={`cal-dow${i === 0 || i === 6 ? " weekend" : ""}`}>
+              {d}
+            </div>
+          ))}
+          {cells.map((n, i) => (
+            <div
+              key={i}
+              className={`cal-day${n === today ? " today" : ""}${i % 7 === 0 || i % 7 === 6 ? " weekend" : ""}`}
+              aria-current={n === today ? "date" : undefined}
+            >
+              {n ?? ""}
+            </div>
+          ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { WIDGET_INFO } from "@/lib/types";
 import EditablePopup from "../EditablePopup";
 import { SwipeCarousel } from "./Carousel";
-import { BigStat, Empty, MI, Shell, integrationGate, useIntegration, useIntegrationAction } from "./kit";
+import { BigStat, Empty, Shell, integrationGate, useIntegration, useIntegrationAction } from "./kit";
 import type { WidgetProps } from "./registry";
 
 interface SeerrRequest {
@@ -40,7 +40,7 @@ export function SeerrWidget({ wide, settings, integrationSettings }: WidgetProps
 
   if (gate)
     return (
-      <Shell icon={WIDGET_INFO.seerr.icon} label="seerr">
+      <Shell icon={WIDGET_INFO.seerr.icon} label="Requests">
         {gate}
       </Shell>
     );
@@ -54,17 +54,14 @@ export function SeerrWidget({ wide, settings, integrationSettings }: WidgetProps
   }
 
   return (
-    <Shell icon={WIDGET_INFO.seerr.icon} label="seerr">
-      <span className="hero-tap-icon">
-        <MI name={WIDGET_INFO.seerr.icon} className="hero-tap-mi" />
-      </span>
+    <Shell icon={WIDGET_INFO.seerr.icon} label="Requests">
       <BigStat
         value={d.counts.pending}
-        unit="pending"
-        caption={`${d.counts.approved} approved · ${d.counts.available} available`}
+        unit="waiting"
+        caption={`${d.counts.approved} approved, ${d.counts.available} ready to watch`}
       />
       {list.length === 0 ? (
-        <Empty>no pending requests</Empty>
+        <Empty plain>Nothing to approve</Empty>
       ) : (
         <SwipeCarousel
           items={list}
@@ -77,15 +74,19 @@ export function SeerrWidget({ wide, settings, integrationSettings }: WidgetProps
               <div className="seerr-row-body">
                 <span className="seerr-row-title">{r.title}</span>
                 <span className="seerr-row-meta">
-                  {r.mediaType} · {r.requestedBy}
+                  {r.mediaType === "tv" ? "Show" : "Movie"} · {r.requestedBy}
                 </span>
               </div>
               <div className="seerr-row-actions">
-                <button className="seerr-icon-btn approve" onClick={() => respond(r.id, "approve")} aria-label="approve">
-                  ✓
+                <button className="key seerr-icon-btn approve" onClick={() => respond(r.id, "approve")} aria-label="approve">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
                 </button>
-                <button className="seerr-icon-btn reject" onClick={() => respond(r.id, "decline")} aria-label="reject">
-                  ✕
+                <button className="key seerr-icon-btn decline" onClick={() => respond(r.id, "decline")} aria-label="decline">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+                    <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -101,11 +102,11 @@ export function SeerrWidget({ wide, settings, integrationSettings }: WidgetProps
           detail && (
             <>
               <button className="edit-pop-muted" onClick={() => respond(detail.id, "decline")}>
-                reject
+                Decline
               </button>
               <span style={{ flex: 1 }} />
               <button className="edit-pop-primary" onClick={() => respond(detail.id, "approve")}>
-                approve
+                Approve
               </button>
             </>
           )
@@ -116,11 +117,11 @@ export function SeerrWidget({ wide, settings, integrationSettings }: WidgetProps
             {detail.poster && <img className="seerr-detail-poster" src={detail.poster} alt="" draggable={false} />}
             <div className="seerr-detail-meta">
               <div className="seerr-detail-sub">
-                {detail.mediaType} · requested by {detail.requestedBy}
+                {detail.mediaType === "tv" ? "Show" : "Movie"} · asked for by {detail.requestedBy}
               </div>
               <div className="seerr-detail-sub">
                 {detail.releaseDate && <span>{detail.releaseDate.slice(0, 4)}</span>}
-                {detail.voteAverage !== null && <span> · ★ {detail.voteAverage.toFixed(1)}</span>}
+                {detail.voteAverage !== null && <span> · rated {detail.voteAverage.toFixed(1)}</span>}
               </div>
               {detail.overview && <p className="seerr-detail-overview">{detail.overview}</p>}
             </div>

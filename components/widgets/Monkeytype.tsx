@@ -1,7 +1,7 @@
 "use client";
 
 import { WIDGET_INFO } from "@/lib/types";
-import { BigStat, Empty, MI, MiniList, Shell, StatRow, integrationGate, useIntegration } from "./kit";
+import { BigStat, Empty, MiniList, Shell, StatRow, integrationGate, useIntegration } from "./kit";
 import type { WidgetProps } from "./registry";
 
 interface MonkeytypeData {
@@ -41,34 +41,31 @@ export function MonkeytypeWidget({ settings, integrationSettings, wide }: Widget
   return (
     <Shell
       icon={WIDGET_INFO.monkeytype.icon}
-      label={`monkeytype${payload?.data?.username ? ` · ${payload.data.username}` : ""}`}
+      label={`Monkeytype${payload?.data?.username ? ` · ${payload.data.username}` : ""}`}
     >
       {!hasApeKey ? (
-        <Empty>add your monkeytype ape key in settings → accounts</Empty>
+        <Empty>Add your Monkeytype ape key in settings</Empty>
       ) : gate ?? (
         <>
           <div className="monkeytype-hero">
-            <span className="monkeytype-hero-icon">
-              <MI name={WIDGET_INFO.monkeytype.icon} className="monkeytype-hero-mi" />
-            </span>
             <BigStat
               value={Math.round(payload!.data!.best60?.wpm ?? payload!.data!.last?.wpm ?? 0)}
-              unit={payload!.data!.best60 ? "wpm pb" : "wpm last"}
+              unit={payload!.data!.best60 ? "wpm best" : "wpm last test"}
               caption={
                 payload!.data!.best60?.acc
-                  ? `60s · ${payload!.data!.best60.acc.toFixed(1)}% acc`
+                  ? `60 seconds, ${payload!.data!.best60.acc.toFixed(1)}% accurate`
                   : testName(payload!.data!.last)
               }
             />
           </div>
           <StatRow
             items={[
-              ...(payload!.data!.streak ? [{ label: "streak", value: payload!.data!.streak.current }] : []),
+              ...(payload!.data!.streak ? [{ label: "Day streak", value: payload!.data!.streak.current }] : []),
               ...(payload!.data!.totals.tests
-                ? [{ label: "tests", value: payload!.data!.totals.tests.toLocaleString() }]
+                ? [{ label: "Tests", value: payload!.data!.totals.tests.toLocaleString() }]
                 : []),
               ...(payload!.data!.last
-                ? [{ label: payload!.data!.last.isPb ? "last pb" : "last", value: Math.round(payload!.data!.last.wpm) }]
+                ? [{ label: payload!.data!.last.isPb ? "Last, a best" : "Last test", value: Math.round(payload!.data!.last.wpm) }]
                 : []),
             ]}
           />
@@ -79,7 +76,7 @@ export function MonkeytypeWidget({ settings, integrationSettings, wide }: Widget
                   ? [
                       {
                         key: "best",
-                        left: "60s best",
+                        left: "60 second best",
                         right: (
                           <>
                             <b>{payload!.data!.best60.wpm.toFixed(1)} wpm</b>
@@ -107,7 +104,7 @@ export function MonkeytypeWidget({ settings, integrationSettings, wide }: Widget
                   ? [
                       {
                         key: "streak",
-                        left: "best streak",
+                        left: "Best streak",
                         right: <b>{payload!.data!.streak.max} days</b>,
                       },
                     ]

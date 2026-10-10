@@ -1,0 +1,492 @@
+/* ── board: StandBy ────────────────────────────────────────────────────
+   Landscape (Echo Show 5, 960×480): two widgets side by side, each owning
+   half the screen, straight on black — no cards, no borders. Portrait
+   (phone): they stack. Controls hide until a tap (.hud.show). */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  bottom: auto;
+  height: var(--app-height);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.pager-track {
+  display: flex;
+  height: var(--app-height);
+  will-change: transform;
+}
+
+.pager-track.animate {
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.page {
+  flex: 0 0 100%;
+  height: var(--app-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: var(--pad);
+}
+
+@media (orientation: portrait) {
+  .page {
+    padding: calc(var(--safe-t) + 8px) var(--pad) calc(var(--safe-b) + 8px);
+  }
+}
+
+.vrow {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── controls: a translucent pill, top right, only after a tap ────── */
+
+.hud {
+  position: fixed;
+  top: calc(var(--safe-t) + 12px);
+  right: 12px;
+  z-index: 40;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--material);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  opacity: 0;
+  transform: translateY(-6px) scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hud.show {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.hud-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--label);
+  transition: background 0.15s;
+}
+
+.hud-btn:active {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.hud-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* page dots (bottom) and row dots (right edge) flash with the controls */
+.dots,
+.vdots {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+
+.dots.show,
+.vdots.show {
+  opacity: 1;
+}
+
+.dots {
+  left: 50%;
+  bottom: calc(var(--safe-b) + 6px);
+  transform: translateX(-50%);
+}
+
+.vdots {
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+
+.dots i,
+.vdots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  transition: background 0.3s;
+}
+
+.dots i.on,
+.vdots i.on {
+  background: var(--label);
+}
+
+/* ── panels: each widget owns its half, straight on black ─────────── */
+
+.main-view {
+  --gap: 20px;
+  --pw: calc((100vw - var(--pad) * 2 - var(--gap)) / 2);
+  --ph: calc(var(--app-height) - var(--pad) * 2);
+  --ps: min(var(--pw), var(--ph));
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+@media (orientation: portrait) {
+  .main-view {
+    --gap: 12px;
+    --pw: calc(100vw - var(--pad) * 2);
+    --ph: calc((var(--app-height) - var(--safe-t) - var(--safe-b) - 16px - var(--gap)) / 2);
+    flex-direction: column;
+  }
+}
+
+.panel {
+  position: relative;
+  /* never wider than 1.3× its height, so big desktop windows stay boxy */
+  width: min(var(--pw), calc(var(--ph) * 1.3));
+  height: var(--ph);
+  flex: 0 0 auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--label);
+}
+
+.panel.wide {
+  width: min(calc(var(--pw) * 2 + var(--gap)), calc(var(--ph) * 2.6));
+}
+
+@media (orientation: portrait) {
+  .panel,
+  .panel.wide {
+    width: var(--pw);
+  }
+}
+
+/* each widget owns one system tint */
+.panel[data-widget="clock"],
+.panel[data-widget="please_disturb"],
+.panel[data-widget="github"],
+.panel[data-widget="stocks"],
+.panel[data-widget="citybikes"],
+.panel[data-widget="adguard"],
+.panel[data-widget="chess"] {
+  --tint: var(--green);
+}
+
+.panel[data-widget="analog"],
+.panel[data-widget="worldclock"],
+.panel[data-widget="alarms"],
+.panel[data-widget="timer"],
+.panel[data-widget="archerhours"],
+.panel[data-widget="plex"],
+.panel[data-widget="fox"],
+.panel[data-widget="shibe"] {
+  --tint: var(--orange);
+}
+
+.panel[data-widget="date"],
+.panel[data-widget="datetime"],
+.panel[data-widget="calendar"],
+.panel[data-widget="agenda"],
+.panel[data-widget="f1"],
+.panel[data-widget="pihole"],
+.panel[data-widget="transmission"],
+.panel[data-widget="embed"] {
+  --tint: var(--red);
+}
+
+.panel[data-widget="weather"],
+.panel[data-widget="forecast"],
+.panel[data-widget="homeassistant"] {
+  --tint: var(--cyan);
+}
+
+.panel[data-widget="sun"],
+.panel[data-widget="quote"],
+.panel[data-widget="away_until"],
+.panel[data-widget="monkeytype"],
+.panel[data-widget="catfact"],
+.panel[data-widget="dogfact"],
+.panel[data-widget="duck"] {
+  --tint: var(--yellow);
+}
+
+.panel[data-widget="moon"],
+.panel[data-widget="dnd"],
+.panel[data-widget="seerr"] {
+  --tint: var(--indigo);
+}
+
+.panel[data-widget="nowplaying"],
+.panel[data-widget="navidrome"],
+.panel[data-widget="vibe"] {
+  --tint: var(--pink);
+}
+
+.panel[data-widget="spacenews"],
+.panel[data-widget="jellyfin"] {
+  --tint: var(--purple);
+}
+
+.panel[data-widget="anilist"],
+.panel[data-widget="wakatime"],
+.panel[data-widget="flights"],
+.panel[data-widget="septa"],
+.panel[data-widget="macapad"],
+.panel[data-widget="qbittorrent"] {
+  --tint: var(--blue);
+}
+
+.panel[data-widget="epicgames"],
+.panel[data-widget="dog"],
+.panel[data-widget="cat"] {
+  --tint: var(--mint);
+}
+
+/* widget names stay out of sight, like StandBy: the content says what it
+   is. Screen readers still get the name. A heading is shown only where it
+   carries information the content doesn't (the weather's city, macapad's
+   page name and press errors). */
+.w-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.w-label.show,
+.panel[data-widget="macapad"] .w-label {
+  width: auto;
+  height: auto;
+  clip: auto;
+  top: 4px;
+  left: 6px;
+  right: 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--tint);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.w-label .mi {
+  font-size: 20px;
+}
+
+.w-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.w-empty {
+  color: var(--label-2);
+  font-size: 17px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.4;
+  max-width: 26ch;
+  text-wrap: balance;
+}
+
+/* ── standby: StandBy's big clock ─────────────────────────────────── */
+
+.standby {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.standby-info {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  right: 72px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 18px;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.standby-date {
+  color: var(--label);
+}
+
+.standby-info .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.standby-info .chip b {
+  font-weight: 600;
+  color: var(--label);
+}
+
+.standby-info svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+/* StandBy figures (BigTime tone): heavy rounded digits in two tones of the
+   tint, overlapping where they meet, colon as two soft white dots */
+.tt {
+  position: relative;
+  --a: var(--tint);
+  --b: var(--tint);
+  --b: color-mix(in srgb, var(--tint) 58%, #000);
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--round);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.tt-pair {
+  display: flex;
+}
+
+.tt-d {
+  display: block;
+  margin: 0 -0.05em;
+  color: var(--a);
+}
+
+.tt-d.b {
+  color: var(--b);
+}
+
+.tt-colon {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  width: 0;
+  align-items: center;
+}
+
+.tt-colon::before,
+.tt-colon::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.15em;
+  height: 0.15em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* am / pm hangs under the minutes, right-aligned */
+.tt-ampm {
+  position: absolute;
+  top: 100%;
+  right: 0.03em;
+  margin-top: 4px;
+  font-family: var(--sans);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--label-2);
+}
+
+/* plain rounded time (BigTime without tone) */
+.btime {
+  font-family: var(--round);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.btime-ampm {
+  font-family: var(--sans);
+  font-size: 0.36em;
+  font-weight: 600;
+  margin-left: 0.2em;
+  opacity: 0.6;
+}
+
+.standby {
+  --tint: var(--green);
+}
+
+/* digits fill the screen edge to edge, as StandBy's do; the line box is
+   trimmed to the figures so they center on the glyphs, not the leading */
+.standby-time {
+  --a: #5fe08a;
+  --b: #23934b;
+  font-size: min(56vw, 100vh);
+  margin-top: 0.03em;
+  line-height: 0.74;
+}
+
+
+@media (orientation: portrait) {
+  .standby-info {
+    right: 0;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 20px;
+  }
+
+  .standby-time {
+    flex-direction: column;
+    gap: 0.1em;
+    font-size: min(80vw, 38vh);
+    line-height: 0.74;
+    margin-top: 0.1em;
+  }
+
+  /* stacked hours over minutes: the rows are the separator */
+  .standby-time .tt-colon {
+    display: none;
+  }
+
+}
+
+/* a shown heading keeps its own line above the content */
+.w-label.show + .w-body {
+  padding-top: 34px;
+}

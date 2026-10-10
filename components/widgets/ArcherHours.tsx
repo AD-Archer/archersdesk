@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { WIDGET_INFO } from "@/lib/types";
 import EditablePopup from "../EditablePopup";
 import { ClickSettingsGlyph } from "./Integrations";
-import { BigStat, MI, MiniList, Shell, integrationGate, useIntegration } from "./kit";
+import { BigStat, MiniList, Shell, integrationGate, useIntegration } from "./kit";
 import type { WidgetProps } from "./registry";
 
 interface ArcherHoursData {
@@ -21,8 +21,8 @@ interface ArcherHoursData {
 const ARCHER_MODE_KEY = "archersdesk.archerHoursMode";
 
 const ARCHER_MODES = [
-  { key: "projects", title: "weighted projects" },
-  { key: "hours", title: "hours shipped" },
+  { key: "projects", title: "Weighted projects" },
+  { key: "hours", title: "Hours shipped" },
 ] as const;
 
 type ArcherMode = (typeof ARCHER_MODES)[number]["key"];
@@ -40,7 +40,7 @@ export function ArcherHoursWidget({ settings, integrationSettings }: WidgetProps
 
   if (gate)
     return (
-      <Shell icon={WIDGET_INFO.archerhours.icon} label="archer hours">
+      <Shell icon={WIDGET_INFO.archerhours.icon} label="Archer hours">
         {gate}
       </Shell>
     );
@@ -53,34 +53,40 @@ export function ArcherHoursWidget({ settings, integrationSettings }: WidgetProps
   }
 
   return (
-    <Shell icon={WIDGET_INFO.archerhours.icon} label="archer hours">
+    <Shell icon={WIDGET_INFO.archerhours.icon} label="Archer hours">
       <button className="archer-hero" onClick={() => setOpen(true)} aria-label="choose stat">
-        <span className="archer-hero-icon">
-          <MI name={WIDGET_INFO.archerhours.icon} className="archer-hero-mi" />
-        </span>
         {mode === "projects" ? (
           <BigStat
             value={d.weightedGrantsTotal.toFixed(2)}
             unit="weighted projects"
-            caption={`${d.hoursPerWeightedGrant}h per project`}
+            caption={
+              <>
+                {d.hoursPerWeightedGrant} hours per project
+                <ClickSettingsGlyph />
+              </>
+            }
           />
         ) : (
           <BigStat
             value={d.roundedHoursShipped}
             unit="hours shipped"
-            caption={`${d.hoursShipped.toFixed(1)} exact`}
+            caption={
+              <>
+                {d.hoursShipped.toFixed(1)} exactly
+                <ClickSettingsGlyph />
+              </>
+            }
           />
         )}
-        <ClickSettingsGlyph />
       </button>
       <MiniList
         rows={
           mode === "projects"
-            ? [{ key: "hours", left: "hours shipped", right: <b>{d.roundedHoursShipped}</b> }]
-            : [{ key: "projects", left: "weighted projects", right: <b>{d.weightedGrantsTotal.toFixed(2)}</b> }]
+            ? [{ key: "hours", left: "Hours shipped", right: <b>{d.roundedHoursShipped}</b> }]
+            : [{ key: "projects", left: "Weighted projects", right: <b>{d.weightedGrantsTotal.toFixed(2)}</b> }]
         }
       />
-      <EditablePopup open={open} title="show first" onClose={() => setOpen(false)}>
+      <EditablePopup open={open} title="Show first" onClose={() => setOpen(false)}>
         <div className="mood-grid">
           {ARCHER_MODES.map((m) => (
             <button

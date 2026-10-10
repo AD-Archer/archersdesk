@@ -1,0 +1,709 @@
+/* ── overlays: popup sheet, ringing alarm, away sign, device picker ───
+   The alarm and away sign are StandBy faces: pure black, one tint, huge
+   rounded type. The device picker and popups are iOS dark UI: large title,
+   inset grouped lists, #1c1c1e sheets with a blue nav bar. Every screen
+   works at 960×480 (Echo Show 5) and 393×852 (iPhone 15 Pro). */
+
+/* ── ringing alarm ────────────────────────────────────────────────── */
+
+.alarm-overlay {
+  --tint: var(--orange);
+  --ring-size: min(28vw, 54vh);
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: calc(var(--safe-t) + 20px) 24px calc(var(--safe-b) + 24px);
+  background: var(--black);
+}
+
+.ring-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  gap: 4px;
+}
+
+.ring-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--label);
+}
+
+.ring-label span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ring-bell {
+  flex: 0 0 auto;
+  font-size: 30px;
+  color: var(--orange);
+  animation: ring-bell 1.2s ease-in-out infinite;
+  transform-origin: 50% 20%;
+}
+
+@keyframes ring-bell {
+  0%, 50%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-14deg); }
+  20%, 40% { transform: rotate(14deg); }
+}
+
+.ring-clock {
+  display: flex;
+  align-items: flex-end;
+  min-height: 0;
+}
+
+.ring-time {
+  font-size: var(--ring-size);
+}
+
+/* sits on the digits' baseline, not the line box */
+.ring-ampm {
+  margin: 0 0 calc(var(--ring-size) * 0.15) 12px;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.ring-keys {
+  display: flex;
+  gap: 14px;
+}
+
+.ring-snooze {
+  flex: 2 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 96px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: #000;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  transition: transform 0.15s, filter 0.15s;
+}
+
+.ring-snooze small {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.58);
+}
+
+.ring-snooze:active {
+  transform: scale(0.97);
+  filter: brightness(0.88);
+}
+
+.ring-stop.btn {
+  flex: 1 1 0;
+  min-height: 96px;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+@media (orientation: portrait) {
+  .alarm-overlay {
+    --ring-size: min(54vw, 26vh);
+    padding: calc(var(--safe-t) + 24px) 20px calc(var(--safe-b) + 20px);
+  }
+
+  .ring-face {
+    gap: 8px;
+  }
+
+  .ring-label {
+    font-size: 24px;
+  }
+
+  .ring-bell {
+    font-size: 26px;
+  }
+
+  .ring-clock {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* stacked like StandBy in portrait: hours over minutes */
+  .ring-time {
+    flex-direction: column;
+    line-height: 0.86;
+  }
+
+  .ring-time .tt-colon {
+    flex-direction: row;
+    width: auto;
+    height: 0;
+    gap: 0.22em;
+  }
+
+  .ring-ampm {
+    margin: 6px 0 0;
+    font-size: 22px;
+  }
+
+  .ring-keys {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ring-snooze {
+    flex: 0 0 auto;
+    min-height: 120px;
+    font-size: 34px;
+  }
+
+  .ring-stop.btn {
+    flex: 0 0 auto;
+    min-height: 68px;
+    font-size: 24px;
+  }
+}
+
+/* ── away sign ────────────────────────────────────────────────────── */
+
+.away-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: calc(var(--safe-t) + 20px) 28px calc(var(--safe-b) + 24px);
+  background: var(--black);
+}
+
+.away-sign {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 4vw, 44px);
+  min-width: 0;
+  min-height: 0;
+}
+
+.away-glyph {
+  flex: 0 0 auto;
+  font-size: min(22vw, 40vh);
+  color: var(--yellow);
+}
+
+.away-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.away-lead {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--yellow);
+}
+
+.away-time {
+  font-family: var(--round);
+  font-weight: 900;
+  font-size: min(19vw, 40vh);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: var(--label);
+}
+
+.away-ampm {
+  margin-left: 0.14em;
+  font-family: var(--sans);
+  font-size: 0.22em;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--label-2);
+}
+
+.away-where {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--label-2);
+}
+
+.away-where .mi {
+  font-size: 28px;
+}
+
+.away-where span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.away-back.btn {
+  justify-self: end;
+  min-height: 52px;
+  padding: 0 26px;
+  font-size: 19px;
+}
+
+@media (orientation: portrait) {
+  .away-overlay {
+    padding: calc(var(--safe-t) + 24px) 20px calc(var(--safe-b) + 24px);
+  }
+
+  .away-sign {
+    flex-direction: column;
+    gap: 18px;
+    text-align: center;
+  }
+
+  .away-glyph {
+    font-size: min(36vw, 20vh);
+  }
+
+  .away-text {
+    align-items: center;
+  }
+
+  .away-lead {
+    font-size: 26px;
+  }
+
+  .away-time {
+    font-size: min(30vw, 18vh);
+  }
+
+  .away-where {
+    font-size: 22px;
+  }
+
+  .away-where .mi {
+    font-size: 24px;
+  }
+
+  .away-back.btn {
+    justify-self: stretch;
+    min-height: 56px;
+  }
+}
+
+/* ── device picker ────────────────────────────────────────────────── */
+
+.device-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--black);
+}
+
+.pick-page {
+  display: flex;
+  flex-direction: column;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: calc(var(--safe-t) + 28px) 16px calc(var(--safe-b) + 32px);
+}
+
+.pick-intro .large-title {
+  padding: 0 4px;
+}
+
+.pick-sub {
+  margin-top: 8px;
+  padding: 0 4px;
+  font-size: 17px;
+  line-height: 1.35;
+  color: var(--label-2);
+}
+
+.pick-remote {
+  margin-top: 24px;
+}
+
+.pick-row.group-row {
+  min-height: 54px;
+  gap: 14px;
+}
+
+/* separators start at the text, past the icon tile (as in iOS Settings) */
+.pick-row.group-row + .pick-row.group-row::before {
+  left: 60px;
+}
+
+.pick-tile {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  color: #fff;
+}
+
+.pick-tile .mi {
+  font-size: 20px;
+}
+
+.pick-tile.blue { background: var(--blue); }
+.pick-tile.green { background: var(--green); }
+
+.pick-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.pick-name small {
+  display: block;
+  margin-top: 1px;
+  font-size: 14px;
+  color: var(--label-2);
+}
+
+.pick-chev {
+  flex: 0 0 auto;
+  font-size: 22px;
+  color: var(--label-3);
+  margin-right: -6px;
+}
+
+.pick-lists .group-head {
+  display: block;
+}
+
+.pick-new-row {
+  display: flex;
+  gap: 10px;
+}
+
+.pick-new-row .field {
+  flex: 1;
+  min-width: 0;
+  min-height: 50px;
+  border-radius: var(--r-row);
+}
+
+.pick-new-row .btn-primary {
+  flex: 0 0 auto;
+  min-width: 84px;
+}
+
+/* short landscape (Echo Show 5): question on the left, answers on the right */
+@media (orientation: landscape) and (max-height: 560px) {
+  .pick-page {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 36px;
+    align-items: start;
+    align-content: center;
+    max-width: 920px;
+    min-height: 100%;
+    padding: 28px 28px 24px;
+  }
+
+  .pick-intro {
+    position: sticky;
+    top: 28px;
+  }
+
+  .pick-lists > .group-head:first-child {
+    padding-top: 6px;
+  }
+}
+
+/* ── popup sheet (EditablePopup) ──────────────────────────────────── */
+
+.edit-pop-layer {
+  position: fixed;
+  inset: 0;
+  bottom: auto;
+  height: var(--app-height);
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.edit-pop-scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  animation: pop-fade 0.25s ease-out;
+}
+
+/* phone: a bottom sheet, as tall as its content up to just under the top */
+.edit-pop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: min(48%, 420px);
+  max-height: calc(var(--app-height) - var(--safe-t) - 14px);
+  padding-bottom: var(--safe-b);
+  background: var(--fill-1);
+  border-radius: 14px 14px 0 0;
+  overflow: hidden;
+  animation: pop-up 0.34s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes pop-up {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pop-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* nav bar: Cancel · title · Done */
+.edit-pop-head {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(76px, 1fr) minmax(0, auto) minmax(76px, 1fr);
+  align-items: center;
+  min-height: 56px;
+  padding: 0 8px;
+}
+
+.edit-pop-head b {
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.edit-pop-head b::first-letter {
+  text-transform: uppercase;
+}
+
+.edit-pop-side {
+  display: flex;
+}
+
+.edit-pop-side.end {
+  justify-content: flex-end;
+}
+
+.edit-pop-nav {
+  min-height: 44px;
+  padding: 0 8px;
+  font-size: 17px;
+  color: var(--blue);
+  transition: opacity 0.15s;
+}
+
+.edit-pop-nav.done {
+  font-weight: 600;
+}
+
+.edit-pop-nav:active {
+  opacity: 0.5;
+}
+
+.edit-pop-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  padding: 4px 16px 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.edit-pop-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 12px;
+  border-top: 0.5px solid var(--sep);
+}
+
+/* controls on the sheet sit one step lighter than the sheet */
+.edit-pop .field {
+  background: var(--fill-2);
+}
+
+/* footer buttons — markup lives in each widget: .edit-pop-muted is the gray
+   pill, .edit-pop-primary the blue one. Labels are single words. */
+.edit-pop-muted,
+.edit-pop-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 600;
+  text-transform: capitalize;
+  transition: transform 0.15s, filter 0.15s, background 0.15s;
+}
+
+.edit-pop-muted {
+  background: var(--fill-2);
+  color: var(--label);
+}
+
+.edit-pop-muted:active:not(:disabled) {
+  background: var(--fill-3);
+  transform: scale(0.97);
+}
+
+.edit-pop-primary {
+  min-width: 100px;
+  background: var(--blue);
+  color: #fff;
+}
+
+.edit-pop-primary:active:not(:disabled) {
+  filter: brightness(0.88);
+  transform: scale(0.97);
+}
+
+.edit-pop-muted:disabled,
+.edit-pop-primary:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* labelled input inside a popup */
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.edit-field span {
+  padding: 0 16px;
+  font-size: 13px;
+  color: var(--label-2);
+}
+
+.edit-field span::first-letter {
+  text-transform: uppercase;
+}
+
+.edit-field input {
+  width: 100%;
+  min-height: 48px;
+  background: var(--fill-2);
+  border: none;
+  border-radius: 10px;
+  padding: 0 16px;
+  color: var(--label);
+  font-size: 17px;
+  outline: none;
+  color-scheme: dark;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.edit-field input:focus {
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+
+.edit-field input::placeholder {
+  color: var(--label-3);
+}
+
+/* quick picks (e.g. +30m / +1h) */
+.edit-quick {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-quick button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.edit-quick button:active {
+  background: var(--fill-3);
+  transform: scale(0.97);
+}
+
+/* short landscape (Echo Show 5): a centered form sheet with margins */
+@media (orientation: landscape) and (max-height: 560px) {
+  .edit-pop-layer {
+    justify-content: center;
+  }
+
+  .edit-pop {
+    width: min(680px, calc(100vw - 48px));
+    min-height: 0;
+    max-height: calc(var(--app-height) - 28px);
+    padding-bottom: 0;
+    border-radius: 14px;
+    animation: pop-in 0.22s ease-out;
+  }
+
+  /* the macapad key editor lays out two scrolling columns: it needs the
+     full height rather than its content's */
+  .edit-pop.bed-pop {
+    height: calc(var(--app-height) - 28px);
+  }
+
+  .edit-pop-head {
+    min-height: 52px;
+  }
+
+  .edit-pop-body {
+    padding: 2px 20px 18px;
+  }
+
+  .edit-pop-foot {
+    padding: 8px 16px;
+  }
+
+  .edit-pop-muted,
+  .edit-pop-primary {
+    min-height: 46px;
+  }
+}

@@ -74,10 +74,10 @@ function draw(size) {
   const aa = 1.25;
 
   // palette
-  const bgTop = [18, 15, 12];
-  const bgBot = [10, 9, 8];
-  const cream = [242, 236, 223];
-  const amber = [232, 161, 60];
+  const bgTop = [40, 41, 46];
+  const bgBot = [24, 25, 28];
+  const cream = [120, 124, 131]; // ring: a dim printed legend
+  const amber = [106, 242, 213]; // hands: phosphor
 
   const ringR = size * 0.335;
   const ringW = size * 0.02;
@@ -95,15 +95,15 @@ function draw(size) {
       const shape = smooth(roundedRectDist(dx, dy, c, size * 0.22), aa);
       if (shape <= 0) continue;
 
-      // vertical gradient + soft amber glow low in the tile
+      // vertical gradient + soft phosphor glow low in the tile
       const t = y / size;
       let r = bgTop[0] + (bgBot[0] - bgTop[0]) * t;
       let g = bgTop[1] + (bgBot[1] - bgTop[1]) * t;
       let b = bgTop[2] + (bgBot[2] - bgTop[2]) * t;
       const glow = Math.exp(-(dx * dx + (dy - size * 0.42) ** 2) / (2 * (size * 0.34) ** 2)) * 0.35;
-      r += amber[0] * glow * 0.35;
-      g += amber[1] * glow * 0.3;
-      b += amber[2] * glow * 0.2;
+      r += amber[0] * glow * 0.04;
+      g += amber[1] * glow * 0.08;
+      b += amber[2] * glow * 0.07;
 
       // ring
       const ring = smooth(Math.abs(Math.hypot(dx, dy) - ringR) - ringW, aa);

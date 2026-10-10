@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { chime, unlockAudio } from "../audio";
+import { BigTime } from "./kit";
 import type { WidgetProps } from "./registry";
 
 function fmt(secs: number): string {
@@ -12,7 +13,7 @@ function fmt(secs: number): string {
     : `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function TimerWidget(_: WidgetProps) {
+export function TimerWidget({ wide }: WidgetProps) {
   const [total, setTotal] = useState(0);
   const [left, setLeft] = useState(0);
   const [running, setRunning] = useState(false);
@@ -65,52 +66,59 @@ export function TimerWidget(_: WidgetProps) {
 
   return (
     <>
-      <span className="w-label">timer</span>
-      <div className={`w-body tm${done ? " done" : ""}`}>
+      <span className="w-label">Timer</span>
+      <div className={`w-body tm${done ? " done" : ""}${running ? " running" : ""}${wide ? " wide" : ""}`}>
         <div className="tm-ring">
-          <svg viewBox="0 0 100 100" width="100%" height="100%">
-            <circle cx="50" cy="50" r={R} fill="none" stroke="var(--line)" strokeWidth="3" />
+          <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden>
+            <circle cx="50" cy="50" r={R} fill="none" stroke="var(--fill-2)" strokeWidth="5" />
             <circle
+              className="tm-arc"
               cx="50"
               cy="50"
               r={R}
               fill="none"
-              stroke="var(--amber)"
-              strokeWidth="3"
+              stroke="var(--tint)"
+              strokeWidth="5"
               strokeLinecap="round"
               strokeDasharray={C}
               strokeDashoffset={C * (1 - frac)}
-              style={{ transition: "stroke-dashoffset 0.3s linear" }}
+              transform="rotate(-90 50 50)"
+              style={{ transition: "stroke-dashoffset 0.3s linear", opacity: frac > 0 ? 1 : 0 }}
             />
           </svg>
-          <div className="tm-time">{done ? "0:00" : fmt(left)}</div>
+          <div className="tm-center">
+            <BigTime className="tm-time" time={done ? "0:00" : fmt(left)} />
+            <span className="tm-state">{done ? "Done" : running ? "Running" : left > 0 ? "Paused" : "Add time"}</span>
+          </div>
         </div>
-        <div className="tm-presets">
-          {[1, 5, 10, 25].map((m) => (
-            <button key={m} className="tm-chip" onClick={() => add(m)}>
-              +{m}m
-            </button>
-          ))}
-        </div>
-        <div className="tm-actions">
-          {done ? (
-            <button className="tm-go" onClick={reset}>
-              done
-            </button>
-          ) : running ? (
-            <button className="tm-go" onClick={() => setRunning(false)}>
-              pause
-            </button>
-          ) : (
-            <button className="tm-go" onClick={start} disabled={left <= 0}>
-              start
-            </button>
-          )}
-          {(left > 0 || total > 0) && !done && (
-            <button className="tm-ghost" onClick={reset}>
-              reset
-            </button>
-          )}
+        <div className="tm-controls">
+          <div className="tm-presets">
+            {[1, 5, 10, 25].map((m) => (
+              <button key={m} className="key wkey" onClick={() => add(m)}>
+                +{m} min
+              </button>
+            ))}
+          </div>
+          <div className="tm-actions">
+            {done ? (
+              <button className="key wkey tm-go stop" onClick={reset}>
+                Stop
+              </button>
+            ) : running ? (
+              <button className="key wkey tm-go" onClick={() => setRunning(false)}>
+                Pause
+              </button>
+            ) : (
+              <button className="key wkey tm-go start" onClick={start} disabled={left <= 0}>
+                Start
+              </button>
+            )}
+            {(left > 0 || total > 0) && !done && (
+              <button className="key wkey" onClick={reset}>
+                Reset
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </>

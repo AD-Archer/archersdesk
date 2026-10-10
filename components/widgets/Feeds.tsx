@@ -5,7 +5,8 @@
 
 import type { FeedService } from "@/lib/types";
 import { WIDGET_INFO } from "@/lib/types";
-import { BigStat, Empty, MI, MiniList, Shell, integrationGate, useIntegration } from "./kit";
+import { BigStat, Empty, MiniList, Shell, integrationGate, useIntegration } from "./kit";
+import { lengthClass } from "./Quote";
 import type { WidgetProps } from "./registry";
 
 /* ── critter cams ────────────────────────────────────────────────── */
@@ -22,37 +23,31 @@ function PictureWidget({
   integrationSettings,
 }: WidgetProps & { service: FeedService; label: string }) {
   const payload = useIntegration<PictureData>(service, integrationSettings ?? settings, 100 * 1000);
+  const icon = WIDGET_INFO[service as keyof typeof WIDGET_INFO]?.icon ?? "pets";
+
+  // a photo owns the whole half, edge to edge like StandBy's photos widget
+  if (payload?.configured && payload.data) {
+    return (
+      <div className="pic">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img key={payload.data.src} className="pic-img" src={payload.data.src} alt={label} draggable={false} />
+        {payload.data.caption && <span className="pic-caption">{payload.data.caption}</span>}
+      </div>
+    );
+  }
 
   return (
-    <>
-      <span className="w-label has-icon">
-        <MI name={WIDGET_INFO[service as keyof typeof WIDGET_INFO]?.icon ?? "pets"} />
-        {label}
-      </span>
-      {!payload ? (
-        <div className="w-body">
-          <Empty>fetching a good one…</Empty>
-        </div>
-      ) : !payload.configured || !payload.data ? (
-        <div className="w-body">
-          <Empty>{payload.reason ?? "feed unavailable"}</Empty>
-        </div>
-      ) : (
-        <div className="pic">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img key={payload.data.src} className="pic-img" src={payload.data.src} alt="" draggable={false} />
-          {payload.data.caption && <span className="pic-caption">{payload.data.caption}</span>}
-        </div>
-      )}
-    </>
+    <Shell icon={icon} label={label}>
+      <Empty>{!payload ? "Fetching a good one…" : (payload.reason ?? "This feed isn’t answering right now")}</Empty>
+    </Shell>
   );
 }
 
-export const DogWidget = (p: WidgetProps) => <PictureWidget {...p} service="dog" label="dog cam" />;
-export const CatWidget = (p: WidgetProps) => <PictureWidget {...p} service="cat" label="cat cam" />;
-export const FoxWidget = (p: WidgetProps) => <PictureWidget {...p} service="fox" label="fox cam" />;
-export const DuckWidget = (p: WidgetProps) => <PictureWidget {...p} service="duck" label="duck cam" />;
-export const ShibeWidget = (p: WidgetProps) => <PictureWidget {...p} service="shibe" label="shibe cam" />;
+export const DogWidget = (p: WidgetProps) => <PictureWidget {...p} service="dog" label="Dog cam" />;
+export const CatWidget = (p: WidgetProps) => <PictureWidget {...p} service="cat" label="Cat cam" />;
+export const FoxWidget = (p: WidgetProps) => <PictureWidget {...p} service="fox" label="Fox cam" />;
+export const DuckWidget = (p: WidgetProps) => <PictureWidget {...p} service="duck" label="Duck cam" />;
+export const ShibeWidget = (p: WidgetProps) => <PictureWidget {...p} service="shibe" label="Shibe cam" />;
 
 /* ── facts ───────────────────────────────────────────────────────── */
 
@@ -64,6 +59,7 @@ interface FactData {
 function FactWidget({
   service,
   label,
+  wide,
   settings,
   integrationSettings,
 }: WidgetProps & { service: FeedService; label: string }) {
@@ -73,8 +69,7 @@ function FactWidget({
   return (
     <Shell icon={WIDGET_INFO[service as keyof typeof WIDGET_INFO]?.icon} label={label}>
       {gate ?? (
-        <div className="qt">
-          <span className="qt-mark">&ldquo;</span>
+        <div className={`qt fact ${lengthClass(payload!.data!.fact)}${wide ? " wide" : ""}`}>
           <div className="qt-text">{payload!.data!.fact}</div>
           <div className="qt-author">{payload!.data!.source}</div>
         </div>
@@ -83,8 +78,8 @@ function FactWidget({
   );
 }
 
-export const CatFactWidget = (p: WidgetProps) => <FactWidget {...p} service="catfact" label="cat facts" />;
-export const DogFactWidget = (p: WidgetProps) => <FactWidget {...p} service="dogfact" label="dog facts" />;
+export const CatFactWidget = (p: WidgetProps) => <FactWidget {...p} service="catfact" label="Cat facts" />;
+export const DogFactWidget = (p: WidgetProps) => <FactWidget {...p} service="dogfact" label="Dog facts" />;
 
 /* ── spaceflight news ────────────────────────────────────────────── */
 
@@ -92,14 +87,14 @@ interface SpaceNewsData {
   articles: Array<{ title: string; site: string; at: string }>;
 }
 
-export function SpaceNewsWidget({ settings, integrationSettings }: WidgetProps) {
+export function SpaceNewsWidget({ settings, integrationSettings, wide }: WidgetProps) {
   const payload = useIntegration<SpaceNewsData>("spacenews", integrationSettings ?? settings, 10 * 60 * 1000);
   const gate = integrationGate(payload, "checking the launchpad…");
 
   return (
-    <Shell icon={WIDGET_INFO.spacenews.icon} label="space news">
+    <Shell icon={WIDGET_INFO.spacenews.icon} label="Space news">
       {gate ?? (
-        <div className="headlines">
+        <div className={`headlines${wide ? " wide" : ""}`}>
           {payload!.data!.articles.map((a, i) => (
             <div key={i} className="headline">
               <div className="headline-title">{a.title}</div>
@@ -123,7 +118,7 @@ export function F1Widget({ settings, integrationSettings }: WidgetProps) {
   const payload = useIntegration<F1Data>("f1", integrationSettings ?? settings, 30 * 60 * 1000);
   const gate = integrationGate(payload, "warming the tyres…");
 
-  if (gate) return <Shell icon={WIDGET_INFO.f1.icon} label="formula 1">{gate}</Shell>;
+  if (gate) return <Shell icon={WIDGET_INFO.f1.icon} label="Formula 1">{gate}</Shell>;
   const { next, top } = payload!.data!;
   const raceDate = next
     ? new Date(`${next.date}T${next.time || "12:00:00Z"}`).toLocaleDateString("en-US", {
@@ -134,20 +129,21 @@ export function F1Widget({ settings, integrationSettings }: WidgetProps) {
     : null;
 
   return (
-    <Shell icon={WIDGET_INFO.f1.icon} label="formula 1">
-      {next ? (
-        <BigStat
-          value={<span style={{ fontSize: "0.55em" }}>{next.name.replace(" Grand Prix", " GP")}</span>}
-          caption={`${raceDate} · ${next.circuit}`}
-        />
-      ) : (
-        <BigStat value="season over" caption="final standings" />
-      )}
+    <Shell icon={WIDGET_INFO.f1.icon} label="Formula 1">
+      <div className="f1-next">
+        <span className="f1-when">{next ? raceDate : "Season over"}</span>
+        <span className="f1-name">{next ? next.name.replace(" Grand Prix", " GP") : "Final standings"}</span>
+        {next && <span className="f1-where">{next.circuit}</span>}
+      </div>
       {top.length > 0 && (
         <MiniList
           rows={top.map((t) => ({
             key: t.pos,
-            left: `${t.pos}. ${t.driver}`,
+            left: (
+              <>
+                <span className="f1-pos">{t.pos}</span> {t.driver}
+              </>
+            ),
             right: <b>{t.points} pts</b>,
           }))}
         />
@@ -170,16 +166,16 @@ export function CityBikesWidget({ settings, integrationSettings }: WidgetProps) 
   return (
     <Shell
       icon={WIDGET_INFO.citybikes.icon}
-      label={`bikes${payload?.data ? ` · ${payload.data.network}` : ""}`}
+      label={`City bikes${payload?.data ? ` · ${payload.data.network}` : ""}`}
     >
       {gate ?? (
         <MiniList
           rows={payload!.data!.stations.map((s) => ({
             key: s.name,
-            left: s.name.toLowerCase(),
+            left: s.name,
             right: (
               <>
-                <b>{s.bikes}</b> <small>bikes · {s.km}km</small>
+                <b>{s.bikes}</b> <small>bikes, {s.km} km</small>
               </>
             ),
           }))}
@@ -203,21 +199,21 @@ export function FlightsWidget({ settings, integrationSettings }: WidgetProps) {
   return (
     <Shell
       icon={WIDGET_INFO.flights.icon}
-      label={`overhead · ${settings.location.name.toLowerCase()}`}
+      label={`Overhead · ${settings.location.name}`}
     >
       {gate ?? (
         <>
           <BigStat
             value={payload!.data!.count}
-            unit={payload!.data!.count === 1 ? "aircraft" : "aircraft"}
-            caption="within ~50 miles"
+            unit="aircraft"
+            caption="Within about 50 miles"
           />
           {payload!.data!.planes.length > 0 && (
             <MiniList
               rows={payload!.data!.planes.map((p) => ({
                 key: p.callsign,
-                left: p.callsign.toLowerCase(),
-                right: p.altFt ? <b>{p.altFt.toLocaleString()} ft</b> : <small>on ground</small>,
+                left: <span className="k-strong">{p.callsign}</span>,
+                right: p.altFt ? <b>{p.altFt.toLocaleString()} ft</b> : <small>On the ground</small>,
               }))}
             />
           )}

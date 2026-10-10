@@ -3,74 +3,76 @@
 import { useNow } from "../hooks";
 import { clock12 } from "../alarmUtil";
 import { useWeather } from "./Weather";
+import { BigTime, Empty } from "./kit";
 import type { WidgetProps } from "./registry";
 
 // ── sunrise / sunset ─────────────────────────────────────────────────
 
-export function SunWidget({ settings }: WidgetProps) {
+/** The next sun event as the hero time (in the tint), the day's arc over the
+ *  horizon with the sun riding it, and the other event underneath. */
+export function SunWidget({ settings, wide }: WidgetProps) {
   const wx = useWeather(settings);
   const now = useNow(60_000);
 
   let body: React.ReactNode;
   if (!wx || wx.error) {
-    body = <div className="w-empty">{wx?.error ?? "reading the sky…"}</div>;
+    body = <Empty icon="light_mode">{wx?.error ?? "Reading the sky…"}</Empty>;
   } else {
     const rise = new Date(wx.sunrise).getTime();
     const set = new Date(wx.sunset).getTime();
-    const p = Math.max(0, Math.min(1, (now.getTime() - rise) / (set - rise)));
-    const up = now.getTime() >= rise && now.getTime() <= set;
-    // arc from (20,95) to (180,95), radius 80
+    const t = now.getTime();
+    const p = Math.max(0, Math.min(1, (t - rise) / (set - rise)));
+    const up = t >= rise && t <= set;
+    // arc from (16,100) to (184,100), radius 84
     const a = Math.PI * (1 - p);
-    const sx = 100 + 80 * Math.cos(a);
-    const sy = 95 - 80 * Math.sin(a);
+    const sx = 100 + 84 * Math.cos(a);
+    const sy = 100 - 84 * Math.sin(a);
     const riseT = clock12(new Date(rise));
     const setT = clock12(new Date(set));
+    // before sunrise or after sunset the next thing is a sunrise
+    const nextIsSet = up;
+    const hero = nextIsSet ? setT : riseT;
+    const other = nextIsSet ? riseT : setT;
 
     body = (
-      <>
-        <svg className="sun-svg" viewBox="0 0 200 108">
+      <div className={`sun${wide ? " wide" : ""}`}>
+        <svg className="sun-svg" viewBox="0 0 200 108" aria-hidden>
           <path
-            d="M 20 95 A 80 80 0 0 1 180 95"
+            d="M 16 100 A 84 84 0 0 1 184 100"
             fill="none"
-            stroke="var(--line-strong)"
-            strokeWidth="1.6"
-            strokeDasharray="3 5"
+            stroke="var(--fill-3)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="0.1 8"
           />
-          <line x1="8" y1="95" x2="192" y2="95" stroke="var(--line)" strokeWidth="1.4" />
+          <line x1="2" y1="100" x2="198" y2="100" stroke="var(--label-3)" strokeWidth="1.5" />
           {up && (
             <>
               <path
-                d={`M 20 95 A 80 80 0 0 1 ${sx} ${sy}`}
+                d={`M 16 100 A 84 84 0 0 1 ${sx} ${sy}`}
                 fill="none"
-                stroke="var(--amber)"
-                strokeWidth="2.4"
+                stroke="var(--tint)"
+                strokeWidth="4"
+                strokeLinecap="round"
               />
-              <circle cx={sx} cy={sy} r="7" fill="var(--amber)" />
-              <circle cx={sx} cy={sy} r="12" fill="none" stroke="var(--amber)" strokeWidth="1" opacity="0.4" />
+              <circle cx={sx} cy={sy} r="9" fill="var(--tint)" />
             </>
           )}
         </svg>
-        <div className="sun-times">
-          <div className="sun-t">
-            <b>
-              {riseT.time} {riseT.ampm}
-            </b>
-            <span>sunrise</span>
-          </div>
-          <div className="sun-t">
-            <b>
-              {setT.time} {setT.ampm}
-            </b>
-            <span>sunset</span>
+        <div className="sun-text">
+          <div className="sun-what">{nextIsSet ? "Sunset" : "Sunrise"}</div>
+          <BigTime className="sun-time" time={hero.time} ampm={hero.ampm} />
+          <div className="sun-other">
+            {nextIsSet ? "Sunrise" : "Sunset"} {other.time} {other.ampm}
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
     <>
-      <span className="w-label">sun · {settings.location.name}</span>
+      <span className="w-label">Sun · {settings.location.name}</span>
       <div className="w-body">{body}</div>
     </>
   );
@@ -87,14 +89,14 @@ function moonPhase(d: Date): number {
 }
 
 function phaseName(p: number): string {
-  if (p < 0.033 || p > 0.967) return "new moon";
-  if (p < 0.217) return "waxing crescent";
-  if (p < 0.283) return "first quarter";
-  if (p < 0.467) return "waxing gibbous";
-  if (p < 0.533) return "full moon";
-  if (p < 0.717) return "waning gibbous";
-  if (p < 0.783) return "last quarter";
-  return "waning crescent";
+  if (p < 0.033 || p > 0.967) return "New moon";
+  if (p < 0.217) return "Waxing crescent";
+  if (p < 0.283) return "First quarter";
+  if (p < 0.467) return "Waxing gibbous";
+  if (p < 0.533) return "Full moon";
+  if (p < 0.717) return "Waning gibbous";
+  if (p < 0.783) return "Last quarter";
+  return "Waning crescent";
 }
 
 /** Shadow path over a lit disc — the classic half-circle + ellipse trick. */
@@ -109,22 +111,26 @@ function shadowPath(p: number, cx: number, cy: number, r: number): string {
   );
 }
 
-export function MoonWidget(_: WidgetProps) {
+/** Tonight's moon as big as the half allows, its phase and how lit it is. */
+export function MoonWidget({ wide }: WidgetProps) {
   const now = useNow(60_000);
   const p = moonPhase(now);
   const illum = Math.round(((1 - Math.cos(2 * Math.PI * p)) / 2) * 100);
 
   return (
     <>
-      <span className="w-label">moon</span>
+      <span className="w-label">Moon</span>
       <div className="w-body">
-        <svg className="moon-svg" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="52" fill="var(--cream)" opacity="0.92" />
-          <path d={shadowPath(p, 60, 60, 52)} fill="var(--bg-2)" opacity="0.94" />
-          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--line-strong)" strokeWidth="1.4" />
-        </svg>
-        <div className="moon-name">{phaseName(p)}</div>
-        <div className="moon-pct">{illum}% illuminated</div>
+        <div className={`moon${wide ? " wide" : ""}`}>
+          <svg className="moon-svg" viewBox="0 0 120 120" role="img" aria-label={phaseName(p)}>
+            <circle cx="60" cy="60" r="56" fill="#f2f2f7" />
+            <path d={shadowPath(p, 60, 60, 56.5)} fill="var(--fill-1)" />
+          </svg>
+          <div className="moon-text">
+            <div className="moon-name">{phaseName(p)}</div>
+            <div className="moon-pct">{illum}% lit</div>
+          </div>
+        </div>
       </div>
     </>
   );

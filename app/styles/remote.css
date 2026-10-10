@@ -1,0 +1,1113 @@
+/* ── remote: the phone in your hand ─────────────────────────────────────
+   iOS dark, like Home + Control Center. Portrait iPhone 15 Pro (393×852)
+   is the main target; landscape normally snaps back to the display, but a
+   960×480 window still reads (content centers at a phone-ish width).
+     .rm-page     one tab's scrolling page: nav row, large title, sections
+     .rm-tile     Home-app accessory tile (a screen); .on = lit, controlled
+     .rm-vibe     Control Center tile, lit in its own color when current
+     .rm-card     away chooser; .rm-away-lit = the yellow "away" card
+     .ral         Clock-app alarm row; .rm-sheet = iOS sheet with grabber
+     .rm-tabbar   translucent tab bar, selected = blue
+   Shared primitives (.btn, .field, .large-title, .group…, .ios-switch)
+   come from ui.css. Everything here is prefixed rm- / ral- / rdev- / rpad-. */
+
+.remote {
+  --rm-gut: 16px;
+  --rm-tab-h: 50px;
+  --rm-tab-pad: max(var(--safe-b), 4px);
+  --rm-bottom: calc(var(--rm-tab-h) + var(--rm-tab-pad));
+  position: fixed;
+  inset: 0;
+  bottom: auto;
+  height: var(--app-height);
+  min-height: 0;
+  background: var(--black);
+  color: var(--label);
+  overflow: hidden;
+}
+
+.ricon {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+}
+
+/* ── a page ─────────────────────────────────────────────────────────── */
+
+.rm-page {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(var(--safe-t) + 2px) max(var(--rm-gut), calc((100% - 600px) / 2))
+    calc(var(--rm-bottom) + 28px);
+}
+
+.rm-head {
+  margin-bottom: 4px;
+}
+
+.rm-navrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  margin: 0 -8px;
+}
+
+.rm-nav-l,
+.rm-nav-r {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.rm-head .large-title {
+  padding: 2px 0 6px;
+}
+
+/* the blue text button of iOS nav bars */
+.rm-navbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 8px;
+  color: var(--blue);
+  font-size: 17px;
+  font-weight: 400;
+  white-space: nowrap;
+  border-radius: 10px;
+  transition: opacity 0.15s;
+}
+
+.rm-navbtn .ricon {
+  font-size: 22px;
+}
+
+.rm-navbtn:active:not(:disabled) {
+  opacity: 0.45;
+}
+
+.rm-navbtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rm-navbtn.strong {
+  font-weight: 600;
+}
+
+.rm-navbtn.small {
+  font-size: 15px;
+  min-height: 44px;
+  padding: 0 4px;
+}
+
+.rm-navbtn.red {
+  color: var(--red);
+}
+
+.rm-navbtn.icon {
+  width: 44px;
+  justify-content: center;
+  padding: 0;
+}
+
+.rm-navbtn.icon .ricon {
+  font-size: 26px;
+}
+
+/* ── sections ──────────────────────────────────────────────────────── */
+
+.rm-sec {
+  margin-top: 26px;
+}
+
+.rm-head + .rm-sec {
+  margin-top: 10px;
+}
+
+.rm-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  margin-bottom: 8px;
+}
+
+.rm-sec-head h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rm-foot-note {
+  font-size: 13px;
+  color: var(--label-2);
+  padding: 8px 4px 0;
+}
+
+/* ── screens: Home-app accessory tiles ─────────────────────────────── */
+
+.rm-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rm-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 112px;
+  padding: 12px 14px 13px;
+  border-radius: 20px;
+  background: var(--fill-1);
+  color: var(--label);
+  text-align: left;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+}
+
+.rm-tile:active {
+  transform: scale(0.97);
+}
+
+.rm-tile-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: auto;
+}
+
+.rm-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--fill-3);
+  color: var(--label-2);
+  font-size: 21px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.rm-tile-alarm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-2);
+  font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+
+.rm-tile-alarm .ricon {
+  font-size: 15px;
+}
+
+.rm-tile-name {
+  margin-top: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rm-tile-state {
+  font-size: 15px;
+  color: var(--label-2);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* lit: the screen is being controlled, like an accessory that's on */
+.rm-tile.on {
+  background: rgba(255, 255, 255, 0.94);
+  color: #000;
+}
+
+.rm-tile.on .rm-tile-icon {
+  background: var(--blue);
+  color: #fff;
+}
+
+.rm-tile.on.away .rm-tile-icon {
+  background: var(--yellow);
+  color: #000;
+}
+
+.rm-tile.on .rm-tile-state,
+.rm-tile.on .rm-tile-alarm {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.rm-tile.away:not(.on) .rm-tile-icon {
+  color: var(--yellow);
+}
+
+/* ── vibe: Control Center tiles ────────────────────────────────────── */
+
+.rm-vibes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rm-vibe {
+  --v: var(--blue);
+  --v-ink: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 92px;
+  border-radius: 20px;
+  background: var(--fill-1);
+  color: var(--label);
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+}
+
+.rm-vibe .ricon {
+  font-size: 30px;
+  color: var(--v);
+  transition: color 0.2s;
+}
+
+.rm-vibe:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.rm-vibe:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* selected = lit white, the same as a controlled screen tile */
+.rm-vibe.on {
+  background: rgba(255, 255, 255, 0.94);
+  color: #000;
+}
+
+.rm-vibe.on .ricon {
+  color: var(--v-on, var(--v));
+}
+
+.rm-vibe.v-joyful,
+.rm-vibe.v-busy { --v-on: #c77c00; }
+
+.rm-vibe.v-joyful { --v: var(--yellow); }
+.rm-vibe.v-calm { --v: var(--mint); }
+.rm-vibe.v-sad { --v: var(--blue); --v-ink: #fff; }
+.rm-vibe.v-stressed { --v: var(--red); --v-ink: #fff; }
+.rm-vibe.v-busy { --v: var(--orange); }
+.rm-vibe.v-mysterious { --v: var(--purple); --v-ink: #fff; }
+
+/* ── pills (away choices, pages, rings-on) ─────────────────────────── */
+
+.rm-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rm-pill {
+  flex: 1 0 auto;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.rm-pill:active {
+  transform: scale(0.96);
+}
+
+.rm-pill.on,
+.rm-pill.yellow.on {
+  background: rgba(255, 255, 255, 0.94);
+  color: #000;
+}
+
+/* ── away ──────────────────────────────────────────────────────────── */
+
+.rm-card {
+  background: var(--fill-1);
+  border-radius: 20px;
+  padding: 16px 14px 14px;
+}
+
+.rm-card-q {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 2px 12px;
+}
+
+.rm-exact {
+  margin-top: 10px;
+  background: var(--fill-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.rm-back-at {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 2px 10px;
+  font-size: 15px;
+  color: var(--label-2);
+}
+
+.rm-back-at .ricon {
+  font-size: 17px;
+  color: var(--yellow);
+}
+
+.rm-where {
+  background: var(--fill-2);
+}
+
+.rm-card-keys {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.rm-card-keys .btn {
+  min-height: 50px;
+  background: var(--fill-2);
+}
+
+.rm-set-away {
+  flex: 1;
+  min-height: 50px;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: #000;
+  font-size: 17px;
+  font-weight: 600;
+  transition: transform 0.15s, filter 0.15s, opacity 0.15s;
+}
+
+.rm-set-away:active:not(:disabled) {
+  transform: scale(0.97);
+  filter: brightness(0.9);
+}
+
+.rm-set-away:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* the lit away card */
+.rm-away-lit {
+  position: relative;
+  border-radius: 20px;
+  background: var(--yellow);
+  color: #000;
+  padding: 16px 16px 14px;
+}
+
+.rm-away-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.rm-away-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 22px;
+}
+
+.rm-away-kicker {
+  font-size: 17px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.rm-away-until {
+  font-family: var(--round);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.rm-away-where {
+  font-size: 17px;
+  color: rgba(0, 0, 0, 0.7);
+  margin-top: 2px;
+}
+
+.rm-away-keys {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.rm-away-change,
+.rm-away-back {
+  min-height: 50px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 600;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.rm-away-change {
+  padding: 0 22px;
+  background: rgba(0, 0, 0, 0.12);
+  color: #000;
+}
+
+.rm-away-back {
+  flex: 1;
+  background: #000;
+  color: var(--yellow);
+}
+
+.rm-away-change:active,
+.rm-away-back:active {
+  transform: scale(0.97);
+}
+
+.rm-signed {
+  justify-content: space-between;
+  color: var(--label-2);
+  font-size: 15px;
+}
+
+.rm-signed span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── pad: Control Center key tiles ─────────────────────────────────── */
+
+.rm-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  padding: 2px;
+  margin-top: 10px;
+  border-radius: 10px;
+  background: var(--fill-1);
+}
+
+.rm-seg button {
+  min-height: 40px;
+  border-radius: 8px;
+  color: var(--label);
+  font-size: 15px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.rm-seg button.on {
+  background: #636366;
+  font-weight: 600;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+}
+
+.rpad-pages {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.rpad-pages .rm-pill {
+  flex: 0 0 auto;
+  font-size: 15px;
+}
+
+.rpad-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.rpad-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  aspect-ratio: 3 / 2;
+  padding: 10px;
+  border-radius: 24px;
+  background: var(--fill-1);
+  color: var(--label);
+  transition: background 0.15s, color 0.15s, transform 0.12s;
+}
+
+.rpad-grid.small .rpad-key {
+  aspect-ratio: 1;
+}
+
+.rpad-face {
+  display: grid;
+  place-items: center;
+  height: 48px;
+}
+
+.rpad-face .mi {
+  font-size: 38px;
+}
+
+.rpad-face .mpad-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 22%;
+}
+
+.rpad-label {
+  max-width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--label-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rpad-label::first-letter {
+  text-transform: uppercase;
+}
+
+.rpad-key:active,
+.rpad-key.busy {
+  transform: scale(0.95);
+  background: var(--fill-2);
+}
+
+.rpad-key.ok {
+  background: #fff;
+  color: #000;
+}
+
+.rpad-key.ok .rpad-label {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.rpad-key.err {
+  background: rgba(255, 69, 58, 0.24);
+}
+
+.rpad-key.err .rpad-label {
+  color: var(--red);
+}
+
+.rpad-key.empty {
+  background: rgba(118, 118, 128, 0.12);
+  color: var(--label-3);
+  font-size: 30px;
+}
+
+.rpad-foot {
+  font-size: 13px;
+  color: var(--label-2);
+  text-align: center;
+  margin-top: 16px;
+}
+
+/* toast for a failed press, floating above the tab bar */
+.rm-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--rm-bottom) + 14px);
+  z-index: 30;
+  max-width: calc(100% - 32px);
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+.rm-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ── alarms: the Clock app list ────────────────────────────────────── */
+
+.ral-list {
+  list-style: none;
+  margin-top: 6px;
+}
+
+.ral {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 104px;
+}
+
+.ral + .ral::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0.5px;
+  background: var(--sep);
+}
+
+.ral-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 0 12px;
+  text-align: left;
+}
+
+.ral-time {
+  font-family: var(--round);
+  font-size: 60px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ral-time small {
+  font-size: 30px;
+  font-weight: 400;
+  margin-left: 4px;
+  letter-spacing: 0;
+}
+
+.ral-meta {
+  margin-top: 4px;
+  font-size: 15px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ral-meta::first-letter {
+  text-transform: uppercase;
+}
+
+.ral.off .ral-time,
+.ral.off .ral-meta {
+  color: var(--label-2);
+}
+
+.ral-chev {
+  font-size: 20px;
+  color: var(--label-3);
+}
+
+/* edit mode: red minus, then a Delete button */
+.rm-minus {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+  flex: 0 0 auto;
+}
+
+.rm-minus i {
+  position: relative;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.rm-minus i::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 50%;
+  height: 2.5px;
+  margin-top: -1.25px;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.rm-delete {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.rm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 120px 24px 0;
+}
+
+.rm-empty p {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--label-2);
+}
+
+.rm-empty span {
+  font-size: 15px;
+  color: var(--label-3);
+  max-width: 26ch;
+}
+
+/* ── the iOS sheet ─────────────────────────────────────────────────── */
+
+.remote-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.6);
+  animation: rm-fade 0.25s ease-out;
+}
+
+.rm-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  height: calc(100% - var(--safe-t) - 12px);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  background: var(--fill-1);
+  animation: rm-rise 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.rm-grabber {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 36px;
+  height: 5px;
+  margin-left: -18px;
+  border-radius: 3px;
+  background: rgba(235, 235, 245, 0.3);
+}
+
+.rm-sheet-nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 56px;
+  padding: 8px 8px 0;
+}
+
+.rm-sheet-nav h2 {
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.rm-sheet-nav .rm-navbtn {
+  justify-self: end;
+}
+
+.rm-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 16px calc(var(--safe-b) + 32px);
+}
+
+/* in a sheet, rows sit one step lighter than the sheet */
+.rm-sheet .group {
+  background: var(--fill-2);
+}
+
+.rm-sheet .rm-pill {
+  background: var(--fill-2);
+  flex: 0 0 auto;
+}
+
+.rm-sheet .rm-pill.on {
+  background: var(--blue);
+}
+
+input.ral-time-field {
+  display: block;
+  width: 100%;
+  min-height: 96px;
+  margin: 8px 0 20px;
+  border: none;
+  border-radius: 14px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-family: var(--round);
+  font-size: 56px;
+  font-weight: 300;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+input.ral-time-field:focus {
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+
+input.ral-time-field::-webkit-date-and-time-value {
+  text-align: center;
+}
+
+input.ral-time-field::-webkit-calendar-picker-indicator {
+  width: 24px;
+  height: 24px;
+  opacity: 0.45;
+}
+
+.rm-field-row {
+  justify-content: space-between;
+}
+
+.rm-field-row span {
+  flex: 0 0 auto;
+}
+
+.rm-field-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: none;
+  background: none;
+  color: var(--label-2);
+  font-size: 17px;
+  text-align: right;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.rm-field-row input:focus {
+  color: var(--label);
+}
+
+.ral-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.rm-day {
+  aspect-ratio: 1;
+  min-height: 44px;
+  border-radius: 50%;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+
+.rm-day.on {
+  background: var(--blue);
+  color: #fff;
+}
+
+.rm-danger {
+  margin-top: 32px;
+}
+
+.rm-danger .group-row {
+  justify-content: center;
+  color: var(--red);
+  font-size: 17px;
+}
+
+/* ── devices: grouped list ─────────────────────────────────────────── */
+
+.rm-head + .group-head {
+  padding-top: 12px;
+}
+
+.rdev {
+  min-height: 56px;
+}
+
+.rdev-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 19px;
+}
+
+.rdev-name,
+.rdev-add input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: none;
+  background: none;
+  color: var(--label);
+  font-size: 17px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.rdev-add input::placeholder {
+  color: var(--label-3);
+}
+
+.rdev .rm-minus {
+  margin-left: -8px;
+  margin-right: -6px;
+}
+
+.rdev + .rdev::before {
+  left: 58px;
+}
+
+/* ── the tab bar ───────────────────────────────────────────────────── */
+
+.rm-tabbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  height: var(--rm-bottom);
+  padding: 0 max(4px, calc((100% - 600px) / 2)) var(--rm-tab-pad);
+  background: rgba(22, 22, 24, 0.78);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: inset 0 0.5px 0 rgba(84, 84, 88, 0.65);
+}
+
+.rm-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 44px;
+  padding-top: 4px;
+  color: #8e8e93;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: color 0.15s;
+}
+
+.rm-tab .ricon {
+  font-size: 26px;
+}
+
+.rm-tab.on {
+  color: var(--blue);
+}
+
+.rm-tab:active {
+  opacity: 0.6;
+}
+
+/* ── motion ────────────────────────────────────────────────────────── */
+
+@keyframes rm-fade {
+  from {
+    background: rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes rm-rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* ── wide (a landscape window, should one stay on the remote) ─────── */
+
+@media (min-width: 700px) {
+  .rm-vibes {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .rpad-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .rpad-grid .rpad-key,
+  .rpad-grid.small .rpad-key {
+    aspect-ratio: 1;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .rm-sheet {
+    height: calc(100% - 8px);
+  }
+
+  .rm-empty {
+    padding-top: 40px;
+  }
+}

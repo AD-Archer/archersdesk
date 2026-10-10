@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { WIDGET_INFO } from "@/lib/types";
 import EditablePopup from "../EditablePopup";
 import { SwipeCarousel } from "./Carousel";
-import { MI, Shell, integrationGate, useIntegration } from "./kit";
+import { Shell, integrationGate, useIntegration } from "./kit";
 import type { WidgetProps } from "./registry";
 
 interface AgendaEvent {
@@ -33,7 +33,7 @@ interface Day {
 }
 
 const HORIZON = 28;
-const DOW = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAYS_KEY = "archersdesk.agendaDays";
 const DAY_CHOICES = [3, 5, 7] as const;
 
@@ -61,7 +61,7 @@ function buildDays(events: AgendaEvent[]): Day[] {
 }
 
 function eventTime(e: AgendaEvent) {
-  if (e.allDay) return "all day";
+  if (e.allDay) return "All day";
   return new Date(e.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase();
 }
 
@@ -84,7 +84,7 @@ export function AgendaWidget({ wide, settings, integrationSettings }: WidgetProp
 
   if (gate)
     return (
-      <Shell icon={WIDGET_INFO.agenda.icon} label="agenda">
+      <Shell icon={WIDGET_INFO.agenda.icon} label="Agenda">
         {gate}
       </Shell>
     );
@@ -93,9 +93,9 @@ export function AgendaWidget({ wide, settings, integrationSettings }: WidgetProp
   const perView = wide ? days : Math.min(days, 5);
 
   return (
-    <Shell icon={WIDGET_INFO.agenda.icon} label="agenda">
+    <Shell icon={WIDGET_INFO.agenda.icon} label="Agenda">
       <div
-        className="agenda-picker"
+        className="key wkey agenda-picker"
         role="button"
         tabIndex={0}
         onClick={() => setOpen(true)}
@@ -107,8 +107,10 @@ export function AgendaWidget({ wide, settings, integrationSettings }: WidgetProp
         }}
         aria-label="choose how many days"
       >
-        <MI name={WIDGET_INFO.agenda.icon} />
         <span>{days} days</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M7.5 9.5L12 5l4.5 4.5M7.5 14.5L12 19l4.5-4.5" />
+        </svg>
       </div>
 
       <SwipeCarousel
@@ -126,7 +128,7 @@ export function AgendaWidget({ wide, settings, integrationSettings }: WidgetProp
               </div>
               <div className="agenda-events">
                 {d.events.length === 0 ? (
-                  <span className="agenda-empty">–</span>
+                  <span className="agenda-empty">Nothing planned</span>
                 ) : (
                   d.events.slice(0, 6).map((e, i) => (
                     <div key={i} className="agenda-event">
@@ -141,12 +143,12 @@ export function AgendaWidget({ wide, settings, integrationSettings }: WidgetProp
         }}
       />
 
-      <EditablePopup open={open} title="agenda days" onClose={() => setOpen(false)}>
+      <EditablePopup open={open} title="Days to show" onClose={() => setOpen(false)}>
         <div className="mood-grid">
           {DAY_CHOICES.map((n) => (
             <button key={n} className={`mood-card${days === n ? " on" : ""}`} onClick={() => pick(n)}>
               <b>{n} days</b>
-              <small>show {n} days per view</small>
+              <small>Show {n} days at a time</small>
             </button>
           ))}
         </div>

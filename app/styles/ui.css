@@ -1,0 +1,289 @@
+/* ── shared primitives: iOS dark controls ──────────────────────────────
+   .btn            gray pill button (secondary)            alias .key
+   .btn.on         selected: blue fill, white label        alias .key.on
+   .btn-primary    filled blue pill — one per screen       alias .key-ok, .btn-amber
+   .btn.red|green|orange|yellow|blue   tinted label on the gray pill
+   .field          iOS text field on a grouped row
+   .group / .group-row   inset grouped list (iPhone Settings)
+   .ios-switch     the green toggle
+   .large-title    34px bold page title */
+
+.btn,
+.key {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 17px;
+  font-weight: 600;
+  transition: background 0.15s, transform 0.15s, opacity 0.15s;
+}
+
+.btn:active:not(:disabled),
+.key:active:not(:disabled) {
+  background: var(--fill-3);
+  transform: scale(0.97);
+}
+
+.btn:disabled,
+.key:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.btn.on,
+.key.on {
+  background: var(--blue);
+  color: #fff;
+}
+
+.btn.red,
+.key.red { color: var(--red); }
+.btn.green,
+.key.green { color: var(--green); }
+.btn.orange,
+.key.orange { color: var(--orange); }
+.btn.yellow,
+.key.yellow { color: var(--yellow); }
+.btn.blue,
+.key.blue { color: var(--blue); }
+
+.btn-primary,
+.key-ok,
+.btn-amber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 24px;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  transition: transform 0.15s, opacity 0.15s, filter 0.15s;
+}
+
+.btn-primary:active:not(:disabled),
+.key-ok:active:not(:disabled),
+.btn-amber:active:not(:disabled) {
+  transform: scale(0.97);
+  filter: brightness(0.88);
+}
+
+.btn-primary:disabled,
+.key-ok:disabled,
+.btn-amber:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.field {
+  width: 100%;
+  min-height: 44px;
+  background: var(--fill-1);
+  border: none;
+  border-radius: 10px;
+  padding: 0 14px;
+  color: var(--label);
+  font-size: 17px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.field:focus {
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+
+.field::placeholder {
+  color: var(--label-3);
+}
+
+.large-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+/* inset grouped list */
+.group {
+  background: var(--fill-1);
+  border-radius: var(--r-row);
+  overflow: hidden;
+}
+
+.group-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 16px;
+  position: relative;
+  width: 100%;
+  text-align: left;
+}
+
+.group-row + .group-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 0;
+  height: 0.5px;
+  background: var(--sep);
+}
+
+button.group-row:active {
+  background: var(--fill-2);
+}
+
+.group-head {
+  font-size: 13px;
+  color: var(--label-2);
+  padding: 22px 16px 7px;
+}
+
+.group-foot {
+  font-size: 13px;
+  color: var(--label-2);
+  padding: 7px 16px 0;
+  line-height: 1.35;
+}
+
+/* the iOS switch (markup: label.ios-switch > input + span) */
+.ios-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 51px;
+  height: 31px;
+}
+
+.ios-switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.ios-switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.32);
+  transition: background 0.25s;
+}
+
+.ios-switch span::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ios-switch input:checked + span {
+  background: var(--green);
+}
+
+.ios-switch input:checked + span::after {
+  transform: translateX(20px);
+}
+
+/* ── login ─────────────────────────────────────────────────────────── */
+
+.login-stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-t) + 16px) 16px calc(var(--safe-b) + 16px);
+}
+
+.login-card {
+  width: min(380px, 100%);
+}
+
+.login-eyebrow {
+  display: none;
+}
+
+.login-title {
+  font-family: var(--round);
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 28px;
+  color: var(--label);
+}
+
+.login-title em {
+  font-style: normal;
+  color: var(--green);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-form input {
+  width: 100%;
+  min-height: 50px;
+  background: var(--fill-1);
+  border: none;
+  border-radius: 12px;
+  padding: 0 16px;
+  color: var(--label);
+  font-family: var(--sans);
+  font-size: 17px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.login-form input:focus {
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+
+.login-form input::placeholder {
+  color: var(--label-3);
+}
+
+.login-error {
+  color: var(--red);
+  font-size: 15px;
+  min-height: 1.2em;
+  text-align: center;
+}
+
+.login-switch {
+  color: var(--label-2);
+  font-size: 15px;
+  margin-top: 18px;
+  text-align: center;
+}
+
+.login-switch button {
+  color: var(--blue);
+  font-size: 15px;
+  margin-left: 6px;
+  min-height: 44px;
+}

@@ -9,7 +9,6 @@ export default async function LoginPage() {
   return (
     <main className="login-stage">
       <div className="login-card">
-        <p className="login-eyebrow">welcome to</p>
         <h1 className="login-title">
           archer&rsquo;s <em>desk</em>
         </h1>

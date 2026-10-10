@@ -51,7 +51,7 @@ export function HomeAssistantWidget({ wide, settings, integrationSettings }: Wid
 
   if (gate)
     return (
-      <Shell icon={WIDGET_INFO.homeassistant.icon} label="home assistant">
+      <Shell icon={WIDGET_INFO.homeassistant.icon} label="Home Assistant">
         {gate}
       </Shell>
     );
@@ -73,14 +73,11 @@ export function HomeAssistantWidget({ wide, settings, integrationSettings }: Wid
   }
 
   return (
-    <Shell icon={WIDGET_INFO.homeassistant.icon} label="home assistant">
-      <span className="hero-tap-icon">
-        <MI name={WIDGET_INFO.homeassistant.icon} className="hero-tap-mi" />
-      </span>
+    <Shell icon={WIDGET_INFO.homeassistant.icon} label="Home Assistant">
       {shown.length === 0 ? (
-        <Empty>no entities matched</Empty>
+        <Empty>None of your entities were found</Empty>
       ) : (
-        <div className="ha-list">
+        <div className={`ha-list${wide ? " wide" : ""}`}>
           {shown.map((e) => {
             const state = override[e.entityId] ?? e.state;
             const on = state === "on";
@@ -88,16 +85,17 @@ export function HomeAssistantWidget({ wide, settings, integrationSettings }: Wid
               <div key={e.entityId} className="ha-row">
                 <div className="ha-row-text">
                   <span className="ha-row-name">{e.name}</span>
-                  {!e.toggleable && (
-                    <span className="ha-row-state">
-                      {e.state}
-                      {e.unit ? ` ${e.unit}` : ""}
-                    </span>
-                  )}
+                  {e.toggleable && <span className="ha-row-sub">{on ? "On" : "Off"}</span>}
                 </div>
+                {!e.toggleable && (
+                  <span className="ha-row-state">
+                    {e.state}
+                    {e.unit && <small> {e.unit}</small>}
+                  </span>
+                )}
                 {e.toggleable && (
                   <button
-                    className={`ha-bulb${on ? " on" : ""}`}
+                    className={`key ha-bulb${on ? " on" : ""}`}
                     disabled={pending.has(e.entityId)}
                     onClick={() => toggle(e)}
                     aria-label={`turn ${on ? "off" : "on"} ${e.name}`}

@@ -10,7 +10,6 @@ export function toView(settings: Settings, device: Device): ViewSettings {
   return {
     deviceId: device.id,
     deviceName: device.name,
-    theme: device.theme,
     location: device.location,
     layout: device.layout,
     standby: device.standby,
@@ -32,13 +31,13 @@ export function toView(settings: Settings, device: Device): ViewSettings {
 
 /** Fold an edited view back into a canonical `Settings`. The device list comes
  *  from `view.devices` (so device add/rename/delete survive); the active
- *  device's theme/location/layout/standby are overwritten from the top-level
+ *  device's location/layout/standby are overwritten from the top-level
  *  edits. `presence` is left as-is — it is owned by /api/presence, never by a
  *  settings write. */
 export function fromView(view: ViewSettings): Settings {
   const devices = view.devices.map((d) =>
     d.id === view.deviceId
-      ? { ...d, theme: view.theme, location: view.location, layout: view.layout, standby: view.standby }
+      ? { ...d, location: view.location, layout: view.layout, standby: view.standby }
       : d
   );
   return {

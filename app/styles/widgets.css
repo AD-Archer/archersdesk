@@ -1,0 +1,2466 @@
+/* ── widgets: everything past the StandBy heroes ──────────────────────
+   Same language as hero.css: content straight on black, no cards, one tint
+   per widget (var(--tint), set per panel in board.css). One hero figure as
+   big as the half allows, a little white text, secondary text in --label-2.
+   Lists are iOS widget rows split by hairlines. Sizes come from --ps (the
+   panel's short side: ~448px on the Echo Show 5, ~361px on the iPhone). */
+
+/* ── kit: empty states ─────────────────────────────────────────────── */
+
+.w-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--ps) * 0.05);
+  text-align: center;
+}
+
+.w-glyph {
+  display: grid;
+  place-items: center;
+  width: calc(var(--ps) * 0.2);
+  height: calc(var(--ps) * 0.2);
+  border-radius: 50%;
+  background: var(--tint);
+  color: #fff;
+}
+
+.w-glyph .mi {
+  font-size: calc(var(--ps) * 0.1);
+}
+
+/* ── kit: hero stat ────────────────────────────────────────────────── */
+
+.kstat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.kstat-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  column-gap: calc(var(--ps) * 0.025);
+  max-width: 100%;
+  font-family: var(--round);
+  font-weight: 900;
+  font-size: calc(var(--ps) * 0.24);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tint);
+  white-space: nowrap;
+}
+
+/* alone in its half, the figure takes the room */
+.w-body > .kstat:only-child .kstat-value {
+  font-size: calc(var(--ps) * 0.32);
+}
+
+.kstat-unit {
+  font-family: var(--sans);
+  font-size: calc(var(--ps) * 0.058);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--label);
+}
+
+.kstat-cap {
+  margin-top: calc(var(--ps) * 0.02);
+  font-size: calc(var(--ps) * 0.044);
+  font-weight: 500;
+  color: var(--label-2);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── kit: stat row (figure over label) ─────────────────────────────── */
+
+.krow-strip {
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--ps) * 0.07);
+  margin-top: calc(var(--ps) * 0.045);
+  max-width: 100%;
+}
+
+.krow-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.krow-item b {
+  font-family: var(--round);
+  font-size: calc(var(--ps) * 0.062);
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--label);
+  white-space: nowrap;
+}
+
+.krow-item small {
+  font-size: calc(var(--ps) * 0.036);
+  font-weight: 500;
+  color: var(--label-2);
+  white-space: nowrap;
+}
+
+/* ── kit: list rows ────────────────────────────────────────────────── */
+
+.klist {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  margin-top: calc(var(--ps) * 0.04);
+  padding: 0 calc(var(--ps) * 0.03);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.klist-row {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(var(--ps) * 0.022) 0;
+  font-size: max(15px, calc(var(--ps) * 0.042));
+  line-height: 1.25;
+}
+
+.klist-row + .klist-row {
+  border-top: 0.5px solid var(--sep);
+}
+
+.klist-left {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--label-2);
+  font-weight: 500;
+}
+
+.klist-left::first-letter {
+  text-transform: uppercase;
+}
+
+.klist-right {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--label);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.klist-right b {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.klist-right small {
+  font-size: 0.86em;
+  font-weight: 500;
+  color: var(--label-2);
+}
+
+/* the iOS Stocks change pill */
+.kdelta {
+  display: inline-block;
+  min-width: 4.4em;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 0.86em;
+  font-weight: 700;
+  text-align: right;
+}
+
+.kdelta.up {
+  background: var(--green);
+  color: #000;
+}
+
+.kdelta.down {
+  background: var(--red);
+  color: #fff;
+}
+
+/* tap-to-choose heroes (chess, wakatime, archer hours): the whole stat is
+   the button; a small round menu mark sits beside it */
+.chess-hero,
+.waka-hero,
+.archer-hero,
+.monkeytype-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px calc(var(--ps) * 0.1);
+  border-radius: 18px;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.chess-hero:active,
+.waka-hero:active,
+.archer-hero:active {
+  background: var(--fill-1);
+  transform: scale(0.98);
+}
+
+.click-settings-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35em;
+  height: 1.35em;
+  margin-left: 0.4em;
+  vertical-align: -0.3em;
+  border-radius: 50%;
+  background: var(--fill-2);
+  color: var(--label-2);
+}
+
+.click-settings-glyph svg {
+  width: 62%;
+  height: 62%;
+}
+
+/* a word (a language, a race) instead of a number: smaller, may wrap */
+.kstat.text .kstat-value {
+  font-family: var(--sans);
+  font-size: calc(var(--ps) * 0.11);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: normal;
+  text-wrap: balance;
+}
+
+/* small units inside a figure (the % sign, h and m) */
+.kstat-value small {
+  font-size: 0.5em;
+  font-weight: 800;
+  margin-left: 0.04em;
+}
+
+/* ── weather: iOS weather widget ───────────────────────────────────── */
+
+.wx {
+  flex: 1;
+  align-self: stretch;
+  display: flex;
+  min-height: 0;
+  padding: 0 calc(var(--ps) * 0.03) calc(var(--ps) * 0.02);
+}
+
+.wx-now {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.wx-temp {
+  font-family: var(--sans);
+  font-size: calc(var(--ps) * 0.44);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+  color: var(--label);
+  margin-top: calc(var(--ps) * 0.01);
+}
+
+.wx-deg {
+  font-weight: 300;
+  margin-left: 0.02em;
+}
+
+.wx-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.wx-icon {
+  width: calc(var(--ps) * 0.11);
+  height: calc(var(--ps) * 0.11);
+  margin-bottom: calc(var(--ps) * 0.012);
+  color: var(--tint);
+}
+
+.wx-icon svg,
+.fc-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 2;
+}
+
+.wx-cond {
+  font-size: calc(var(--ps) * 0.064);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--label);
+}
+
+.wx-cond::first-letter {
+  text-transform: uppercase;
+}
+
+.wx-hilo {
+  font-size: calc(var(--ps) * 0.056);
+  font-weight: 600;
+  color: var(--label-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.wx.wide {
+  gap: calc(var(--ps) * 0.12);
+  align-items: stretch;
+}
+
+.wx.wide .wx-temp {
+  font-size: calc(var(--ps) * 0.5);
+}
+
+.wx-more {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.wx-more-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: calc(var(--ps) * 0.03) 0;
+  font-size: calc(var(--ps) * 0.058);
+}
+
+.wx-more-row + .wx-more-row {
+  border-top: 0.5px solid var(--sep);
+}
+
+.wx-more-row span {
+  color: var(--label-2);
+  font-weight: 500;
+}
+
+.wx-more-row b {
+  font-family: var(--round);
+  font-weight: 800;
+  color: var(--label);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── forecast: iOS daily list with range bars ──────────────────────── */
+
+.fc {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  padding: 0 calc(var(--ps) * 0.03);
+}
+
+.fc-day {
+  display: grid;
+  grid-template-columns: 2.6em 1.6em 2.2em 1fr 2.2em;
+  align-items: center;
+  column-gap: calc(var(--ps) * 0.03);
+  padding: calc(var(--ps) * 0.026) 0;
+  font-size: calc(var(--ps) * 0.058);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.fc-day + .fc-day {
+  border-top: 0.5px solid var(--sep);
+}
+
+.fc-dow {
+  color: var(--label);
+  font-weight: 700;
+}
+
+.fc-icon {
+  width: 1.4em;
+  height: 1.4em;
+  color: var(--tint);
+}
+
+.fc-lo {
+  color: var(--label-2);
+  text-align: right;
+}
+
+.fc-hi {
+  color: var(--label);
+}
+
+.fc-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--fill-2);
+}
+
+.fc-bar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: var(--tint);
+  min-width: 6px;
+}
+
+/* wide: days side by side, like the iOS medium weather widget */
+.fc.wide {
+  flex-direction: row;
+  justify-content: space-around;
+}
+
+.fc.wide .fc-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--ps) * 0.03);
+  padding: 0 8px;
+  border: 0;
+  font-size: calc(var(--ps) * 0.075);
+}
+
+.fc.wide .fc-icon {
+  width: 1.6em;
+  height: 1.6em;
+}
+
+.fc.wide .fc-bar {
+  display: none;
+}
+
+.fc.wide .fc-hi {
+  order: 3;
+  font-family: var(--round);
+  font-size: 1.35em;
+  font-weight: 800;
+}
+
+.fc.wide .fc-lo {
+  order: 4;
+}
+
+/* ── sun ───────────────────────────────────────────────────────────── */
+
+.sun {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--ps) * 0.03);
+}
+
+.sun-svg {
+  width: calc(var(--ps) * 0.8);
+  height: auto;
+  overflow: visible;
+}
+
+.sun-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sun-what {
+  font-size: calc(var(--ps) * 0.058);
+  font-weight: 700;
+  color: var(--label);
+}
+
+.sun-time {
+  font-size: calc(var(--ps) * 0.22);
+  color: var(--tint);
+  font-weight: 900;
+}
+
+.sun-other {
+  margin-top: calc(var(--ps) * 0.02);
+  font-size: calc(var(--ps) * 0.048);
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.sun.wide {
+  flex-direction: row;
+  gap: calc(var(--ps) * 0.12);
+}
+
+.sun.wide .sun-svg {
+  width: calc(var(--ps) * 0.95);
+}
+
+.sun.wide .sun-text {
+  align-items: flex-start;
+}
+
+.sun.wide .sun-time {
+  font-size: calc(var(--ps) * 0.26);
+}
+
+/* ── moon ──────────────────────────────────────────────────────────── */
+
+.moon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--ps) * 0.05);
+}
+
+.moon-svg {
+  width: calc(var(--ps) * 0.52);
+  height: calc(var(--ps) * 0.52);
+}
+
+.moon-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.moon-name {
+  font-size: calc(var(--ps) * 0.08);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--label);
+}
+
+.moon-pct {
+  font-family: var(--round);
+  font-size: calc(var(--ps) * 0.07);
+  font-weight: 800;
+  color: var(--tint);
+  font-variant-numeric: tabular-nums;
+}
+
+.moon.wide {
+  flex-direction: row;
+  gap: calc(var(--ps) * 0.12);
+}
+
+.moon.wide .moon-svg {
+  width: calc(var(--ph) * 0.74);
+  height: calc(var(--ph) * 0.74);
+}
+
+.moon.wide .moon-text {
+  align-items: flex-start;
+}
+
+.moon.wide .moon-name {
+  font-size: calc(var(--ps) * 0.11);
+}
+
+.moon.wide .moon-pct {
+  font-size: calc(var(--ps) * 0.09);
+}
+
+/* ── world clock ───────────────────────────────────────────────────── */
+
+.wc {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  padding: 0 calc(var(--ps) * 0.03);
+}
+
+.wc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(var(--ps) * 0.032) 0;
+}
+
+.wc-row + .wc-row {
+  border-top: 0.5px solid var(--sep);
+}
+
+.wc-place {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wc-city {
+  font-size: calc(var(--ps) * 0.062);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--label);
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wc-day {
+  font-size: calc(var(--ps) * 0.04);
+  font-weight: 500;
+  color: var(--label-2);
+  white-space: nowrap;
+}
+
+.wc-time {
+  font-size: calc(var(--ps) * 0.12);
+  color: var(--tint);
+}
+
+.wc.n4 .wc-row {
+  padding: calc(var(--ps) * 0.022) 0;
+}
+
+.wc.n4 .wc-time {
+  font-size: calc(var(--ps) * 0.1);
+}
+
+.wc.wide {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.wc.wide .wc-row {
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: 0;
+}
+
+.wc.wide .wc-place {
+  align-items: center;
+}
+
+.wc.wide .wc-time {
+  font-size: calc(var(--ps) * 0.15);
+}
+
+/* ── alarms ────────────────────────────────────────────────────────── */
+
+.al {
+  align-self: stretch;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--ps) * 0.05);
+  min-height: 0;
+}
+
+.al-next {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.al-next-time {
+  font-size: calc(var(--ps) * 0.24);
+  font-weight: 900;
+  color: var(--tint);
+}
+
+.al-in {
+  margin-top: calc(var(--ps) * 0.015);
+  font-size: calc(var(--ps) * 0.05);
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.al-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 calc(var(--ps) * 0.03);
+}
+
+.al-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 12px;
+  padding: calc(var(--ps) * 0.022) 0;
+  font-size: max(15px, calc(var(--ps) * 0.044));
+  border-top: 0.5px solid var(--sep);
+}
+
+.al-row-time {
+  font-size: 1.15em;
+  color: var(--label);
+}
+
+.al-row-label {
+  color: var(--label);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.al-row-days {
+  display: inline-block;
+  color: var(--label-2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.al-row-days::first-letter {
+  text-transform: uppercase;
+}
+
+.al-row.off > * {
+  color: var(--label-3);
+}
+
+.al.wide {
+  flex-direction: row;
+  align-items: center;
+  gap: calc(var(--ps) * 0.12);
+  padding: 0 calc(var(--ps) * 0.06);
+}
+
+.al.wide > * {
+  flex: 1;
+}
+
+.al.wide .al-next-time {
+  font-size: calc(var(--ps) * 0.3);
+}
+
+.al.wide .al-row:first-child {
+  border-top: 0;
+}
+
+/* ── timer ─────────────────────────────────────────────────────────── */
+
+.tm {
+  gap: calc(var(--ps) * 0.045);
+}
+
+.tm-ring {
+  position: relative;
+  width: calc(var(--ps) * 0.5);
+  height: calc(var(--ps) * 0.5);
+  flex: 0 0 auto;
+}
+
+.tm-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tm-time {
+  font-size: calc(var(--ps) * 0.13);
+  font-weight: 900;
+  color: var(--tint);
+}
+
+.tm-state {
+  margin-top: 2px;
+  font-size: calc(var(--ps) * 0.038);
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.tm.done .tm-time {
+  animation: tm-blink 1s steps(2, start) infinite;
+}
+
+@keyframes tm-blink {
+  to {
+    opacity: 0.35;
+  }
+}
+
+.tm-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.tm-presets,
+.tm-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tm .wkey {
+  min-height: 44px;
+  padding: 0 calc(var(--ps) * 0.032);
+  font-size: max(14px, calc(var(--ps) * 0.036));
+  white-space: nowrap;
+}
+
+.tm-go {
+  min-width: calc(var(--ps) * 0.28);
+}
+
+.tm-go.start {
+  background: var(--tint);
+  color: #000;
+}
+
+.tm-go.stop {
+  background: var(--red);
+  color: #fff;
+}
+
+.tm-go.start:disabled {
+  background: var(--fill-2);
+  color: var(--label);
+}
+
+.tm.wide {
+  flex-direction: row;
+  gap: calc(var(--ps) * 0.12);
+}
+
+.tm.wide .tm-ring {
+  width: calc(var(--ph) * 0.68);
+  height: calc(var(--ph) * 0.68);
+}
+
+.tm.wide .tm-time {
+  font-size: calc(var(--ph) * 0.17);
+}
+
+/* ── quote & facts: big words, the source in the tint ─────────────── */
+
+.qt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--ps) * 0.04);
+  max-width: 100%;
+  padding: 0 calc(var(--ps) * 0.04);
+  text-align: left;
+}
+
+.qt-text {
+  font-size: calc(var(--ps) * 0.08);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  color: var(--label);
+  text-wrap: pretty;
+}
+
+.qt.len-s .qt-text {
+  font-size: calc(var(--ps) * 0.105);
+  line-height: 1.12;
+}
+
+.qt.len-l .qt-text {
+  font-size: calc(var(--ps) * 0.064);
+}
+
+.qt.len-xl .qt-text {
+  font-size: calc(var(--ps) * 0.05);
+  line-height: 1.25;
+}
+
+.qt.wide .qt-text {
+  font-size: calc(var(--ps) * 0.1);
+}
+
+.qt.wide.len-l .qt-text {
+  font-size: calc(var(--ps) * 0.085);
+}
+
+.qt.wide.len-xl .qt-text {
+  font-size: calc(var(--ps) * 0.066);
+}
+
+.qt-author {
+  font-size: calc(var(--ps) * 0.052);
+  font-weight: 700;
+  color: var(--tint);
+}
+
+.qt-author::first-letter {
+  text-transform: uppercase;
+}
+
+/* ── status signs: dnd, please disturb, away, vibe ─────────────────── */
+
+.sign {
+  gap: calc(var(--ps) * 0.05);
+  text-align: center;
+}
+
+.sign.tappable {
+  cursor: pointer;
+}
+
+.sign-glyph {
+  width: calc(var(--ps) * 0.3);
+  height: calc(var(--ps) * 0.3);
+  color: var(--tint);
+  flex: 0 0 auto;
+}
+
+.sign-glyph svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sign-glyph .mi {
+  display: block;
+  font-size: calc(var(--ps) * 0.3);
+}
+
+.sign.away.has-time .sign-glyph .mi {
+  font-size: calc(var(--ps) * 0.2);
+}
+
+.sign.wide .sign-glyph .mi {
+  font-size: calc(var(--ph) * 0.42);
+}
+
+.sign-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.sign-title {
+  font-family: var(--round);
+  font-size: calc(var(--ps) * 0.115);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  color: var(--label);
+  text-wrap: balance;
+}
+
+.sign-note {
+  margin-top: calc(var(--ps) * 0.025);
+  font-size: calc(var(--ps) * 0.05);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--label-2);
+  max-width: 24ch;
+  text-wrap: balance;
+}
+
+/* away with a return time: the time is the hero */
+.sign.away.has-time .sign-glyph {
+  width: calc(var(--ps) * 0.2);
+  height: calc(var(--ps) * 0.2);
+}
+
+.sign.away.has-time .sign-title {
+  font-family: var(--sans);
+  font-size: calc(var(--ps) * 0.065);
+  font-weight: 700;
+}
+
+.sign-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sign-time {
+  font-size: calc(var(--ps) * 0.21);
+  font-weight: 900;
+  color: var(--tint);
+}
+
+.sign.wide {
+  flex-direction: row;
+  gap: calc(var(--ps) * 0.1);
+  text-align: left;
+}
+
+.sign.wide .sign-glyph {
+  width: calc(var(--ph) * 0.42);
+  height: calc(var(--ph) * 0.42);
+}
+
+.sign.wide .sign-text,
+.sign.wide .sign-hero {
+  align-items: flex-start;
+}
+
+.sign.wide .sign-title {
+  font-size: calc(var(--ps) * 0.15);
+}
+
+.sign.wide .sign-note {
+  font-size: calc(var(--ps) * 0.062);
+}
+
+.sign.wide.away.has-time .sign-title {
+  font-size: calc(var(--ps) * 0.08);
+}
+
+.sign.wide .sign-time {
+  font-size: calc(var(--ps) * 0.28);
+}
+
+/* the vibe / "show first" pickers (inside the popup sheet): a grouped list */
+.mood-grid {
+  display: flex;
+  flex-direction: column;
+  background: var(--fill-1);
+  border-radius: var(--r-row);
+  overflow: hidden;
+}
+
+.mood-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  column-gap: 12px;
+  align-items: center;
+  min-height: 56px;
+  padding: 10px 16px;
+  text-align: left;
+  color: var(--label);
+}
+
+.mood-card + .mood-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 0;
+  height: 0.5px;
+  background: var(--sep);
+}
+
+.mood-card:active {
+  background: var(--fill-2);
+}
+
+.mood-face {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 30px;
+  height: 30px;
+  color: var(--pink);
+}
+
+.mood-face svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.mood-card b {
+  grid-column: 2;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.mood-card b::first-letter {
+  text-transform: uppercase;
+}
+
+.mood-card small {
+  grid-column: 2;
+  font-size: 14px;
+  color: var(--label-2);
+}
+
+.mood-card.on::after {
+  content: "";
+  grid-column: 3;
+  grid-row: 1 / 3;
+  width: 14px;
+  height: 8px;
+  margin-top: -4px;
+  border-left: 2.5px solid var(--blue);
+  border-bottom: 2.5px solid var(--blue);
+  transform: rotate(-45deg);
+}
+
+/* ── account stats ─────────────────────────────────────────────────── */
+
+.k-strong {
+  color: var(--label);
+  font-weight: 700;
+}
+
+.gh-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.04em;
+}
+
+.gh-fire {
+  font-size: 0.62em;
+  color: var(--tint);
+}
+
+/* ── photo cams: the picture owns the half ─────────────────────────── */
+
+.pic {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: calc(var(--ps) * 0.07);
+  overflow: hidden;
+  background: var(--fill-1);
+}
+
+.pic-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: pic-in 0.6s ease both;
+}
+
+@keyframes pic-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.pic-caption {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  font-size: calc(var(--ps) * 0.048);
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7), 0 0 2px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pic-caption::first-letter {
+  text-transform: uppercase;
+}
+
+/* ── space news: headlines as an iOS news list ─────────────────────── */
+
+.headlines {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  padding: 0 calc(var(--ps) * 0.03);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.headline {
+  padding: calc(var(--ps) * 0.028) 0;
+}
+
+.headline + .headline {
+  border-top: 0.5px solid var(--sep);
+}
+
+.headline:nth-child(n + 4) {
+  display: none;
+}
+
+.headline-title {
+  font-size: max(15px, calc(var(--ps) * 0.05));
+  font-weight: 700;
+  line-height: 1.22;
+  color: var(--label);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.headline-site {
+  margin-top: 2px;
+  font-size: max(13px, calc(var(--ps) * 0.036));
+  font-weight: 600;
+  color: var(--tint);
+}
+
+.headlines.wide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: calc(var(--ps) * 0.08);
+}
+
+.headlines.wide .headline:nth-child(n + 4) {
+  display: block;
+}
+
+.headlines.wide .headline:nth-child(n + 5) {
+  display: none;
+}
+
+.headlines.wide .headline:nth-child(2) {
+  border-top: 0;
+}
+
+/* ── formula 1 ─────────────────────────────────────────────────────── */
+
+.f1-next {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 100%;
+}
+
+.f1-when {
+  font-family: var(--round);
+  font-size: calc(var(--ps) * 0.075);
+  font-weight: 900;
+  color: var(--tint);
+}
+
+.f1-name {
+  font-size: calc(var(--ps) * 0.095);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--label);
+  text-wrap: balance;
+}
+
+.f1-where {
+  margin-top: 2px;
+  font-size: calc(var(--ps) * 0.042);
+  font-weight: 500;
+  color: var(--label-2);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.f1-pos {
+  display: inline-block;
+  min-width: 1.2em;
+  font-family: var(--round);
+  font-weight: 900;
+  color: var(--tint);
+}
+
+/* ── swipe carousel (inside torrents, requests, agenda, epic) ──────── */
+
+.swipe-carousel {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  margin-top: calc(var(--ps) * 0.03);
+}
+
+.swipe-row {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+}
+
+.swipe-arrow.key {
+  flex: 0 0 auto;
+  width: 36px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  color: var(--label-2);
+}
+
+.swipe-arrow.key:active:not(:disabled) {
+  background: var(--fill-1);
+}
+
+.swipe-arrow.key:disabled {
+  opacity: 0.2;
+}
+
+.swipe-arrow svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* nothing to page through: no arrows, the list gets the full width */
+.swipe-carousel.single .swipe-arrow {
+  display: none;
+}
+
+.swipe-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.swipe-track {
+  display: flex;
+}
+
+.swipe-track.animate {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.swipe-item {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+
+.swipe-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.swipe-page.row {
+  flex-direction: row;
+}
+
+.swipe-cell {
+  min-width: 0;
+}
+
+.swipe-page:not(.row) > .swipe-cell + .swipe-cell {
+  border-top: 0.5px solid var(--sep);
+}
+
+.swipe-page.row > .swipe-cell {
+  flex: 1 1 0;
+}
+
+.swipe-dots {
+  display: flex;
+  gap: 4px;
+}
+
+/* tiny dots, but each sits in a 28px tap area */
+.swipe-dot {
+  position: relative;
+  width: 20px;
+  height: 20px;
+}
+
+.swipe-dot::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--fill-3);
+  transition: background 0.2s;
+}
+
+.swipe-dot.on::before {
+  background: var(--label);
+}
+
+/* ── requests (seerr) ──────────────────────────────────────────────── */
+
+.seerr-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(var(--ps) * 0.02) 2px;
+}
+
+.seerr-row-thumb {
+  flex: 0 0 auto;
+  width: calc(var(--ps) * 0.1);
+  height: calc(var(--ps) * 0.15);
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--fill-1);
+}
+
+.seerr-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.seerr-row-title {
+  font-size: max(15px, calc(var(--ps) * 0.046));
+  font-weight: 700;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seerr-row-meta {
+  font-size: max(13px, calc(var(--ps) * 0.036));
+  font-weight: 500;
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seerr-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.seerr-icon-btn.key {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.seerr-icon-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.seerr-icon-btn.approve {
+  background: var(--green);
+  color: #000;
+}
+
+.seerr-icon-btn.decline {
+  color: var(--red);
+}
+
+/* request detail, inside the popup sheet */
+.seerr-detail {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.seerr-detail-poster {
+  flex: 0 0 auto;
+  width: 120px;
+  aspect-ratio: 2 / 3;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--fill-1);
+}
+
+.seerr-detail-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.seerr-detail-sub {
+  font-size: 15px;
+  color: var(--label-2);
+}
+
+.seerr-detail-overview {
+  margin-top: 8px;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--label);
+}
+
+/* ── torrents ──────────────────────────────────────────────────────── */
+
+.torrent-summary {
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--ps) * 0.07);
+  margin-top: calc(var(--ps) * 0.03);
+}
+
+.torrent-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.torrent-summary-item b {
+  font-family: var(--round);
+  font-size: calc(var(--ps) * 0.054);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--label);
+  white-space: nowrap;
+}
+
+.torrent-summary-item small {
+  font-size: calc(var(--ps) * 0.034);
+  font-weight: 500;
+  color: var(--label-2);
+}
+
+.torrent-rows {
+  width: 100%;
+  max-width: 520px;
+  margin-top: calc(var(--ps) * 0.05);
+}
+
+.torrent-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: calc(var(--ps) * 0.022) 2px;
+}
+
+.torrent-row-top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.torrent-row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: max(15px, calc(var(--ps) * 0.042));
+  font-weight: 700;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.torrent-row-pct {
+  font-family: var(--round);
+  font-size: max(15px, calc(var(--ps) * 0.042));
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--tint);
+}
+
+.torrent-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.torrent-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--tint);
+}
+
+.torrent-row.seeding .torrent-bar-fill {
+  background: var(--label-2);
+}
+
+.torrent-row-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: max(13px, calc(var(--ps) * 0.034));
+  font-weight: 500;
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.torrent-row-state {
+  display: inline-block;
+}
+
+.torrent-row-state::first-letter {
+  text-transform: uppercase;
+}
+
+/* ── home assistant: iOS Home-style rows ───────────────────────────── */
+
+/* (scoped under .w-body: settings.css styles its own .ha-list picker) */
+.w-body .ha-list {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  max-height: none;
+  margin: 0;
+  padding: 0 calc(var(--ps) * 0.03);
+  overflow: visible;
+  border-radius: 0;
+  background: none;
+}
+
+.w-body .ha-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: calc(var(--ps) * 0.16);
+  padding: 6px 0;
+}
+
+.w-body .ha-row + .ha-row {
+  border-top: 0.5px solid var(--sep);
+}
+
+.ha-row-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ha-row-name {
+  font-size: max(16px, calc(var(--ps) * 0.05));
+  font-weight: 700;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ha-row-sub {
+  font-size: max(13px, calc(var(--ps) * 0.038));
+  font-weight: 500;
+  color: var(--label-2);
+}
+
+.ha-row-state {
+  font-family: var(--round);
+  font-size: calc(var(--ps) * 0.075);
+  font-weight: 800;
+  color: var(--tint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ha-row-state::first-letter {
+  text-transform: uppercase;
+}
+
+.ha-row-state small {
+  font-family: var(--sans);
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+/* the bulb: dark when off, a bright disc when on (brightness, not hue, so
+   it still reads in red night mode) */
+.ha-bulb.key {
+  flex: 0 0 auto;
+  width: calc(var(--ps) * 0.13);
+  height: calc(var(--ps) * 0.13);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--fill-2);
+  color: var(--label-2);
+}
+
+.ha-bulb .mi {
+  font-size: calc(var(--ps) * 0.065);
+}
+
+.ha-bulb.key.on {
+  background: var(--yellow);
+  color: #000;
+}
+
+.w-body .ha-list.wide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: calc(var(--ps) * 0.1);
+}
+
+.w-body .ha-list.wide .ha-row:nth-child(2) {
+  border-top: 0;
+}
+
+/* ── agenda: day columns ───────────────────────────────────────────── */
+
+.agenda-picker.key {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  min-height: 34px;
+  height: 34px;
+  padding: 0 12px 0 14px;
+  gap: 4px;
+  font-size: 15px;
+  color: var(--label);
+}
+
+/* the tap area stays 44px tall even though the pill looks smaller */
+.agenda-picker.key::after {
+  content: "";
+  position: absolute;
+  inset: -5px 0;
+}
+
+.agenda-picker svg {
+  width: 14px;
+  height: 14px;
+  color: var(--label-2);
+}
+
+.swipe-carousel.row {
+  flex: 1;
+  margin-top: calc(var(--ps) * 0.02);
+}
+
+.swipe-carousel.row .swipe-row,
+.swipe-carousel.row .swipe-viewport,
+.swipe-carousel.row .swipe-track,
+.swipe-carousel.row .swipe-item,
+.swipe-carousel.row .swipe-page {
+  height: 100%;
+  min-height: 0;
+}
+
+.swipe-carousel.row .swipe-row {
+  flex: 1;
+}
+
+.agenda-day {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ps) * 0.025);
+  padding: 0 calc(var(--ps) * 0.018);
+  min-width: 0;
+}
+
+.swipe-page.row > .swipe-cell + .swipe-cell .agenda-day {
+  border-left: 0.5px solid var(--sep);
+}
+
+.agenda-head {
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda-dow {
+  font-size: calc(var(--ps) * 0.04);
+  font-weight: 700;
+  color: var(--label-2);
+}
+
+.agenda-date {
+  font-family: var(--sans);
+  font-size: calc(var(--ps) * 0.1);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--label);
+}
+
+.agenda-day.today .agenda-dow,
+.agenda-day.today .agenda-date {
+  color: var(--tint);
+}
+
+.agenda-events {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ps) * 0.022);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.agenda-event {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-left: 11px;
+}
+
+.agenda-event::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--tint);
+}
+
+.agenda-event-time {
+  font-size: max(12px, calc(var(--ps) * 0.032));
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.agenda-event-title {
+  font-size: max(13px, calc(var(--ps) * 0.038));
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--label);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.agenda-empty {
+  font-size: max(12px, calc(var(--ps) * 0.034));
+  font-weight: 500;
+  color: var(--label-3);
+}
+
+/* ── epic free games ───────────────────────────────────────────────── */
+
+.epic-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 0 2px;
+}
+
+.epic-art {
+  width: 100%;
+  height: calc(var(--ps) * 0.42);
+  border-radius: calc(var(--ps) * 0.04);
+  object-fit: cover;
+  background: var(--fill-1);
+  margin-bottom: calc(var(--ps) * 0.02);
+}
+
+.epic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: max(13px, calc(var(--ps) * 0.036));
+  font-weight: 700;
+  color: var(--label-2);
+}
+
+.epic-badge i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--label-3);
+}
+
+.epic-badge.now {
+  color: var(--tint);
+}
+
+.epic-badge.now i {
+  background: var(--tint);
+}
+
+.epic-title {
+  max-width: 100%;
+  font-size: max(16px, calc(var(--ps) * 0.06));
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--label);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.epic-meta {
+  font-size: max(13px, calc(var(--ps) * 0.038));
+  font-weight: 500;
+  color: var(--label-2);
+}
+
+/* ── navidrome: a real mini player ─────────────────────────────────── */
+
+.navp {
+  flex: 1;
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--ps) * 0.03);
+}
+
+.navp-art {
+  width: calc(var(--ps) * 0.36);
+  height: calc(var(--ps) * 0.36);
+  border-radius: calc(var(--ps) * 0.03);
+  object-fit: cover;
+  background: var(--fill-1);
+}
+
+.navp-text {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 0 calc(var(--ps) * 0.06);
+}
+
+.navp-title,
+.navp-artist {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navp-title {
+  font-size: calc(var(--ps) * 0.056);
+  font-weight: 700;
+  color: var(--label);
+}
+
+.navp-artist {
+  font-size: calc(var(--ps) * 0.046);
+  font-weight: 500;
+  color: var(--label-2);
+}
+
+/* the seek bar keeps a tall invisible hit area around the thin line */
+.navp-bar {
+  position: relative;
+  align-self: stretch;
+  height: 22px;
+  margin-top: 6px;
+  cursor: pointer;
+}
+
+.navp-bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--fill-2);
+}
+
+.navp-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--label);
+}
+
+.navp-time {
+  align-self: stretch;
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--label-2);
+}
+
+.navp-controls {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--ps) * 0.05);
+}
+
+.navp-btn.key {
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--label);
+}
+
+.navp-btn svg {
+  width: 28px;
+  height: 28px;
+}
+
+.navp-btn-main.key {
+  width: 64px;
+  height: 64px;
+  background: var(--label);
+  color: #000;
+}
+
+.navp-btn-main svg {
+  width: 30px;
+  height: 30px;
+}
+
+.navp-wide {
+  flex-direction: row;
+  align-items: stretch;
+  gap: calc(var(--ps) * 0.06);
+}
+
+.navp-browse {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.navp-search .field {
+  background: var(--fill-1);
+}
+
+.navp-lists {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.navp-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 52px;
+  padding: 6px 4px;
+  text-align: left;
+}
+
+.navp-row + .navp-row {
+  border-top: 0.5px solid var(--sep);
+}
+
+.navp-row:active {
+  background: var(--fill-1);
+}
+
+.navp-row-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navp-row-sub {
+  font-size: 14px;
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navp-now {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--ps) * 0.03);
+}
+
+/* ── embed: a full-bleed frame ─────────────────────────────────────── */
+
+.embed {
+  flex: 1;
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+}
+
+.embed-frame {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: calc(var(--ps) * 0.05);
+  overflow: hidden;
+  background: #000;
+}
+
+.embed-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+}
+
+.embed-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--label);
+}
+
+.embed-empty svg {
+  width: calc(var(--ps) * 0.2);
+  height: calc(var(--ps) * 0.2);
+  margin-bottom: calc(var(--ps) * 0.03);
+  color: var(--tint);
+  stroke-width: 1.6;
+}
+
+.embed-empty b {
+  font-size: calc(var(--ps) * 0.06);
+  font-weight: 700;
+}
+
+.embed-empty small {
+  font-size: calc(var(--ps) * 0.044);
+  font-weight: 500;
+  color: var(--label-2);
+}
+
+.embed-gear.key,
+.embed-fsbtn.key {
+  position: absolute;
+  bottom: 10px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--material);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  color: var(--label);
+}
+
+.embed-gear.key {
+  right: 10px;
+}
+
+.embed-fsbtn.key {
+  right: 62px;
+}
+
+.embed-gear svg,
+.embed-fsbtn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.embed-frame:fullscreen {
+  border-radius: 0;
+}
+
+/* embed manager, inside the popup sheet: a grouped list */
+.embed-rows {
+  display: flex;
+  flex-direction: column;
+  background: var(--fill-1);
+  border-radius: var(--r-row);
+  overflow: hidden;
+}
+
+.embed-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.embed-row + .embed-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 0;
+  height: 0.5px;
+  background: var(--sep);
+}
+
+.embed-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 56px;
+  justify-content: center;
+  padding: 8px 16px;
+  text-align: left;
+}
+
+.embed-row-main:active,
+.embed-row-edit:active {
+  background: var(--fill-2);
+}
+
+.embed-row-main b {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.embed-row-main small {
+  font-size: 14px;
+  color: var(--label-2);
+}
+
+.embed-row.on .embed-row-main b {
+  color: var(--blue);
+}
+
+.embed-row-edit {
+  flex: 0 0 auto;
+  width: 52px;
+  min-height: 56px;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+}
+
+.embed-row-edit svg {
+  width: 20px;
+  height: 20px;
+}
+
+.embed-form-head {
+  font-size: 13px;
+  color: var(--label-2);
+  padding: 8px 4px 0;
+}
+
+.embed-form-head::first-letter,
+.embed-hint::first-letter,
+.embed-error::first-letter {
+  text-transform: uppercase;
+}
+
+.embed-hint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--label-2);
+}
+
+.embed-error {
+  font-size: 15px;
+  color: var(--red);
+}
+
+/* small times in rows keep a readable am/pm */
+.al-row-time .btime-ampm,
+.wc-time .btime-ampm {
+  font-size: 0.5em;
+}
+
+
+/* ── wide stat widgets: the hero on the left, its list on the right ── */
+
+.panel.wide[data-widget="github"] .w-body,
+.panel.wide[data-widget="chess"] .w-body,
+.panel.wide[data-widget="anilist"] .w-body,
+.panel.wide[data-widget="jellyfin"] .w-body,
+.panel.wide[data-widget="plex"] .w-body,
+.panel.wide[data-widget="flights"] .w-body,
+.panel.wide[data-widget="archerhours"] .w-body,
+.panel.wide[data-widget="monkeytype"] .w-body,
+.panel.wide[data-widget="adguard"] .w-body,
+.panel.wide[data-widget="pihole"] .w-body,
+.panel.wide[data-widget="f1"] .w-body,
+.panel.wide[data-widget="wakatime"] .w-body,
+.panel.wide[data-widget="seerr"] .w-body,
+.panel.wide[data-widget="qbittorrent"] .w-body,
+.panel.wide[data-widget="transmission"] .w-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  grid-auto-rows: auto;
+  align-content: center;
+  align-items: center;
+  justify-items: center;
+  column-gap: calc(var(--ps) * 0.12);
+  padding-left: calc(var(--ps) * 0.04);
+  padding-right: calc(var(--ps) * 0.04);
+}
+
+.panel.wide[data-widget="github"] .w-body > *,
+.panel.wide[data-widget="chess"] .w-body > *,
+.panel.wide[data-widget="anilist"] .w-body > *,
+.panel.wide[data-widget="jellyfin"] .w-body > *,
+.panel.wide[data-widget="plex"] .w-body > *,
+.panel.wide[data-widget="flights"] .w-body > *,
+.panel.wide[data-widget="archerhours"] .w-body > *,
+.panel.wide[data-widget="monkeytype"] .w-body > *,
+.panel.wide[data-widget="adguard"] .w-body > *,
+.panel.wide[data-widget="pihole"] .w-body > *,
+.panel.wide[data-widget="f1"] .w-body > *,
+.panel.wide[data-widget="wakatime"] .w-body > *,
+.panel.wide[data-widget="seerr"] .w-body > *,
+.panel.wide[data-widget="qbittorrent"] .w-body > *,
+.panel.wide[data-widget="transmission"] .w-body > * {
+  grid-column: 1;
+  max-width: 100%;
+}
+
+.panel.wide[data-widget="github"] .w-body > .klist,
+.panel.wide[data-widget="chess"] .w-body > .klist,
+.panel.wide[data-widget="anilist"] .w-body > .klist,
+.panel.wide[data-widget="jellyfin"] .w-body > .klist,
+.panel.wide[data-widget="plex"] .w-body > .klist,
+.panel.wide[data-widget="flights"] .w-body > .klist,
+.panel.wide[data-widget="archerhours"] .w-body > .klist,
+.panel.wide[data-widget="monkeytype"] .w-body > .klist,
+.panel.wide[data-widget="adguard"] .w-body > .klist,
+.panel.wide[data-widget="pihole"] .w-body > .klist,
+.panel.wide[data-widget="f1"] .w-body > .klist,
+.panel.wide[data-widget="wakatime"] .w-body > .klist,
+.panel.wide[data-widget="seerr"] .w-body > .klist,
+.panel.wide[data-widget="qbittorrent"] .w-body > .klist,
+.panel.wide[data-widget="transmission"] .w-body > .klist,
+.panel.wide[data-widget="github"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="chess"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="anilist"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="jellyfin"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="plex"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="flights"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="archerhours"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="monkeytype"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="adguard"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="pihole"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="f1"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="wakatime"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="seerr"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="qbittorrent"] .w-body > .swipe-carousel,
+.panel.wide[data-widget="transmission"] .w-body > .swipe-carousel {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  align-self: center;
+  justify-self: stretch;
+  margin-top: 0;
+}
+
+/* nothing to list: the hero takes the middle */
+.panel.wide[data-widget="github"] .w-body > :only-child,
+.panel.wide[data-widget="chess"] .w-body > :only-child,
+.panel.wide[data-widget="anilist"] .w-body > :only-child,
+.panel.wide[data-widget="jellyfin"] .w-body > :only-child,
+.panel.wide[data-widget="plex"] .w-body > :only-child,
+.panel.wide[data-widget="flights"] .w-body > :only-child,
+.panel.wide[data-widget="archerhours"] .w-body > :only-child,
+.panel.wide[data-widget="monkeytype"] .w-body > :only-child,
+.panel.wide[data-widget="adguard"] .w-body > :only-child,
+.panel.wide[data-widget="pihole"] .w-body > :only-child,
+.panel.wide[data-widget="f1"] .w-body > :only-child,
+.panel.wide[data-widget="wakatime"] .w-body > :only-child,
+.panel.wide[data-widget="seerr"] .w-body > :only-child,
+.panel.wide[data-widget="qbittorrent"] .w-body > :only-child,
+.panel.wide[data-widget="transmission"] .w-body > :only-child,
+.panel.wide[data-widget="github"] .w-body > .w-empty-state,
+.panel.wide[data-widget="chess"] .w-body > .w-empty-state,
+.panel.wide[data-widget="anilist"] .w-body > .w-empty-state,
+.panel.wide[data-widget="jellyfin"] .w-body > .w-empty-state,
+.panel.wide[data-widget="plex"] .w-body > .w-empty-state,
+.panel.wide[data-widget="flights"] .w-body > .w-empty-state,
+.panel.wide[data-widget="archerhours"] .w-body > .w-empty-state,
+.panel.wide[data-widget="monkeytype"] .w-body > .w-empty-state,
+.panel.wide[data-widget="adguard"] .w-body > .w-empty-state,
+.panel.wide[data-widget="pihole"] .w-body > .w-empty-state,
+.panel.wide[data-widget="f1"] .w-body > .w-empty-state,
+.panel.wide[data-widget="wakatime"] .w-body > .w-empty-state,
+.panel.wide[data-widget="seerr"] .w-body > .w-empty-state,
+.panel.wide[data-widget="qbittorrent"] .w-body > .w-empty-state,
+.panel.wide[data-widget="transmission"] .w-body > .w-empty-state,
+.panel.wide[data-widget="github"] .w-body > .w-empty,
+.panel.wide[data-widget="chess"] .w-body > .w-empty,
+.panel.wide[data-widget="anilist"] .w-body > .w-empty,
+.panel.wide[data-widget="jellyfin"] .w-body > .w-empty,
+.panel.wide[data-widget="plex"] .w-body > .w-empty,
+.panel.wide[data-widget="flights"] .w-body > .w-empty,
+.panel.wide[data-widget="archerhours"] .w-body > .w-empty,
+.panel.wide[data-widget="monkeytype"] .w-body > .w-empty,
+.panel.wide[data-widget="adguard"] .w-body > .w-empty,
+.panel.wide[data-widget="pihole"] .w-body > .w-empty,
+.panel.wide[data-widget="f1"] .w-body > .w-empty,
+.panel.wide[data-widget="wakatime"] .w-body > .w-empty,
+.panel.wide[data-widget="seerr"] .w-body > .w-empty,
+.panel.wide[data-widget="qbittorrent"] .w-body > .w-empty,
+.panel.wide[data-widget="transmission"] .w-body > .w-empty {
+  grid-column: 1 / -1;
+}
+
+/* wide hero figures get bigger */
+.panel.wide[data-widget="github"] .w-body .kstat-value,
+.panel.wide[data-widget="chess"] .w-body .kstat-value,
+.panel.wide[data-widget="anilist"] .w-body .kstat-value,
+.panel.wide[data-widget="jellyfin"] .w-body .kstat-value,
+.panel.wide[data-widget="plex"] .w-body .kstat-value,
+.panel.wide[data-widget="flights"] .w-body .kstat-value,
+.panel.wide[data-widget="archerhours"] .w-body .kstat-value,
+.panel.wide[data-widget="monkeytype"] .w-body .kstat-value,
+.panel.wide[data-widget="adguard"] .w-body .kstat-value,
+.panel.wide[data-widget="pihole"] .w-body .kstat-value,
+.panel.wide[data-widget="f1"] .w-body .kstat-value,
+.panel.wide[data-widget="wakatime"] .w-body .kstat-value,
+.panel.wide[data-widget="seerr"] .w-body .kstat-value,
+.panel.wide[data-widget="qbittorrent"] .w-body .kstat-value,
+.panel.wide[data-widget="transmission"] .w-body .kstat-value {
+  font-size: calc(var(--ps) * 0.3);
+}
+
+.panel.wide .torrent-summary {
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: calc(var(--ps) * 0.06);
+  row-gap: 8px;
+}
+
+/* downloads, wide: the figure on the left, the rows across the right */
+.panel.wide[data-widget="qbittorrent"] .w-body > .torrent-rows,
+.panel.wide[data-widget="transmission"] .w-body > .torrent-rows {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  align-self: center;
+  justify-self: stretch;
+  max-width: none;
+  margin-top: 0;
+}
+
+/* stacked on a phone a wide panel is no wider than a square one, so its
+   two columns become one */
+@media (orientation: portrait) {
+  .panel.wide[data-widget] .w-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}

@@ -94,16 +94,16 @@ export function SwipeCarousel<T>({
   if (items.length === 0) return null;
 
   return (
-    <div className="swipe-carousel">
+    <div className={`swipe-carousel${pageCount <= 1 ? " single" : ""}${layout === "row" ? " row" : ""}`}>
       <div className="swipe-row">
         <button
           type="button"
-          className="swipe-arrow"
+          className="key swipe-arrow"
           onClick={() => setPage((p) => Math.max(0, p - 1))}
           disabled={clamped === 0}
           aria-label="previous"
         >
-          ‹
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14.5 6l-6 6 6 6" /></svg>
         </button>
         <div
           ref={viewportRef}
@@ -135,12 +135,12 @@ export function SwipeCarousel<T>({
         </div>
         <button
           type="button"
-          className="swipe-arrow"
+          className="key swipe-arrow"
           onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
           disabled={clamped === pageCount - 1}
           aria-label="next"
         >
-          ›
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9.5 6l6 6-6 6" /></svg>
         </button>
       </div>
       {pageCount > 1 && (

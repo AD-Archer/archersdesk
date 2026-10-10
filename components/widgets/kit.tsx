@@ -5,6 +5,7 @@
 // stat, label/value lists, and a polling hook for integration proxies.
 // Everything reads theme tokens, so new widgets pick up themes for free.
 
+import { createContext, useContext } from "react";
 import type { IntegrationPayload, ProxyService, ViewSettings } from "@/lib/types";
 import { usePoll } from "../hooks";
 
@@ -18,7 +19,10 @@ export function MI({ name, className }: { name: string; className?: string }) {
   );
 }
 
-/** Label chip + centered body — the frame every widget lives in. */
+// the Shell's icon, so an Empty inside it can show the widget's glyph
+const ShellIcon = createContext<string | undefined>(undefined);
+
+/** Tinted heading + centered body — the frame every widget lives in. */
 export function Shell({
   label,
   icon,
@@ -29,56 +33,132 @@ export function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <ShellIcon.Provider value={icon}>
       <span className={`w-label${icon ? " has-icon" : ""}`}>
         {icon && <MI name={icon} />}
         {label}
       </span>
       <div className="w-body">{children}</div>
-    </>
+    </ShellIcon.Provider>
   );
 }
 
-/** Dimmed centered message for loading / unconfigured / error states. */
-export function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="w-empty">{children}</div>;
+/** Loading / unconfigured / error state: the widget's glyph in a tinted
+ *  disc over one plain sentence (like StandBy's empty music widget).
+ *  `plain` drops the glyph for a quiet line inside other content. */
+export function Empty({
+  children,
+  icon,
+  plain = false,
+}: {
+  children: React.ReactNode;
+  icon?: string;
+  plain?: boolean;
+}) {
+  const shellIcon = useContext(ShellIcon);
+  const glyph = plain ? undefined : (icon ?? shellIcon);
+  const text = typeof children === "string" ? plainWords(children) : children;
+  if (!glyph) return <div className="w-empty">{text}</div>;
+  return (
+    <div className="w-empty-state">
+      <span className="w-glyph" aria-hidden>
+        <MI name={glyph} />
+      </span>
+      <p className="w-empty">{text}</p>
+    </div>
+  );
 }
 
-/** Huge serif number with an accent unit and a small caption under it. */
+/** Server reasons read like "add your x in settings → accounts". On the board
+ *  that becomes plain direction: "Add your x in settings" (no arrow paths). */
+export function plainWords(text: string): string {
+  const t = text.replace(/\s*→\s*[\w &]+$/u, "").replace(/\s*→\s*/gu, ", ");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** A time readout in the rounded figure face. `tone` gives StandBy's big
+ *  clock treatment: each digit drawn separately, two tones of the widget's
+ *  tint overlapping where they meet, and the colon as two soft white dots. */
+export function BigTime({
+  time,
+  ampm,
+  className,
+  tone = false,
+}: {
+  time: string;
+  ampm?: string;
+  className?: string;
+  tone?: boolean;
+}) {
+  const label = `${time}${ampm ? ` ${ampm}` : ""}`;
+  if (!tone) {
+    return (
+      <span className={`btime${className ? ` ${className}` : ""}`} aria-label={label} suppressHydrationWarning>
+        {time}
+        {ampm && <span className="btime-ampm">{ampm}</span>}
+      </span>
+    );
+  }
+  const [h, m = ""] = time.split(":");
+  // tones alternate across the whole readout: light, dark, light, dark
+  const digits = (str: string, offset: number) =>
+    [...str].map((d, i) => (
+      <span key={i} className={`tt-d${(i + offset) % 2 ? " b" : ""}`}>
+        {d}
+      </span>
+    ));
+  return (
+    <span className={`tt${className ? ` ${className}` : ""}`} role="img" aria-label={label} suppressHydrationWarning>
+      <span className="tt-pair">{digits(h, 0)}</span>
+      <span className="tt-colon" />
+      <span className="tt-pair">{digits(m, h.length)}</span>
+      {ampm && <span className="tt-ampm">{ampm}</span>}
+    </span>
+  );
+}
+
+/** @deprecated old name — use BigTime */
+export const DotTime = BigTime;
+
+/** The hero figure: a big rounded number in the tint, a quiet unit beside
+ *  it, a caption under it. */
 export function BigStat({
   value,
   unit,
   caption,
+  className,
 }: {
   value: React.ReactNode;
   unit?: string;
   caption?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="kstat">
+    <div className={`kstat${className ? ` ${className}` : ""}`}>
       <div className="kstat-value">
         {value}
-        {unit && <em>{unit}</em>}
+        {unit && <span className="kstat-unit">{unit}</span>}
       </div>
       {caption && <div className="kstat-cap">{caption}</div>}
     </div>
   );
 }
 
-/** Horizontal strip of small labeled figures (like the weather hi/lo row). */
+/** A row of small figures, each over its label (like iOS widget stats). */
 export function StatRow({ items }: { items: Array<{ label: string; value: React.ReactNode }> }) {
   return (
     <div className="krow-strip">
       {items.map((it, i) => (
-        <span key={i}>
-          <b>{it.value}</b> {it.label}
+        <span key={i} className="krow-item">
+          <b>{it.value}</b>
+          <small>{it.label}</small>
         </span>
       ))}
     </div>
   );
 }
 
-/** Bordered rows of left/right pairs (like the world clock list). */
+/** Left/right rows split by hairlines, like an iOS widget list. */
 export function MiniList({
   rows,
 }: {
@@ -152,6 +232,7 @@ export function integrationGate<T>(
   payload: IntegrationPayload<T> | null,
   loading: string
 ): React.ReactNode | null {
+  // rendered inside a Shell, so the Empty picks up the widget's glyph
   if (!payload) return <Empty>{loading}</Empty>;
   if (!payload.configured || !payload.data) return <Empty>{payload.reason ?? loading}</Empty>;
   return null;

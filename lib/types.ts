@@ -125,17 +125,6 @@ export const WIDGET_INFO: Record<
   archerhours: { label: "archer hours", blurb: "weighted grants + hours shipped", category: "archer", icon: "rocket_launch" },
 };
 
-export const THEMES = ["ember", "moonlight", "meadow", "rose", "paper"] as const;
-export type ThemeName = (typeof THEMES)[number];
-
-export const THEME_INFO: Record<ThemeName, { label: string; blurb: string }> = {
-  ember: { label: "ember", blurb: "warm black · amber" },
-  moonlight: { label: "moonlight", blurb: "cool night · ice blue" },
-  meadow: { label: "meadow", blurb: "deep green · sage" },
-  rose: { label: "rose", blurb: "dark plum · blush" },
-  paper: { label: "paper", blurb: "daylight · ink & clay" },
-};
-
 export interface Alarm {
   time: string; // "HH:MM" 24h
   label: string;
@@ -271,7 +260,6 @@ export interface Presence {
 export interface Device {
   id: string;
   name: string;
-  theme: ThemeName;
   location: Location;
   layout: {
     rows: LayoutRow[]; // legacy page-1 shape
@@ -281,7 +269,16 @@ export interface Device {
     showTemp: boolean;
     showAlarm: boolean;
   };
+  /** red night mode between sunset and sunrise (see components/night.ts) */
+  night: NightMode;
   presence: Presence;
+}
+
+export interface NightMode {
+  enabled: boolean;
+  /** when someone chose "not tonight"; skips the night it was pressed in or
+   *  before, until the next sunrise */
+  pausedAt: string | null;
 }
 
 export interface Settings {
@@ -321,14 +318,13 @@ export interface Settings {
 }
 
 /** The flattened, per-active-device shape the client actually renders from:
- *  every account-global field, plus the active device's own theme/location/
+ *  every account-global field, plus the active device's own location/
  *  layout/standby/presence hoisted to the top level. Widgets read this, so a
  *  widget can keep reading `settings.location` etc. unchanged. Built by
  *  `toView`; folded back into a canonical `Settings` by `fromView` (lib/view). */
 export interface ViewSettings {
   deviceId: string;
   deviceName: string;
-  theme: ThemeName;
   location: Location;
   layout: { rows: LayoutRow[]; pages: LayoutRow[][] };
   standby: { showTemp: boolean; showAlarm: boolean };

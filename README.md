@@ -42,10 +42,11 @@ calendar  | weather
 github    | chess
 ```
 
-Buttons: top-left = fullscreen (also grabs a screen wake lock so the display
-stays awake), top-right gear = settings. Everything in settings is tap-first
-and autosaves: layout rows (add/remove/reorder, pick widgets from a grid),
-themes, alarms (time picker + day chips + toggles), location (search a city,
+Controls stay hidden until you tap the screen: a pill in the top-right corner
+with settings, use-as-remote, and fullscreen (which also grabs a screen wake
+lock so the display stays awake), plus page dots along the bottom. Everything in
+settings is tap-first and autosaves: layout rows (add/remove/reorder, pick
+widgets from a grid), alarms (time picker + day chips + toggles), location (search a city,
 tap a result), and accounts.
 
 
@@ -83,12 +84,14 @@ Settings are encrypted before they are stored in SQLite. Set
 if it is omitted, the app creates `DATA_DIR/settings.encryption.key` and uses
 that file. Keep that key with the database backup.
 
-### themes
+### look
 
-`ember` (warm black/amber) · `moonlight` (ice blue) · `meadow` (sage) ·
-`rose` (blush) · `paper` (light). Themes are CSS variable sets on
-`[data-theme]` in `app/globals.css` — every widget reads tokens, so new
-widgets and new themes compose for free.
+One look, no themes: iOS StandBy. Widgets sit straight on black, each in its
+own system tint, with heavy rounded figures; after sunset the display turns
+red so it doesn't light the room (`?night=1` / `?night=0` forces either).
+Settings, the remote and the editors use iOS-style dark lists. Tokens are in
+`app/globals.css`, shared controls in `app/styles/ui.css`, and each area has
+its own stylesheet in `app/styles/`. The rules are in `DESIGN.md`.
 
 
 ## adding a widget

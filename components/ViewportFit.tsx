@@ -28,18 +28,15 @@ export default function ViewportFit() {
       root.style.setProperty("--app-height", `${height}px`);
       root.dataset.ios = isIosLike() ? "true" : "false";
       root.dataset.standalone = isStandalone() ? "true" : "false";
-      const bg = getComputedStyle(root).getPropertyValue("--bg").trim();
+      const bg = getComputedStyle(root).getPropertyValue("--body").trim();
       if (bg && themeMeta) themeMeta.content = bg;
     };
 
     update();
-    const observer = new MutationObserver(update);
-    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
     window.addEventListener("resize", update);
     window.addEventListener("orientationchange", update);
     window.visualViewport?.addEventListener("resize", update);
     return () => {
-      observer.disconnect();
       window.removeEventListener("resize", update);
       window.removeEventListener("orientationchange", update);
       window.visualViewport?.removeEventListener("resize", update);

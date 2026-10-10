@@ -21,12 +21,13 @@ export default function LoginForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "something went wrong");
+        const msg = String(data.error ?? "Something went wrong");
+        setError(msg.charAt(0).toUpperCase() + msg.slice(1));
       } else {
         location.href = "/";
       }
     } catch {
-      setError("network error");
+      setError("Can’t reach the desk. Check your connection.");
     } finally {
       setBusy(false);
     }
@@ -36,7 +37,7 @@ export default function LoginForm() {
     <>
       <form className="login-form" onSubmit={submit}>
         <input
-          placeholder="username"
+          placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           autoCapitalize="off"
@@ -44,21 +45,23 @@ export default function LoginForm() {
           autoComplete="username"
         />
         <input
-          placeholder="password"
+          placeholder="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete={mode === "login" ? "current-password" : "new-password"}
         />
-        <div className="login-error">{error}</div>
         <button className="btn-amber" type="submit" disabled={busy}>
-          {busy ? "…" : mode === "login" ? "sign in" : "create account"}
+          {busy ? "…" : mode === "login" ? "Sign in" : "Create account"}
         </button>
+        <div className="login-error" role="alert">
+          {error}
+        </div>
       </form>
       <div className="login-switch">
-        {mode === "login" ? "first time here?" : "already have a desk?"}
+        {mode === "login" ? "First time here?" : "Already have a desk?"}
         <button onClick={() => setMode(mode === "login" ? "register" : "login")}>
-          {mode === "login" ? "create an account" : "sign in"}
+          {mode === "login" ? "Create an account" : "Sign in"}
         </button>
       </div>
     </>

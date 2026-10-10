@@ -6,8 +6,7 @@
 // page through), so you see several at once instead of one stat at a time.
 
 import { WIDGET_INFO } from "@/lib/types";
-import { SwipeCarousel } from "./Carousel";
-import { BigStat, Empty, MI, Shell, integrationGate, useIntegration } from "./kit";
+import { BigStat, Shell, integrationGate, useIntegration } from "./kit";
 import type { WidgetProps } from "./registry";
 
 interface TorrentItem {
@@ -38,18 +37,15 @@ function seedingCount(d: TorrentData) {
   return d.torrents.filter((t) => t.state === "seeding").length;
 }
 
-// seeding is the big hero number above; the row keeps three balanced stats
-// so the widget reads like the others (e.g. seerr) rather than lopsided.
-function summaryItems(d: TorrentData, wide: boolean | undefined) {
-  const downloading = d.torrents.filter((t) => t.state === "downloading").length;
-  const avgRatio = d.torrents.length ? d.torrents.reduce((sum, t) => sum + t.ratio, 0) / d.torrents.length : 0;
-  const base = [
-    { label: "down", value: speedText(d.downloadSpeed) },
-    { label: "up", value: speedText(d.uploadSpeed) },
-    { label: "ratio", value: avgRatio.toFixed(2) },
-  ];
-  if (!wide) return base;
-  return [...base, { label: "downloading", value: downloading }, { label: "total", value: d.torrents.length }];
+/** a torrent name a person can read: no extension, separators as spaces */
+function plainName(name: string) {
+  return name
+    .replace(/\.(iso|mkv|mp4|avi|zip|rar|7z|tar|gz|img|dmg)$/i, "")
+    .replace(/_+/g, " ")
+    // dots become spaces, except inside version numbers (24.04.1 stays)
+    .replace(/(?<!\d)\.|\.(?!\d)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function TorrentClientWidget({
@@ -63,52 +59,39 @@ function TorrentClientWidget({
 
   if (gate)
     return (
-      <Shell icon={WIDGET_INFO[service].icon} label={WIDGET_INFO[service].label}>
+      <Shell icon={WIDGET_INFO[service].icon} label={service === "qbittorrent" ? "qBittorrent" : "Transmission"}>
         {gate}
       </Shell>
     );
   const d = payload!.data!;
 
-  return (
-    <Shell icon={WIDGET_INFO[service].icon} label={WIDGET_INFO[service].label}>
-      <span className="hero-tap-icon">
-        <MI name={WIDGET_INFO[service].icon} className="hero-tap-mi" />
-      </span>
-      <BigStat value={seedingCount(d)} unit="seeding" />
-      <div className="torrent-summary">
-        {summaryItems(d, wide).map((it) => (
-          <div key={it.label} className="torrent-summary-item">
-            <b>{it.value}</b>
-            <small>{it.label}</small>
-          </div>
-        ))}
-      </div>
+  // one figure, one plain line: what's downloading now, else what's shared
+  const downloading = d.torrents.filter((t) => t.state === "downloading");
+  const busy = downloading.length > 0;
+  const line = busy
+    ? `Downloading at ${speedText(d.downloadSpeed)}`
+    : d.torrents.length
+      ? "All finished, sharing with others"
+      : "Nothing downloading";
+  const rows = (busy ? downloading : d.torrents).slice(0, 3);
 
-      {d.torrents.length === 0 ? (
-        <Empty>no torrents right now</Empty>
-      ) : (
-        <SwipeCarousel
-          items={d.torrents}
-          perView={wide ? 3 : 2}
-          getKey={(t) => t.id}
-          renderItem={(t) => (
-            <div className="torrent-row">
+  return (
+    <Shell icon={WIDGET_INFO[service].icon} label="Downloads">
+      <BigStat value={busy ? downloading.length : seedingCount(d)} unit={busy ? "downloading" : "sharing"} caption={line} />
+      {wide && rows.length > 0 && (
+        <div className="torrent-rows">
+          {rows.map((t) => (
+            <div key={t.id} className="torrent-row">
               <div className="torrent-row-top">
-                <span className="torrent-row-name">{t.name}</span>
+                <span className="torrent-row-name">{plainName(t.name)}</span>
                 <span className="torrent-row-pct">{Math.round(t.progress)}%</span>
               </div>
               <div className="torrent-bar">
                 <div className="torrent-bar-fill" style={{ width: `${Math.min(100, Math.max(0, t.progress))}%` }} />
               </div>
-              <div className="torrent-row-meta">
-                <span>{t.state}</span>
-                <span>
-                  ↓ {speedText(t.dlspeed)} · ↑ {speedText(t.upspeed)} · {t.ratio.toFixed(2)}
-                </span>
-              </div>
             </div>
-          )}
-        />
+          ))}
+        </div>
       )}
     </Shell>
   );

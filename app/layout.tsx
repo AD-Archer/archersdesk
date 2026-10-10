@@ -3,19 +3,20 @@ import localFont from "next/font/local";
 import RegisterSW from "@/components/RegisterSW";
 import ViewportFit from "@/components/ViewportFit";
 import "./globals.css";
+import "./styles/ui.css";
+import "./styles/board.css";
+import "./styles/widgets.css";
+import "./styles/hero.css";
+import "./styles/macapad.css";
+import "./styles/settings.css";
+import "./styles/remote.css";
+import "./styles/overlays.css";
 
-const serif = localFont({
-  src: [
-    { path: "./fonts/instrument-serif.woff2", weight: "400", style: "normal" },
-    { path: "./fonts/instrument-serif-italic.woff2", weight: "400", style: "italic" },
-  ],
-  variable: "--font-serif",
-  display: "swap",
-});
-
-const sans = localFont({
-  src: [{ path: "./fonts/schibsted-grotesk.woff2", weight: "400 900", style: "normal" }],
-  variable: "--font-sans",
+// Nunito — heavy rounded figures on screens without ui-rounded (the Echo);
+// Apple devices use SF Pro Rounded through ui-rounded in --round
+const round = localFont({
+  src: [{ path: "./fonts/nunito.woff2", weight: "200 1000", style: "normal" }],
+  variable: "--font-round",
   display: "swap",
 });
 
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0908",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -43,9 +44,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${serif.variable} ${sans.variable} ${icons.variable}`}>
+    <html lang="en" className={`${round.variable} ${icons.variable}`}>
       <body>
         {children}
+        {/* night mode: brightness → red, used by html.night (globals.css) */}
+        <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden>
+          <filter id="night-red" colorInterpolationFilters="sRGB">
+            <feColorMatrix
+              type="matrix"
+              values="0.33 0.66 0.12 0 0  0.03 0.06 0.01 0 0  0.02 0.04 0.008 0 0  0 0 0 1 0"
+            />
+          </filter>
+        </svg>
         <ViewportFit />
         <RegisterSW />
       </body>

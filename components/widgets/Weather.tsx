@@ -1,7 +1,9 @@
 "use client";
 
 import type { WeatherData } from "@/lib/types";
+import { clock12 } from "../alarmUtil";
 import { usePoll } from "../hooks";
+import { Empty } from "./kit";
 import type { WidgetProps } from "./registry";
 
 export function WxIcon({ kind }: { kind: string }) {
@@ -76,75 +78,114 @@ export function useWeather(settings: WidgetProps["settings"]): WeatherData | nul
   ]);
 }
 
+function sunTime(iso: string) {
+  const { time, ampm } = clock12(new Date(iso));
+  return `${time} ${ampm}`;
+}
+
+const DOW_LONG: Record<string, string> = {
+  sun: "Sun",
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+};
+
+/** iOS weather: the city in the tint, a huge white temperature, then the
+ *  condition and today's high and low. Wide adds humidity and wind. */
 export function WeatherWidget({ settings, wide }: WidgetProps) {
   const wx = useWeather(settings);
 
   const body = !wx ? (
-    <div className="w-empty">reading the sky…</div>
+    <Empty icon="cloud">Reading the sky…</Empty>
   ) : wx.error ? (
-    <div className="w-empty">{wx.error}</div>
+    <Empty icon="cloud">{wx.error}</Empty>
   ) : (
-    <div className={wide ? "wx-row" : undefined} style={wide ? undefined : { display: "contents" }}>
-      <div className="wx-icon">
-        <WxIcon kind={wx.kind} />
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div className={`wx${wide ? " wide" : ""}`}>
+      <div className="wx-now">
         <div className="wx-temp">
           {wx.temp}
-          <sup>°</sup>
+          <span className="wx-deg">°</span>
         </div>
-        <div className="wx-cond">{wx.label}</div>
+        <div className="wx-foot">
+          <span className="wx-icon">
+            <WxIcon kind={wx.kind} />
+          </span>
+          <div className="wx-cond">{wx.label}</div>
+          <div className="wx-hilo">
+            H:{wx.hi}° L:{wx.lo}°
+          </div>
+        </div>
       </div>
-      <div className="wx-meta">
-        <span>
-          <b>{wx.hi}°</b> hi
-        </span>
-        <span>
-          <b>{wx.lo}°</b> lo
-        </span>
-        {wide && (
-          <>
-            <span>
-              <b>{wx.humidity}%</b> hum
-            </span>
-            <span>
-              <b>{wx.wind}</b> {wx.units === "celsius" ? "km/h" : "mph"}
-            </span>
-          </>
-        )}
-      </div>
+      {wide && (
+        <div className="wx-more">
+          <div className="wx-more-row">
+            <span>Humidity</span>
+            <b>{wx.humidity}%</b>
+          </div>
+          <div className="wx-more-row">
+            <span>Wind</span>
+            <b>
+              {wx.wind} {wx.units === "celsius" ? "km/h" : "mph"}
+            </b>
+          </div>
+          <div className="wx-more-row">
+            <span>Sunrise</span>
+            <b>{sunTime(wx.sunrise)}</b>
+          </div>
+          <div className="wx-more-row">
+            <span>Sunset</span>
+            <b>{sunTime(wx.sunset)}</b>
+          </div>
+        </div>
+      )}
     </div>
   );
 
   return (
     <>
-      <span className="w-label">{wx && !wx.error ? wx.city : settings.location.name}</span>
-      <div className="w-body" style={{ gap: "0.5vmin" }}>
-        {body}
-      </div>
+      <span className="w-label show">{wx && !wx.error ? wx.city : settings.location.name}</span>
+      <div className="w-body">{body}</div>
     </>
   );
 }
 
-export function ForecastWidget({ settings }: WidgetProps) {
+/** iOS's daily forecast list: day, icon, low, a range bar, high. */
+export function ForecastWidget({ settings, wide }: WidgetProps) {
   const wx = useWeather(settings);
+  const days = wx && !wx.error ? wx.days : [];
+  const min = Math.min(...days.map((d) => d.lo));
+  const max = Math.max(...days.map((d) => d.hi));
+  const span = Math.max(1, max - min);
 
   return (
     <>
-      <span className="w-label">forecast · {settings.location.name}</span>
+      <span className="w-label">Forecast · {settings.location.name}</span>
       <div className="w-body">
         {!wx ? (
-          <div className="w-empty">reading the sky…</div>
+          <Empty icon="cloud">Reading the sky…</Empty>
         ) : wx.error ? (
-          <div className="w-empty">{wx.error}</div>
+          <Empty icon="cloud">{wx.error}</Empty>
         ) : (
-          <div className="fc">
-            {wx.days.map((d) => (
+          <div className={`fc${wide ? " wide" : ""}`}>
+            {days.map((d) => (
               <div key={d.date} className="fc-day">
-                <span className="fc-dow">{d.dow}</span>
-                <WxIcon kind={d.kind} />
-                <span className="fc-hi">{d.hi}°</span>
+                <span className="fc-dow">{DOW_LONG[d.dow] ?? d.dow}</span>
+                <span className="fc-icon">
+                  <WxIcon kind={d.kind} />
+                </span>
                 <span className="fc-lo">{d.lo}°</span>
+                <span className="fc-bar" aria-hidden>
+                  <i
+                    style={{
+                      left: `${((d.lo - min) / span) * 100}%`,
+                      right: `${((max - d.hi) / span) * 100}%`,
+                    }}
+                  />
+                </span>
+                <span className="fc-hi">{d.hi}°</span>
               </div>
             ))}
           </div>

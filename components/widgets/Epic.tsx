@@ -34,7 +34,7 @@ export function EpicGamesWidget({ settings, integrationSettings }: WidgetProps) 
 
   if (gate)
     return (
-      <Shell icon={WIDGET_INFO.epicgames.icon} label="epic free games">
+      <Shell icon={WIDGET_INFO.epicgames.icon} label="Epic free games">
         {gate}
       </Shell>
     );
@@ -43,9 +43,9 @@ export function EpicGamesWidget({ settings, integrationSettings }: WidgetProps) 
   const games = [...current, ...next];
 
   return (
-    <Shell icon={WIDGET_INFO.epicgames.icon} label="epic free games">
+    <Shell icon={WIDGET_INFO.epicgames.icon} label="Epic free games">
       {games.length === 0 ? (
-        <Empty>nothing free right now</Empty>
+        <Empty>Nothing free right now</Empty>
       ) : (
         <SwipeCarousel
           items={games}
@@ -53,10 +53,13 @@ export function EpicGamesWidget({ settings, integrationSettings }: WidgetProps) 
           renderItem={(g) => (
             <div className="epic-card">
               {g.image && <img className="epic-art" src={g.image} alt="" draggable={false} />}
-              <span className={`epic-badge${g.free ? " now" : ""}`}>{g.free ? "free now" : "coming soon"}</span>
+              <span className={`epic-badge${g.free ? " now" : ""}`}>
+                <i aria-hidden />
+                {g.free ? "Free now" : "Coming soon"}
+              </span>
               <span className="epic-title">{g.title}</span>
               <span className="epic-meta">
-                {g.free ? `claim by ${shortDate(g.endsAt)}` : `free ${shortDate(g.startsAt)}`}
+                {g.free ? `Free until ${shortDate(g.endsAt)}` : `Free from ${shortDate(g.startsAt)}`}
               </span>
             </div>
           )}

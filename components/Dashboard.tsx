@@ -16,7 +16,9 @@ import { alarmMatches } from "./alarmUtil";
 import { alarmsForDevice } from "./alarmUtil";
 import { pushPresence } from "./presence";
 import { unlockAudio } from "./audio";
-import { usePoll, useWakeLock } from "./hooks";
+import { useNow, usePoll, useWakeLock } from "./hooks";
+import { useWeather } from "./widgets/Weather";
+import { nightState } from "./night";
 
 const PAGES = 1 + WIDGET_PAGE_COUNT; // 0 = standby, 1..n = widget pages
 const DEVICE_KEY = "archersdesk.deviceId";
@@ -71,8 +73,13 @@ export default function Dashboard({
   const [settingsOpen, setSettingsOpen] = useState(false);
   // which tab the sheet opens on; widgets can ask for one (see the listener below)
   const [sheetTab, setSheetTab] = useState<SheetTab>("layout");
+  const [sheetDirect, setSheetDirect] = useState(false); // deep link vs. the settings button
   const [macapadFocus, setMacapadFocus] = useState<MacapadFocus | null>(null);
   const [saved, setSaved] = useState(false);
+  // StandBy keeps its controls out of sight: a tap (or a page/row change)
+  // shows the control pill and page dots, and they fade again after a moment
+  const [hud, setHud] = useState(true);
+  const hudTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
   const [ringing, setRinging] = useState<Alarm | null>(null);
@@ -96,6 +103,7 @@ export default function Dashboard({
   const fired = useRef<Set<string>>(new Set());
   const snooze = useRef<{ at: number; alarm: Alarm } | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editSeq = useRef(0); // bumps on every local edit, so a late save reply can't roll one back
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncedVersion = useRef(initialSettings.version);
   const refetching = useRef(false);
@@ -243,11 +251,36 @@ export default function Dashboard({
     if (JSON.stringify(activeDualRows) !== JSON.stringify(nextDual)) setActiveDualRows(nextDual);
   }, [pages, leftRows, rightRows, activeDualRows]);
 
-  // theme is a document-level attribute so every layer (body glow, sheet,
-  // overlays) swaps palette together — applied live while tapping
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = view.theme;
-  }, [view.theme]);
+  // page and row changes flash the dots, like StandBy's stack indicator
+  useEffect(() => {
+    showHud();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, leftRows, rightRows, activeDualRows]);
+
+  // night: between sunset and sunrise the display turns red (StandBy night
+  // mode) unless this device has it off or "not tonight" was chosen (see
+  // components/night.ts). `?night=1` / `?night=0` forces it, to check a look.
+  const wx = useWeather(view);
+  const minute = useNow(60_000);
+  const nightNow = wx && !wx.error ? nightState(activeDevice.night, wx.sunrise, wx.sunset, minute) : "day";
+  const forcedNight =
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("night") : null;
+  const nightOn = onDisplay && (forcedNight ? forcedNight === "1" : nightNow === "night");
+  useEffect(() => {
+    document.documentElement.classList.toggle("night", nightOn);
+  }, [nightOn]);
+
+  function skipNightHere() {
+    const id = deviceIdRef.current;
+    if (!id || id === "remote") return;
+    const cur = settingsRef.current;
+    saveCanonical({
+      ...cur,
+      devices: cur.devices.map((d) =>
+        d.id === id ? { ...d, night: { ...d.night, pausedAt: new Date().toISOString() } } : d
+      ),
+    });
+  }
 
   // track fullscreen state (echo show / browser chrome)
   useEffect(() => {
@@ -289,8 +322,10 @@ export default function Dashboard({
     settingsRef.current = next;
     setSettings(next);
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    editSeq.current += 1;
     saveTimer.current = setTimeout(async () => {
       saveTimer.current = null;
+      const sentSeq = editSeq.current;
       try {
         const res = await fetch("/api/settings", {
           method: "PUT",
@@ -301,9 +336,17 @@ export default function Dashboard({
           const data = await res.json();
           if (data?.settings) {
             syncedVersion.current = data.settings.version;
-            settingsRef.current = data.settings;
-            setSettings(data.settings);
             setSavedSettings(data.settings);
+            if (editSeq.current === sentSeq) {
+              settingsRef.current = data.settings;
+              setSettings(data.settings);
+            } else {
+              // edits landed while this save was in flight: keep them (the
+              // next save carries them) and only adopt the new version
+              const pending = { ...settingsRef.current, version: data.settings.version };
+              settingsRef.current = pending;
+              setSettings(pending);
+            }
           }
           setSaved(true);
           if (savedTimer.current) clearTimeout(savedTimer.current);
@@ -342,10 +385,10 @@ export default function Dashboard({
     const device: Device = {
       id,
       name,
-      theme: base.theme,
       location: { ...base.location },
       layout: { rows: [...base.layout.rows], pages: base.layout.pages.map((p) => [...p]) },
       standby: { ...base.standby },
+      night: { enabled: base?.night?.enabled ?? true, pausedAt: null },
       presence: { awayUntil: null, awayLocation: "", vibe: "joyful" },
     };
     saveCanonical({ ...settingsRef.current, devices: [...settingsRef.current.devices, device] });
@@ -412,6 +455,7 @@ export default function Dashboard({
     const onOpen = (e: Event) => {
       const detail = (e as CustomEvent<{ tab?: SheetTab; macapad?: MacapadFocus }>).detail ?? {};
       setSheetTab(detail.tab ?? "layout");
+      setSheetDirect(Boolean(detail.tab));
       setMacapadFocus(detail.macapad ?? null);
       setSettingsOpen(true);
     };
@@ -512,7 +556,15 @@ export default function Dashboard({
       const threshold = Math.min(70, window.innerHeight * 0.12);
       if (dy < -threshold) movePaneRow(page - 1, s.side, 1);
       else if (dy > threshold) movePaneRow(page - 1, s.side, -1);
+    } else if (!axis) {
+      showHud();
     }
+  }
+
+  function showHud() {
+    setHud(true);
+    if (hudTimer.current) clearTimeout(hudTimer.current);
+    hudTimer.current = setTimeout(() => setHud(false), 4000);
   }
 
   function paneStyle(pageIndex: number, side: PaneSide) {
@@ -571,6 +623,7 @@ export default function Dashboard({
           onBecomeDisplay={chooseLastDisplayDevice}
           onOpenAccounts={() => {
             setSheetTab("accounts");
+            setSheetDirect(true);
             setSettingsOpen(true);
           }}
           onSaveSettings={saveCanonical}
@@ -583,6 +636,7 @@ export default function Dashboard({
           username={username}
           saved={saved}
           initialTab={sheetTab}
+        direct={sheetDirect}
           activePage={activeWidgetPage}
           macapadFocus={macapadFocus}
           deviceId={activeDevice.id}
@@ -618,46 +672,61 @@ export default function Dashboard({
         </div>
       </div>
 
-      {canFullscreen && (
-        <button className="fsbtn" onClick={toggleFullscreen} aria-label="fullscreen">
-          {fullscreen ? (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+      {/* controls: hidden until a tap, like StandBy */}
+      <div className={`hud${hud ? " show" : ""}`} aria-label="desk controls">
+        {nightOn && (
+          <button className="hud-btn" onClick={skipNightHere} aria-label="turn off red tonight" title="turn off red tonight">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
+              <path d="M3 3l18 18" />
             </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-            </svg>
-          )}
+          </button>
+        )}
+        <button
+          className="hud-btn"
+          onClick={() => {
+            setSheetTab("layout");
+            setSheetDirect(false);
+            setSettingsOpen(true);
+          }}
+          aria-label="settings"
+          title="settings"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.4z" />
+          </svg>
         </button>
-      )}
+        <button className="hud-btn" onClick={() => chooseDevice("remote")} aria-label="use as remote" title="use as remote">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="7" y="2.5" width="10" height="19" rx="4" />
+            <circle cx="12" cy="8.5" r="2" />
+            <path d="M10 14h.01M14 14h.01M10 17.5h.01M14 17.5h.01" />
+          </svg>
+        </button>
+        {canFullscreen && (
+          <button className="hud-btn fsbtn" onClick={toggleFullscreen} aria-label={fullscreen ? "exit full screen" : "full screen"} title="full screen">
+            {fullscreen ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
 
-      <button className="remotebtn" onClick={() => chooseDevice("remote")} aria-label="use as remote" title="use as remote">
-        remote
-      </button>
-
-      <button
-        className="gear"
-        onClick={() => {
-          setSheetTab("layout");
-          setSettingsOpen(true);
-        }}
-        aria-label="settings"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-          <circle cx="12" cy="12" r="3.2" />
-          <path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.4z" />
-        </svg>
-      </button>
-
-      <div className="dots">
+      <div className={`dots${hud ? " show" : ""}`} aria-hidden>
         {Array.from({ length: PAGES }, (_, i) => (
           <i key={i} className={i === page ? "on" : ""} />
         ))}
       </div>
 
       {page > 0 && activeRows.length > 1 && (
-        <div className="vdots">
+        <div className={`vdots${hud ? " show" : ""}`} aria-hidden>
           {activeRows.map((_, i) => (
             <i
               key={i}
@@ -679,6 +748,7 @@ export default function Dashboard({
         username={username}
         saved={saved}
         initialTab={sheetTab}
+        direct={sheetDirect}
         activePage={activeWidgetPage}
         macapadFocus={macapadFocus}
         deviceId={activeDevice.id}

@@ -126,7 +126,7 @@ export function MainRow({
     const Widget = REGISTRY[row.widget] ?? ClockWidget;
     return (
       <div className="main-view">
-        <section className="panel wide">
+        <section className="panel wide" data-widget={row.widget}>
           <Widget settings={settings} integrationSettings={integrationSettings} wide />
         </section>
       </div>
@@ -156,7 +156,7 @@ export function WidgetPanel({
 }) {
   const Widget = REGISTRY[widget] ?? ClockWidget;
   return (
-    <section className="panel" data-slot={slot} style={style}>
+    <section className="panel" data-slot={slot} data-widget={widget} style={style}>
       <Widget settings={settings} integrationSettings={integrationSettings} />
     </section>
   );

@@ -278,7 +278,7 @@ export function EmbedWidget({ settings }: WidgetProps) {
   }
 
   return (
-    <Shell label="embed">
+    <Shell label="Embed">
       <div className="embed">
         <div className="embed-frame" ref={frameRef}>
           {src ? (
@@ -293,16 +293,16 @@ export function EmbedWidget({ settings }: WidgetProps) {
           ) : (
             <button className="embed-empty" onClick={openManager}>
               <PlayIcon />
-              <b>{embeds.length ? "that link can't be embedded" : "nothing playing"}</b>
-              <small>{embeds.length ? "tap to fix the url" : "tap to add music or a video"}</small>
+              <b>{embeds.length ? "That link can’t play here" : "Nothing playing"}</b>
+              <small>{embeds.length ? "Tap to fix the link" : "Tap to add music or a video"}</small>
             </button>
           )}
-          <button className="embed-gear" onClick={openManager} aria-label="manage embeds">
+          <button className="key embed-gear" onClick={openManager} aria-label="manage embeds">
             <GearIcon />
           </button>
           {src && fsAvailable && (
             <button
-              className="embed-fsbtn"
+              className="key embed-fsbtn"
               onClick={toggleFullscreen}
               aria-label={isFull ? "exit fullscreen" : "fullscreen"}
             >

@@ -25,17 +25,22 @@ function AdblockWidget({
   const gate = integrationGate(payload, "checking the filter…");
 
   return (
-    <Shell icon={WIDGET_INFO[service].icon} label={WIDGET_INFO[service].label}>
+    <Shell icon={WIDGET_INFO[service].icon} label={service === "adguard" ? "AdGuard Home" : "Pi-hole"}>
       {gate ?? (
         <>
           <BigStat
-            value={payload!.data!.blockedPct.toFixed(1)}
-            unit="% blocked"
+            value={
+              <>
+                {payload!.data!.blockedPct.toFixed(1)}
+                <small>%</small>
+              </>
+            }
+            unit="blocked"
             caption={
               <>
-                {payload!.data!.blockedToday.toLocaleString()} / {payload!.data!.queriesToday.toLocaleString()}{" "}
-                queries today
-                {!payload!.data!.protectionEnabled && " · protection off"}
+                {payload!.data!.blockedToday.toLocaleString()} of {payload!.data!.queriesToday.toLocaleString()}{" "}
+                lookups today
+                {!payload!.data!.protectionEnabled && " · protection is off"}
               </>
             }
           />

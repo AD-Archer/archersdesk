@@ -1,0 +1,550 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T05:48:56.593211+00:00",
+  "title": "Design System: archer's desk",
+  "extensions": {
+    "colorMeta": {
+      "green": {
+        "role": "primary",
+        "displayName": "System Green",
+        "canonical": "#30d158",
+        "tonalRamp": [
+          "#0e3f1a",
+          "#17682b",
+          "#20923d",
+          "#2abc4e",
+          "#50d872",
+          "#82e39a",
+          "#b4eec2",
+          "#eafaee"
+        ]
+      },
+      "red": {
+        "role": "primary",
+        "displayName": "System Red",
+        "canonical": "#ff453a",
+        "tonalRamp": [
+          "#4c0400",
+          "#800700",
+          "#b20a00",
+          "#e60d00",
+          "#ff3529",
+          "#ff6f66",
+          "#ffa8a3",
+          "#ffe7e5"
+        ]
+      },
+      "orange": {
+        "role": "primary",
+        "displayName": "System Orange",
+        "canonical": "#ff9f0a",
+        "tonalRamp": [
+          "#4c2f00",
+          "#804e00",
+          "#b26d00",
+          "#e68c00",
+          "#ffab29",
+          "#ffc366",
+          "#ffdba3",
+          "#fff5e5"
+        ]
+      },
+      "yellow": {
+        "role": "primary",
+        "displayName": "System Yellow",
+        "canonical": "#ffd60a",
+        "tonalRamp": [
+          "#4c4000",
+          "#806a00",
+          "#b29500",
+          "#e6bf00",
+          "#ffdb29",
+          "#ffe566",
+          "#fff0a3",
+          "#fffbe5"
+        ]
+      },
+      "cyan": {
+        "role": "primary",
+        "displayName": "System Cyan",
+        "canonical": "#64d2ff",
+        "tonalRamp": [
+          "#00364c",
+          "#005a80",
+          "#007fb2",
+          "#00a3e6",
+          "#29c1ff",
+          "#66d3ff",
+          "#a3e4ff",
+          "#e5f8ff"
+        ]
+      },
+      "blue": {
+        "role": "primary",
+        "displayName": "System Blue (widget tint and off-board accent)",
+        "canonical": "#0a84ff",
+        "tonalRamp": [
+          "#00264c",
+          "#003f80",
+          "#0059b2",
+          "#0072e6",
+          "#2993ff",
+          "#66b2ff",
+          "#a3d1ff",
+          "#e5f2ff"
+        ]
+      },
+      "indigo": {
+        "role": "primary",
+        "displayName": "System Indigo",
+        "canonical": "#5e5ce6",
+        "tonalRamp": [
+          "#0b0a42",
+          "#12116f",
+          "#1a189b",
+          "#211fc7",
+          "#4845e3",
+          "#7c7aeb",
+          "#b0aff3",
+          "#e9e9fc"
+        ]
+      },
+      "purple": {
+        "role": "primary",
+        "displayName": "System Purple",
+        "canonical": "#bf5af2",
+        "tonalRamp": [
+          "#310647",
+          "#520976",
+          "#720da5",
+          "#9311d5",
+          "#b238ef",
+          "#c871f4",
+          "#deaaf8",
+          "#f6e7fd"
+        ]
+      },
+      "pink": {
+        "role": "primary",
+        "displayName": "System Pink",
+        "canonical": "#ff375f",
+        "tonalRamp": [
+          "#4c000f",
+          "#800019",
+          "#b20024",
+          "#e6002e",
+          "#ff2954",
+          "#ff6685",
+          "#ffa3b6",
+          "#ffe5eb"
+        ]
+      },
+      "mint": {
+        "role": "primary",
+        "displayName": "System Mint",
+        "canonical": "#63e6e2",
+        "tonalRamp": [
+          "#0b4240",
+          "#126e6b",
+          "#199a96",
+          "#20c6c1",
+          "#46e1dd",
+          "#7beae6",
+          "#b0f2f0",
+          "#e9fbfb"
+        ]
+      },
+      "black": {
+        "role": "neutral",
+        "displayName": "Black",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "fill-1": {
+        "role": "neutral",
+        "displayName": "Grouped Fill",
+        "canonical": "#1c1c1e",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "fill-2": {
+        "role": "neutral",
+        "displayName": "Control Fill",
+        "canonical": "#2c2c2e",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "fill-3": {
+        "role": "neutral",
+        "displayName": "Pressed Fill",
+        "canonical": "#3a3a3c",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "material": {
+        "role": "neutral",
+        "displayName": "Material",
+        "canonical": "rgba(44, 44, 46, 0.72)",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "label": {
+        "role": "neutral",
+        "displayName": "Label",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "label-2": {
+        "role": "neutral",
+        "displayName": "Secondary Label",
+        "canonical": "rgba(235, 235, 245, 0.62)",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "label-3": {
+        "role": "neutral",
+        "displayName": "Tertiary Label",
+        "canonical": "rgba(235, 235, 245, 0.32)",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "separator": {
+        "role": "neutral",
+        "displayName": "Separator",
+        "canonical": "rgba(84, 84, 88, 0.6)",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "lit-white": {
+        "role": "neutral",
+        "displayName": "Lit White",
+        "canonical": "rgba(255, 255, 255, 0.94)",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      },
+      "segment-on": {
+        "role": "neutral",
+        "displayName": "Segment On",
+        "canonical": "#636366",
+        "tonalRamp": [
+          "#000000",
+          "#1c1c1e",
+          "#2c2c2e",
+          "#3a3a3c",
+          "#48484a",
+          "#636366",
+          "#8e8e93",
+          "#f2f2f7"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The standby clock only: two-tone rounded digits filling the screen."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Each widget's hero number, in the widget's tint, sized from the panel's short side."
+      },
+      "headline": {
+        "displayName": "Large Title",
+        "purpose": "Off-board page titles (Control, Settings)."
+      },
+      "title": {
+        "displayName": "Section Title",
+        "purpose": "Remote section heads."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Rows, buttons, fields, empty-state sentences."
+      },
+      "label": {
+        "displayName": "Footnote",
+        "purpose": "Grouped-list headers and footers in secondary label."
+      }
+    },
+    "shadows": [
+      {
+        "name": "switch-knob",
+        "value": "0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06)",
+        "purpose": "The white thumb of the switch and the selected segment."
+      },
+      {
+        "name": "badge-lift",
+        "value": "0 2px 8px rgba(0,0,0,0.45)",
+        "purpose": "Small dark discs on artwork, such as the Now Playing status badge."
+      },
+      {
+        "name": "inset-focus",
+        "value": "inset 0 0 0 2px var(--blue)",
+        "purpose": "Focus on fields and selected editor items, drawn inside."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-soft",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Pager swipes (0.5s), control pill reveal (0.35s), switch knob, pad key press."
+      },
+      {
+        "name": "ease-ios-sheet",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "Settings sheet and drill-in slides."
+      },
+      {
+        "name": "press",
+        "value": "transform 0.15s, scale 0.97",
+        "purpose": "Every pressable shrinks slightly; reduced motion collapses all durations."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "portrait",
+        "value": "(orientation: portrait)",
+        "purpose": "Board halves stack; standby hours stack over minutes."
+      },
+      {
+        "name": "split",
+        "value": "700px",
+        "purpose": "Settings becomes an iPad split view; remote centers at phone width."
+      },
+      {
+        "name": "short-landscape",
+        "value": "(orientation: landscape) and (max-height: 560px)",
+        "purpose": "Echo Show 5: editors and overlays place previews beside lists."
+      }
+    ],
+    "nightFilter": {
+      "value": "feColorMatrix 0.33 0.66 0.12 0 0 / 0.03 0.06 0.01 0 0 / 0.02 0.04 0.008 0 0 / 0 0 0 1 0",
+      "purpose": "html.night applies url(#night-red) to body: brightness maps to red, hue dropped."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Filled blue pill, one per screen.",
+      "html": "<button class=\"ds-btn-primary\">Save</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 24px;border:none;border-radius:999px;background:#0a84ff;color:#fff;font:600 17px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;transition:transform .15s,filter .15s;cursor:pointer}.ds-btn-primary:active{transform:scale(.97);filter:brightness(.88)}.ds-btn-primary:focus-visible{outline:2px solid #0a84ff;outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Gray pill; tinted label variants for meaning.",
+      "html": "<button class=\"ds-btn\">Not tonight</button> <button class=\"ds-btn ds-red\">Delete</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:none;border-radius:999px;background:#2c2c2e;color:#fff;font:600 17px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;transition:background .15s,transform .15s;cursor:pointer}.ds-btn:hover{background:#3a3a3c}.ds-btn:active{background:#3a3a3c;transform:scale(.97)}.ds-btn:focus-visible{outline:2px solid #0a84ff;outline-offset:2px}.ds-red{color:#ff453a}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Borderless field on grouped fill with inset blue focus.",
+      "html": "<input class=\"ds-field\" placeholder=\"City\">",
+      "css": ".ds-field{width:260px;min-height:44px;padding:0 14px;border:none;border-radius:10px;background:#1c1c1e;color:#fff;font:17px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;outline:none;caret-color:#0a84ff}.ds-field::placeholder{color:rgba(235,235,245,.32)}.ds-field:focus{box-shadow:inset 0 0 0 2px #0a84ff}"
+    },
+    {
+      "name": "Grouped List",
+      "kind": "card",
+      "refersTo": "group",
+      "description": "iOS inset grouped list with hairlines and colored square row icons.",
+      "html": "<div class=\"ds-group\"><button class=\"ds-row\"><span class=\"ds-ico\" style=\"background:#5e5ce6\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\"><path fill=\"#fff\" d=\"M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z\"/></svg></span>Night mode<span class=\"ds-chev\">On</span></button><button class=\"ds-row\"><span class=\"ds-ico\" style=\"background:#30d158\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\"><path fill=\"#fff\" d=\"M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z\"/></svg></span>Location<span class=\"ds-chev\">Philadelphia</span></button></div>",
+      "css": ".ds-group{width:340px;background:#1c1c1e;border-radius:12px;overflow:hidden}.ds-row{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:0 16px;border:none;background:none;color:#fff;font:17px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;text-align:left;cursor:pointer}.ds-row+.ds-row::before{content:'';position:absolute;top:0;left:57px;right:0;height:.5px;background:rgba(84,84,88,.6)}.ds-row:hover,.ds-row:active{background:#2c2c2e}.ds-row:focus-visible{outline:2px solid #0a84ff;outline-offset:-2px}.ds-ico{display:grid;place-items:center;width:29px;height:29px;border-radius:7px}.ds-chev{margin-left:auto;color:rgba(235,235,245,.62)}"
+    },
+    {
+      "name": "Switch",
+      "kind": "input",
+      "refersTo": "group-row",
+      "description": "iOS switch, green when on.",
+      "html": "<label class=\"ds-switch\"><input type=\"checkbox\" checked><span></span></label>",
+      "css": ".ds-switch{position:relative;display:inline-block;width:51px;height:31px}.ds-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}.ds-switch span{position:absolute;inset:0;border-radius:999px;background:rgba(120,120,128,.32);transition:background .25s}.ds-switch span::after{content:'';position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 3px 1px rgba(0,0,0,.06);transition:transform .25s cubic-bezier(.22,1,.36,1)}.ds-switch input:checked+span{background:#30d158}.ds-switch input:checked+span::after{transform:translateX(20px)}.ds-switch input:focus-visible+span{outline:2px solid #0a84ff;outline-offset:2px}"
+    },
+    {
+      "name": "Control Pill",
+      "kind": "nav",
+      "refersTo": "control-pill",
+      "description": "Translucent pill revealed top right after a tap on the board.",
+      "html": "<div class=\"ds-hud\"><button class=\"ds-hud-btn\" aria-label=\"Settings\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1\"/></svg></button><button class=\"ds-hud-btn\" aria-label=\"Fullscreen\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2\"><path d=\"M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5\"/></svg></button></div>",
+      "css": ".ds-hud{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:rgba(44,44,46,.72);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6)}.ds-hud-btn{width:44px;height:44px;border:none;border-radius:50%;background:none;display:grid;place-items:center;cursor:pointer;transition:background .15s}.ds-hud-btn:hover,.ds-hud-btn:active{background:rgba(255,255,255,.16)}.ds-hud-btn:focus-visible{outline:2px solid #0a84ff;outline-offset:2px}"
+    },
+    {
+      "name": "Standby Clock",
+      "kind": "custom",
+      "refersTo": "display",
+      "description": "Two-tone rounded digits with white colon dots, straight on black.",
+      "html": "<div class=\"ds-sb\"><span class=\"ds-tt\"><span class=\"a\">1</span><span class=\"ds-colon\"></span><span class=\"b\">4</span><span class=\"a\">4</span></span></div>",
+      "css": ".ds-sb{background:#000;padding:16px 24px;display:inline-block}.ds-tt{display:inline-flex;align-items:center;font-family:ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;font-weight:900;font-size:120px;line-height:.74;font-variant-numeric:tabular-nums}.ds-tt .a,.ds-tt .b{margin:0 -.05em}.ds-tt .a{color:#5fe08a}.ds-tt .b{color:#23934b}.ds-colon{position:relative;z-index:2;display:flex;flex-direction:column;gap:.2em;width:0;align-items:center}.ds-colon::before,.ds-colon::after{content:'';width:.15em;height:.15em;border-radius:50%;background:rgba(255,255,255,.9)}"
+    },
+    {
+      "name": "Widget Figure",
+      "kind": "custom",
+      "refersTo": "figure",
+      "description": "A widget's hero number in its tint, unit beside, caption under.",
+      "html": "<div class=\"ds-stat\"><div class=\"ds-stat-v\">54<span>°</span></div><div class=\"ds-stat-c\">Cloudy, high 61°</div></div>",
+      "css": ".ds-stat{background:#000;padding:20px 32px;display:inline-flex;flex-direction:column;align-items:center;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif}.ds-stat-v{font-family:ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;font-weight:900;font-size:96px;line-height:1;letter-spacing:-.01em;color:#64d2ff}.ds-stat-v span{font-family:-apple-system,system-ui,sans-serif;font-size:24px;font-weight:600;color:#fff}.ds-stat-c{margin-top:6px;font-size:17px;font-weight:500;color:rgba(235,235,245,.62)}"
+    },
+    {
+      "name": "Lit Remote Tile",
+      "kind": "card",
+      "refersTo": "remote-tile-lit",
+      "description": "Home-app tile; lights white when it is the one being controlled.",
+      "html": "<button class=\"ds-tile\"><span class=\"ds-tile-i\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"12\" rx=\"2\"/><path d=\"M8 20h8\"/></svg></span><b>main</b><small>Joyful</small></button> <button class=\"ds-tile on\"><span class=\"ds-tile-i\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"12\" rx=\"2\"/><path d=\"M8 20h8\"/></svg></span><b>bedroom</b><small>Calm</small></button>",
+      "css": ".ds-tile{display:inline-flex;flex-direction:column;align-items:flex-start;width:160px;min-height:112px;padding:12px 14px 13px;border:none;border-radius:20px;background:#1c1c1e;color:#fff;text-align:left;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;cursor:pointer;transition:background .2s,color .2s,transform .15s}.ds-tile:active{transform:scale(.97)}.ds-tile:focus-visible{outline:2px solid #0a84ff;outline-offset:2px}.ds-tile-i{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#3a3a3c;color:rgba(235,235,245,.62);margin-bottom:auto}.ds-tile b{margin-top:14px;font-size:17px;font-weight:600}.ds-tile small{font-size:15px;color:rgba(235,235,245,.62)}.ds-tile.on{background:rgba(255,255,255,.94);color:#000}.ds-tile.on .ds-tile-i{background:#0a84ff;color:#fff}.ds-tile.on small{color:rgba(0,0,0,.55)}"
+    },
+    {
+      "name": "Macapad Key",
+      "kind": "custom",
+      "refersTo": "pad-key",
+      "description": "App-icon tile with label under; flashes white on press.",
+      "html": "<div class=\"ds-key\"><button class=\"ds-mtile\" aria-label=\"Mute\"><svg viewBox=\"0 0 24 24\" width=\"36\" height=\"36\" fill=\"#fff\"><path d=\"M4 9v6h4l5 4V5L8 9z\"/></svg></button><span>Mute</span></div>",
+      "css": ".ds-key{display:inline-flex;flex-direction:column;align-items:center;gap:6px;background:#000;padding:12px;font:600 13px -apple-system,system-ui,sans-serif;color:rgba(235,235,245,.62)}.ds-mtile{display:grid;place-items:center;width:80px;height:80px;border:none;border-radius:22.5%;background:#2c2c2e;cursor:pointer;transition:transform .18s cubic-bezier(.22,1,.36,1),background .45s}.ds-mtile:hover{background:#3a3a3c}.ds-mtile:active{transform:scale(.92);background:#fff}.ds-mtile:active svg{fill:#000}.ds-mtile:focus-visible{outline:2px solid #0a84ff;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "StandBy on any screen",
+    "overview": "**Creative North Star: \"StandBy on any screen\"**\n\nThe desk is an iPhone lying on its side at night: two widgets straight on pure black, no cards, no borders, each owning its half of the screen and one vivid iOS system tint. The first thing anyone sees from across a room is the time, in heavy rounded digits that fill most of the height, then the second widget. Nothing else competes. The controls are not there until someone taps; then a small translucent pill appears top right and the page dots flash, and both fade away again.\n\nThere is one look and no theme picker. The board is ambient and quiet; every screen off the board (settings, the phone remote, the macapad key editor, popups) is plain iOS dark UI, the way Settings, Home and Control Center look: large bold titles, inset grouped lists on #1c1c1e, pill buttons, a blue accent, a green switch. On the Echo Show 5 (960×480) settings is an iPad split view; on the iPhone (393×852) it is a drill-in list. Copy is plain sentence case for ordinary people, never developer syntax.\n\nAfter sunset the whole display goes red, StandBy-style: every pixel's brightness is mapped into red so the screen never lights the room. Night is per device, decided by sunrise and sunset from the weather feed, and can be switched off per screen or paused with \"Not tonight\" until the next sunrise.",
+    "keyCharacteristics": [
+      "Pure black ground (#000), no card chrome on the board.",
+      "One iOS dark system tint per widget, mapped by widget type, never mixed inside a widget.",
+      "Heavy rounded numerals (weight 900) as big as the half allows; system sans for words.",
+      "Controls hidden until a tap.",
+      "Off-board screens are faithful iOS dark UI.",
+      "Night turns everything red through a color matrix, not a second palette."
+    ],
+    "rules": [
+      {
+        "name": "The One Tint Rule",
+        "body": "A widget uses one tint. Its figure, glyph disc and accent marks all read the widget's tint; secondary text is gray, never a second hue. Exceptions are semantic: stock up/down pills (green/red) and the white colon dots.",
+        "section": "colors"
+      },
+      {
+        "name": "The Night Is a Filter Rule",
+        "body": "Night mode is a brightness-to-red color matrix over the whole page (`?night=1` / `?night=0` forces it). Never author red-variant styles per component; design in color and let the filter do it. Night runs only on the display, not on the remote.",
+        "section": "colors"
+      },
+      {
+        "name": "The Blue Means Act Rule",
+        "body": "Off the board, blue marks the action or the selection. There is one filled blue primary button per screen.",
+        "section": "colors"
+      },
+      {
+        "name": "The Rounded Is for Numbers Rule",
+        "body": "The rounded face is for figures: times, temperatures, counts, the login wordmark. Words, including dates written out, use the system sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sentence Case Rule",
+        "body": "All interface text is sentence case. Lowercase server strings are capitalized on their first letter by style; nothing is set in all caps or tracked out.",
+        "section": "typography"
+      },
+      {
+        "name": "The Glass Not Shadow Rule",
+        "body": "Anything that floats over content (control pill, tab bar, status badge) is a translucent material with backdrop blur. A shadow is never what separates it; at most a small soft lift where a badge sits on artwork.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** put widgets straight on #000 with no card, border or background panel.",
+      "**Do** give each widget exactly one system tint, assigned with its family in the central widget-to-tint map.",
+      "**Do** size widget content from the panel's short side so it fills a half on both the Echo (960×480) and the iPhone (393×852).",
+      "**Do** set every number worth glancing at in the rounded face at 800 to 900, tabular figures.",
+      "**Do** keep board controls hidden until a tap, then fade them back out.",
+      "**Do** build off-board screens from the iOS dark parts: large title, inset grouped lists, pill buttons, green switch, blue for action.",
+      "**Do** write sentence-case, plain-language copy (\"Add your city in settings\", \"Not tonight\").",
+      "**Do** let night mode come from the red color matrix; design in full color."
+    ],
+    "donts": [
+      "**Don't** show a widget's name as a heading unless it carries information the content does not.",
+      "**Don't** add a theme picker or alternate palettes; there is one look.",
+      "**Don't** wrap board widgets in cards or a dashboard grid with corner chrome.",
+      "**Don't** mix two tints inside one widget for decoration.",
+      "**Don't** float things over the board with drop shadows; use translucent material with blur.",
+      "**Don't** set interface text in all caps or letterspaced labels.",
+      "**Don't** expose raw syntax, arrow paths or developer terms in board or settings copy."
+    ]
+  }
+}

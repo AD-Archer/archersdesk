@@ -1,0 +1,1303 @@
+/* ── macapad: the stream-deck pad for the mac ──────────────────────────
+   On the board the keys are home-screen / Control Center tiles straight
+   on black: rounded squares (22% radius) with a white glyph, or the app
+   icon / site logo / picture filling the tile, the label underneath. A
+   press shrinks the tile and flashes it white, like a Control Center
+   toggle turning on. Tile size comes from the widget (--t, --lab), measured
+   from the panel, so the grid fits like a home screen at any size.
+   Off the board (settings → macapad, the key editor) it is iOS Settings:
+   grouped lists, colored rounded-square row icons, a segmented control,
+   pill buttons. Short landscape (Echo Show 5) puts the pad / key preview
+   beside the lists; portrait (phone) stacks them. */
+
+/* ── the tile (shared by the board, the pad preview and the editor) ── */
+
+.mtile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: var(--t, 96px);
+  height: var(--t, 96px);
+  border-radius: 22.5%;
+  overflow: hidden;
+  background: var(--fill-2);
+  color: #fff;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background 0.45s, color 0.45s;
+}
+
+.mtile .mi {
+  font-size: calc(var(--t, 96px) * 0.44);
+}
+
+.mtile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+}
+
+/* a mac app icon brings its own rounded plate inside a transparent margin:
+   scale it so the plate fills the tile, the way an iOS icon does */
+.mtile.app {
+  background: transparent;
+}
+
+.mtile.app img {
+  object-fit: contain;
+  transform: scale(1.22);
+}
+
+/* dark logos (stored "-d") and logos straight from a site sit on a light
+   plate, like a white app icon */
+.mtile.plate {
+  background: #e5e5ea;
+}
+
+.mtile.plate img {
+  width: 62%;
+  height: 62%;
+  object-fit: contain;
+}
+
+/* an empty slot: a faint outline waiting for a key */
+.mtile.socket {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.14);
+  color: var(--label-3);
+}
+
+.mtile.socket .mi {
+  font-size: calc(var(--t, 96px) * 0.3);
+}
+
+/* the flash layer for picture tiles (glyph tiles turn white themselves) */
+.mtile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s;
+}
+
+/* ── on the board ─────────────────────────────────────────────────── */
+
+.panel[data-widget="macapad"] .w-label {
+  right: 72px;
+}
+
+.panel[data-widget="macapad"] .w-body {
+  position: static;
+  justify-content: flex-start;
+  padding: 40px 0 0;
+}
+
+.mpad-say {
+  color: var(--red);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "Edit", top right, like an iOS list's Edit button */
+.mpad-edit {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  z-index: 3;
+  min-height: 44px;
+  padding: 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--tint);
+  transition: opacity 0.15s;
+}
+
+.mpad-edit:active {
+  opacity: 0.5;
+}
+
+/* the space under the heading; the pad and its dots sit at its top, like a
+   widget's content under its title */
+.mpad-fit {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 4px;
+}
+
+.mpad-viewport {
+  position: relative;
+  flex: 0 1 var(--gh, 100%);
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mpad-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.mpad-track.animate {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mpad {
+  flex: 0 0 100%;
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, var(--t, 96px));
+  grid-auto-rows: auto;
+  column-gap: calc(var(--t, 96px) * 0.26);
+  row-gap: calc(var(--t, 96px) * 0.12);
+  align-content: center;
+  justify-content: center;
+}
+
+.mpad-viewport.big .mpad {
+  grid-template-columns: repeat(4, var(--t, 96px));
+}
+
+.mpad-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: var(--t, 96px);
+  min-width: 0;
+}
+
+.mpad-label {
+  display: block;
+  width: calc(var(--t, 96px) * 1.2);
+  height: var(--lab, 30px);
+  padding-top: calc(var(--lab, 30px) * 0.24);
+  font-size: calc(var(--lab, 30px) * 0.5 + 1px);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mpad-key:active .mtile {
+  transform: scale(0.9);
+}
+
+/* pressed: white while the mac runs it, then it fades back */
+.mpad-key.busy .mtile,
+.mpad-key.ok .mtile {
+  transition: transform 0.18s, background 0.05s, color 0.05s;
+}
+
+.mpad-key.busy .mtile.glyph,
+.mpad-key.ok .mtile.glyph {
+  background: #fff;
+  color: #000;
+}
+
+.mpad-key.busy .mtile:not(.glyph)::after,
+.mpad-key.ok .mtile:not(.glyph)::after {
+  opacity: 0.55;
+  transition-duration: 0.05s;
+}
+
+/* didn't work: red, and the heading says why */
+.mpad-key.err .mtile.glyph {
+  background: var(--red);
+  color: #fff;
+}
+
+.mpad-key.err .mtile:not(.glyph)::after {
+  background: var(--red);
+  opacity: 0.6;
+  transition-duration: 0.05s;
+}
+
+.mpad-key.empty:active .mtile {
+  color: var(--label-2);
+}
+
+/* can't reach the mac: the keys dim, the reason sits underneath */
+.mpad-viewport.offline .mtile {
+  opacity: 0.4;
+}
+
+.mpad-msg {
+  flex: 0 0 auto;
+  padding: 8px 12px 0;
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--label-2);
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* page dots, like the board's: white for this page, 28% white for the rest */
+.mpad-dots {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  height: 22px;
+  margin-top: 4px;
+}
+
+.mpad-dots button {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.mpad-dots button::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  transition: background 0.3s;
+}
+
+.mpad-dots button.on::before {
+  background: var(--label);
+}
+
+/* ── shared iOS list bits (settings tab + editors) ────────────────── */
+
+.mps h3.group-head,
+.mps h4.group-head,
+.bed-pop h4.group-head {
+  font-weight: 400;
+}
+
+.mps-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 6px 0;
+  font-size: 17px;
+  line-height: 1.25;
+  color: var(--label);
+  overflow-wrap: break-word;
+}
+
+.mps-row-text.nowrap {
+  white-space: nowrap;
+}
+
+.mps-row-text small {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--label-2);
+}
+
+/* the colored rounded square at the start of a Settings row */
+.mps-ico {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--gray);
+}
+
+.mps-ico .mi {
+  font-size: 19px;
+}
+
+.mps-ico.blue { background: var(--blue); }
+.mps-ico.teal { background: var(--teal); }
+.mps-ico.indigo { background: var(--indigo); }
+.mps-ico.orange { background: var(--orange); }
+.mps-ico.purple { background: var(--purple); }
+.mps-ico.pink { background: var(--pink); }
+.mps-ico.green { background: var(--green); }
+.mps-ico.gray { background: var(--gray); }
+
+/* rows with an icon indent their separator past it, as in Settings */
+.group-row.bed-item + .group-row.bed-item::before,
+.group-row.bed-kind + .group-row.bed-kind::before {
+  left: 58px;
+}
+
+.mps-chev {
+  flex: 0 0 auto;
+  font-size: 22px;
+  color: var(--label-3);
+  margin-right: -6px;
+}
+
+.mps-check {
+  flex: 0 0 auto;
+  font-size: 22px;
+  color: var(--blue);
+}
+
+.group-row.mps-blue {
+  gap: 8px;
+  color: var(--blue);
+  font-size: 17px;
+}
+
+.group-row.mps-blue .mi {
+  font-size: 22px;
+}
+
+.group-row.mps-red {
+  color: var(--red);
+  font-size: 17px;
+}
+
+.group-row:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+button.group-row:disabled:active {
+  background: none;
+}
+
+.mps-muted {
+  color: var(--label-2);
+  font-size: 15px;
+}
+
+/* small pill on a row: Edit, Remove, + Big pad */
+.mps-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--blue);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.mps-pill .mi {
+  font-size: 18px;
+}
+
+.mps-pill.red {
+  color: var(--red);
+}
+
+.mps-pill:active:not(:disabled) {
+  background: var(--fill-3);
+}
+
+.mps-pill:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* round icon button on a row (move a step, delete) */
+.mps-round {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--fill-2);
+  color: var(--label-2);
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.mps-round .mi {
+  font-size: 19px;
+}
+
+.mps-round.red {
+  color: var(--red);
+}
+
+.mps-round:active:not(:disabled) {
+  background: var(--fill-3);
+}
+
+.mps-round:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.mps-error {
+  padding: 8px 16px 0;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--red);
+}
+
+/* iOS segmented control */
+.mps-seg,
+.bed-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
+  width: 100%;
+  padding: 2px;
+  border-radius: 10px;
+  background: rgba(118, 118, 128, 0.24);
+}
+
+.mps-seg button,
+.bed-seg button {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.2s;
+}
+
+.mps-seg button.on,
+.bed-seg button.on {
+  background: #636366;
+  font-weight: 600;
+}
+
+/* ── settings → macapad ───────────────────────────────────────────── */
+
+.mps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+
+.mps-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.mps-pad .mps-seg {
+  max-width: 360px;
+}
+
+.mps-sub {
+  margin-top: -4px;
+  font-size: 13px;
+  color: var(--label-2);
+  text-align: center;
+}
+
+/* the live pad: the board's tiles, smaller */
+.mps-grid {
+  --t: 92px;
+  display: grid;
+  grid-template-columns: repeat(2, var(--t));
+  column-gap: 20px;
+  row-gap: 10px;
+  justify-content: center;
+  padding: 6px 0 2px;
+}
+
+.mps-grid.big {
+  --t: min(74px, calc((100vw - 96px) / 4));
+  grid-template-columns: repeat(4, var(--t));
+  column-gap: 14px;
+}
+
+.mps-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mps-key-label {
+  display: block;
+  width: calc(var(--t) + 12px);
+  min-height: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  text-align: center;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mps-key:active .mtile {
+  transform: scale(0.92);
+}
+
+/* moving keys: they wiggle like a home screen in edit mode; the one you
+   picked up lifts and gets a blue ring */
+.mps-grid.arranging .mps-key:not(.empty) .mtile {
+  animation: mps-jiggle 0.28s ease-in-out infinite alternate;
+}
+
+.mps-grid.arranging .mps-key:nth-child(2n) .mtile {
+  animation-delay: -0.14s;
+}
+
+.mps-grid.arranging .mps-key.held .mtile {
+  animation: none;
+  transform: scale(1.08);
+  box-shadow: 0 0 0 3px var(--black), 0 0 0 6px var(--blue);
+  overflow: visible;
+}
+
+.mps-grid.arranging .mps-key.empty .mtile {
+  box-shadow: inset 0 0 0 1.5px rgba(10, 132, 255, 0.55);
+  color: var(--blue);
+}
+
+@keyframes mps-jiggle {
+  from {
+    transform: rotate(-1.6deg);
+  }
+  to {
+    transform: rotate(1.6deg);
+  }
+}
+
+.mps-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.mps-tools p {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--label-2);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.mps-arrange {
+  min-height: 38px;
+  font-size: 15px;
+}
+
+.mps-lists {
+  width: 100%;
+  min-width: 0;
+}
+
+/* page name: label on the left, the name typed on the right */
+.group-row.mps-name {
+  cursor: text;
+}
+
+.mps-name > span {
+  font-size: 17px;
+}
+
+.mps-name input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--label-2);
+  font-size: 17px;
+  text-align: right;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.mps-name input:focus {
+  color: var(--label);
+}
+
+.mps-name input::placeholder {
+  color: var(--label-3);
+}
+
+/* ── the key editor (and the action editor) ───────────────────────── */
+/* Lives in the shared iOS sheet (EditablePopup: nav bar with Cancel and the
+   title, a #1c1c1e sheet). The editor fills the sheet: phone = preview,
+   question (scrolls), buttons; short landscape = preview and buttons in a
+   left column, the question scrolling on the right. Rows on the sheet sit
+   one step lighter (--fill-2), as on an iOS sheet. */
+
+.edit-pop.bed-pop {
+  height: calc(var(--app-height) - var(--safe-t) - 14px);
+}
+
+.bed-pop .edit-pop-body {
+  display: contents;
+}
+
+.bed-pop .group {
+  background: var(--fill-2);
+}
+
+.bed-pop button.group-row:active,
+.bed-pop .bed-upload:active {
+  background: var(--fill-3);
+}
+
+.bed-pop .mps-pill,
+.bed-pop .mps-round {
+  background: var(--fill-3);
+}
+
+.edit-pop.bed-pop .edit-pop-foot > span:empty {
+  display: block;
+}
+
+.bed-save {
+  min-width: 128px;
+}
+
+.bed-side {
+  grid-area: side;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 2px 16px 12px;
+}
+
+.bed-main {
+  grid-area: main;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 16px 24px;
+}
+
+/* the key preview: the tile as it sits on the board, with its label */
+.bed-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* the preview sits on a patch of black, as it does on the board */
+.bed-key {
+  --t: 72px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: calc(var(--t) + 40px);
+  padding: 12px 8px 8px;
+  border-radius: 16px;
+  background: var(--black);
+}
+
+.bed-key > span:last-child {
+  display: block;
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+  min-height: 16px;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bed-key.pressed .mtile {
+  transform: scale(0.88);
+}
+
+.bed-hero-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bed-does {
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--label-2);
+}
+
+.bed-does.empty {
+  color: var(--label-3);
+}
+
+.bed-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bed-q {
+  padding: 6px 4px 12px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--label);
+}
+
+.bed-back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-left: -8px;
+  padding-right: 8px;
+  font-size: 17px;
+  color: var(--blue);
+}
+
+.bed-back .mi {
+  font-size: 28px;
+}
+
+.bed-back:active {
+  opacity: 0.5;
+}
+
+.bed-panel > .bed-seg.small {
+  margin-bottom: 14px;
+}
+
+.bed-kind {
+  min-height: 60px;
+}
+
+/* search field, pinned while its list scrolls */
+.bed-search {
+  position: sticky;
+  top: -4px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 10px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  background: #2a2a2d;
+  box-shadow: 0 -8px 0 var(--fill-1), 0 6px 0 var(--fill-1);
+  color: var(--label-2);
+}
+
+.bed-search .mi {
+  font-size: 22px;
+}
+
+.bed-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--label);
+  font-size: 17px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.bed-search input::placeholder {
+  color: var(--label-3);
+}
+
+.bed-search:focus-within {
+  box-shadow: 0 -8px 0 var(--fill-1), 0 6px 0 var(--fill-1), inset 0 0 0 2px var(--blue);
+}
+
+.bed-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bed-list > .group:first-child {
+  margin-top: 10px;
+}
+
+.bed-item kbd {
+  flex: 0 0 auto;
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--label-2);
+}
+
+.bed-appicon {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+}
+
+.bed-appicon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.bed-appicon .mpad-img.site {
+  width: 28px;
+  height: 28px;
+  padding: 3px;
+  border-radius: 7px;
+  background: #e5e5ea;
+}
+
+.bed-appicon .mi {
+  font-size: 26px;
+  color: var(--label-2);
+}
+
+.mpe-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 12px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--label-2);
+  text-align: center;
+}
+
+/* keyboard shortcut: the keys as keycaps, then the choices */
+.bed-caps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 80px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--black);
+}
+
+.bed-caps kbd {
+  display: grid;
+  place-items: center;
+  min-width: 52px;
+  height: 52px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--fill-3);
+  font-family: var(--sans);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--label);
+}
+
+.bed-caps kbd.wide {
+  font-size: 19px;
+}
+
+.bed-caps-empty {
+  font-size: 17px;
+  color: var(--label-3);
+}
+
+.bed-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bed-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 15px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--label);
+  transition: background 0.15s;
+}
+
+.bed-chips button b {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.bed-chips button:active {
+  background: var(--fill-3);
+}
+
+.bed-chips button.on {
+  background: var(--blue);
+  color: #fff;
+}
+
+.bed-keyfield {
+  max-width: 300px;
+  margin-bottom: 10px;
+}
+
+/* a picture / a website */
+.bed-picture {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bed-upload {
+  cursor: pointer;
+}
+
+.bed-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.bed-upload:active {
+  background: var(--fill-2);
+}
+
+.bed-upload.busy {
+  opacity: 0.6;
+}
+
+.bed-inline {
+  display: flex;
+  gap: 8px;
+}
+
+.bed-inline .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.group-foot.ok {
+  color: var(--green);
+}
+
+.bed-unpic {
+  margin-top: 18px;
+}
+
+.mpe-logos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 12px;
+}
+
+.mpe-logos button {
+  display: grid;
+  place-items: center;
+}
+
+.mpe-logos .mtile {
+  --t: 64px;
+}
+
+.mpe-logos button:active .mtile {
+  transform: scale(0.92);
+}
+
+.mpe-logos button:disabled {
+  opacity: 0.4;
+}
+
+/* icon picker: a grid of small glyph tiles */
+.bed-iconpick {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mpad-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mpad-icons button {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 22.5%;
+  background: var(--fill-2);
+  color: var(--label);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.mpad-icons button .mi {
+  font-size: 26px;
+}
+
+.mpad-icons button:active {
+  transform: scale(0.92);
+}
+
+.mpad-icons button.on {
+  background: var(--blue);
+  color: #fff;
+}
+
+/* several things in a row: each step a card */
+.bed-sequence {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mpad-steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mpad-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 14px 16px;
+  border-radius: var(--r-row);
+  background: var(--fill-2);
+}
+
+.mpad-step-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mpad-step-head b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.mpad-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mpad-step .field {
+  background-color: var(--fill-3);
+}
+
+.mpad-step select.field {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--label-2) 50%),
+    linear-gradient(135deg, var(--label-2) 50%, transparent 50%);
+  background-position: calc(100% - 19px) 50%, calc(100% - 13px) 50%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.mpad-step textarea.field {
+  min-height: 110px;
+  padding: 10px 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.mpad-step small {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--label-2);
+}
+
+.mpad-step .bed-caps {
+  min-height: 70px;
+}
+
+.mpad-step .bed-chips button {
+  background: var(--fill-3);
+}
+
+.mpad-step .bed-chips button.on {
+  background: var(--blue);
+}
+
+.mpad-step .mps-round {
+  background: var(--fill-3);
+}
+
+/* ── short landscape (Echo Show 5, 960×480): side by side ─────────── */
+
+@media (orientation: landscape) and (max-height: 560px) {
+  /* settings tab: the pad stays put on the left, the lists scroll beside it */
+  .mps {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .mps-pad {
+    position: sticky;
+    top: 0;
+    flex: 0 0 auto;
+    width: 232px;
+    gap: 10px;
+    padding-top: 4px;
+  }
+
+  .mps-sub {
+    display: none;
+  }
+
+  .mps-grid {
+    --t: 70px;
+    column-gap: 22px;
+    row-gap: 8px;
+    padding-top: 4px;
+  }
+
+  .mps-grid.big {
+    --t: 47px;
+    column-gap: 10px;
+  }
+
+  .mps-grid.big .mps-key-label {
+    font-size: 11px;
+  }
+
+  .mps-lists {
+    flex: 1;
+  }
+
+  .mps-lists > .group-head:first-child {
+    padding-top: 6px;
+  }
+
+  /* editor: preview, name, the toggle and the buttons on the left; the
+     question on the right */
+  .edit-pop.bed-pop {
+    display: grid;
+    width: min(760px, calc(100vw - 48px));
+    height: calc(var(--app-height) - 28px);
+    grid-template-columns: 256px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "head head" "side main" "foot main";
+  }
+
+  .edit-pop.bed-pop .edit-pop-head {
+    grid-area: head;
+    border-bottom: 0.5px solid var(--sep);
+  }
+
+  .bed-side {
+    overflow-y: auto;
+    padding: 12px 14px 8px 16px;
+    gap: 12px;
+  }
+
+  .bed-hero {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .bed-key {
+    --t: 76px;
+    align-self: stretch;
+    width: auto;
+  }
+
+  .edit-pop.bed-pop .edit-pop-foot {
+    grid-area: foot;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 4px;
+    padding: 6px 14px 12px 16px;
+    border-top: 0;
+  }
+
+  .edit-pop.bed-pop .edit-pop-foot > span:empty {
+    display: none;
+  }
+
+  .edit-pop.bed-pop .edit-pop-foot > button {
+    width: 100%;
+  }
+
+  .bed-pop .bed-remove {
+    min-height: 38px;
+    background: transparent;
+  }
+
+  .bed-main {
+    padding: 12px 20px 20px 18px;
+    border-left: 0.5px solid var(--sep);
+  }
+
+  .bed-q {
+    padding-top: 0;
+  }
+}
+
+/* ── phone ────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .mps-grid {
+    --t: 88px;
+    column-gap: 28px;
+  }
+
+  .mps-grid.big {
+    --t: min(72px, calc((100vw - 96px) / 4));
+  }
+
+  .group-row .mps-pill {
+    padding: 0 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mps-grid.arranging .mps-key .mtile {
+    animation: none;
+  }
+}
+
+/* what the key does now, checked in the full list of choices */
+.bed-kind-check {
+  font-size: 22px;
+  color: var(--blue);
+}

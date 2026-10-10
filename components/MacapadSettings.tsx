@@ -39,19 +39,19 @@ export interface MacapadFocus {
 type StepType = MacapadStep["type"];
 
 const STEP_INFO: Record<StepType, { label: string; placeholder?: string; hint?: string }> = {
-  media: { label: "media key" },
-  openApp: { label: "open app", placeholder: "Spotify — or a bundle id like com.spotify.client" },
-  openURL: { label: "open website", placeholder: "https://example.com", hint: "opens in the mac's default browser" },
-  keystroke: { label: "keyboard shortcut" },
-  shortcut: { label: "run shortcut", placeholder: "name exactly as in the shortcuts app" },
-  typeText: { label: "type text", placeholder: "text to type on the mac" },
-  appleScript: { label: "applescript", placeholder: 'tell application "Finder" to activate' },
-  wait: { label: "wait", hint: "milliseconds before the next step" },
-  action: { label: "mac action", hint: "a built-in or custom action saved on your mac" },
+  media: { label: "Play, skip or change volume" },
+  openApp: { label: "Open an app", placeholder: "The app's name, like Spotify" },
+  openURL: { label: "Open a website", placeholder: "example.com", hint: "Opens in your Mac's default browser." },
+  keystroke: { label: "Press a keyboard shortcut" },
+  shortcut: { label: "Run a shortcut", placeholder: "Its name, exactly as in the Shortcuts app" },
+  typeText: { label: "Type some text", placeholder: "What to type on your Mac" },
+  appleScript: { label: "Run AppleScript", placeholder: 'tell application "Finder" to activate' },
+  wait: { label: "Wait a moment", hint: "Seconds to wait before the next step." },
+  action: { label: "Do a Mac action", hint: "One of your Mac's actions, built in or your own." },
 };
 
 const MEDIA_LABELS: Record<string, string> = {
-  playPause: "play / pause",
+  playPause: "play or pause",
   next: "next track",
   previous: "previous track",
   volumeUp: "volume up",
@@ -167,6 +167,9 @@ function withValue(st: MacapadStep, v: string): MacapadStep {
   }
 }
 
+/** Messages from the server start lowercase; on a screen they read as sentences. */
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 function newId() {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
@@ -190,8 +193,8 @@ async function callMacapad(
 }
 
 const SIZE_INFO: Record<MacapadSize, { label: string; blurb: string }> = {
-  small: { label: "small pad · 4", blurb: "square panel" },
-  big: { label: "big pad · 8", blurb: "dual row" },
+  small: { label: "Small pad", blurb: "4 keys, square panel" },
+  big: { label: "Big pad", blurb: "8 keys, wide panel" },
 };
 
 export function MacapadSection({
@@ -266,108 +269,132 @@ export function MacapadSection({
   const editingButton = editing !== null ? slots[editing] ?? null : null;
 
   return (
-    <>
-      <p className="sec-note">
-        the <b>small pad</b> fills a square panel, the <b>big pad</b> a dual row. each has its own pages
-        — swipe between them on the widget, or tap its dots.
-      </p>
+    <div className="mps">
+      {/* the pad itself: a live preview you tap to edit. Beside the lists on
+          short landscape screens (Echo Show), above them on phones. */}
+      <div className="mps-pad">
+        <div className="mps-seg" role="tablist" aria-label="Which pad">
+          {(Object.keys(SIZE_INFO) as MacapadSize[]).map((s) => (
+            <button key={s} role="tab" className={s === size ? "on" : ""} onClick={() => chooseSize(s)} aria-selected={s === size}>
+              {SIZE_INFO[s].label}
+            </button>
+          ))}
+        </div>
+        <p className="mps-sub">
+          {SIZE_INFO[size].blurb}
+          {pages.length > 1 ? ` · ${page.name || `page ${pageIndex + 1}`}` : ""}
+        </p>
 
-      {/* controls beside the board on short landscape screens (Echo Show) */}
-      <div className="mps-top">
-        <div className="mps-controls">
-          <div className="page-seg">
-            {(Object.keys(SIZE_INFO) as MacapadSize[]).map((s) => (
-              <button key={s} className={s === size ? "on" : ""} onClick={() => chooseSize(s)}>
-                {SIZE_INFO[s].label}
+        <div className={`mps-grid ${size}${arranging ? " arranging" : ""}`}>
+          {slots.map((b, i) => {
+            const isHeld = held?.page === page.id && held.index === i;
+            return (
+              <button
+                key={b?.id ?? `empty-${i}`}
+                className={`mps-key${b ? "" : " empty"}${isHeld ? " held" : ""}`}
+                onClick={() => tapSlot(i)}
+                aria-label={b ? `${arranging ? "Move" : "Edit"} ${b.label || "key"}` : arranging ? "Drop here" : "Add a key"}
+              >
+                {b ? (
+                  <KeyTile button={b} />
+                ) : (
+                  <span className="mtile socket">
+                    <MI name={arranging && held ? "arrow_downward" : "add"} />
+                  </span>
+                )}
+                <span className="mps-key-label">{b?.label ?? ""}</span>
               </button>
-            ))}
-          </div>
+            );
+          })}
+        </div>
 
-          <div className="mps-pages">
-            {pages.map((p, i) => (
-              <button key={p.id} className={p.id === page.id ? "on" : ""} onClick={() => setPageId(p.id)}>
-                {p.name || `page ${i + 1}`}
-              </button>
-            ))}
-            {pages.length < MACAPAD_MAX_PAGES && (
-              <button className="add" onClick={addPage}>
-                <MI name="add" /> page
-              </button>
-            )}
-          </div>
+        <div className="mps-tools">
+          <p>
+            {arranging
+              ? held
+                ? "Now tap where it goes, on any page. An empty spot leaves a gap."
+                : "Tap a key to pick it up."
+              : "Tap a key to choose what it does."}
+          </p>
+          <button
+            className={`btn mps-arrange${arranging ? " on" : ""}`}
+            onClick={() => {
+              setArranging((a) => !a);
+              setHeld(null);
+            }}
+            aria-pressed={arranging}
+          >
+            {arranging ? "Done" : "Move keys"}
+          </button>
+        </div>
+        {error && <p className="mps-error">{error}</p>}
+      </div>
 
-          <div className="mps-page-bar">
+      <div className="mps-lists">
+        <h3 className="group-head">Pages</h3>
+        <div className="group">
+          {pages.map((p, i) => (
+            <button key={p.id} className="group-row" onClick={() => setPageId(p.id)} aria-pressed={p.id === page.id}>
+              <span className="mps-row-text">{p.name || `page ${i + 1}`}</span>
+              {p.id === page.id && <MI name="check" className="mps-check" />}
+            </button>
+          ))}
+          {pages.length < MACAPAD_MAX_PAGES && (
+            <button className="group-row mps-blue" onClick={addPage}>
+              <MI name="add" /> Add a page
+            </button>
+          )}
+        </div>
+        <p className="group-foot">Each pad has its own pages. Swipe sideways on the pad to change page.</p>
+
+        <h3 className="group-head">This page</h3>
+        <div className="group">
+          <label className="group-row mps-name">
+            <span>Name</span>
             <input
               key={page.id}
               defaultValue={page.name}
               maxLength={30}
               placeholder={`page ${pageIndex + 1}`}
-              aria-label="page name"
+              aria-label="Page name"
               onBlur={(e) => {
                 const name = e.target.value.trim();
                 if (name !== page.name) write("renamePage", { page: page.id, name });
               }}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
             />
-            <button onClick={() => write("movePage", { page: page.id, by: -1 })} disabled={pageIndex === 0} aria-label="move page earlier">
-              <MI name="arrow_back" />
-            </button>
-            <button
-              onClick={() => write("movePage", { page: page.id, by: 1 })}
-              disabled={pageIndex === pages.length - 1}
-              aria-label="move page later"
-            >
-              <MI name="arrow_forward" />
-            </button>
-            <button onClick={removePage} disabled={pages.length === 1} aria-label="delete page">
-              <MI name="delete" />
-            </button>
-          </div>
+          </label>
+          {pages.length > 1 && (
+            <div className="group-row">
+              <span className="mps-row-text">Order</span>
+              <button
+                className="mps-pill"
+                onClick={() => write("movePage", { page: page.id, by: -1 })}
+                disabled={pageIndex === 0}
+                aria-label="Move page earlier"
+              >
+                <MI name="chevron_left" /> Earlier
+              </button>
+              <button
+                className="mps-pill"
+                onClick={() => write("movePage", { page: page.id, by: 1 })}
+                disabled={pageIndex === pages.length - 1}
+                aria-label="Move page later"
+              >
+                Later <MI name="chevron_right" />
+              </button>
+            </div>
+          )}
+          <button className="group-row mps-red" onClick={removePage} disabled={pages.length === 1}>
+            Delete this page
+          </button>
         </div>
-        <div className="mps-board">
-          <div className={`mps-grid ${size}${arranging ? " arranging" : ""}`}>
-            {slots.map((b, i) => {
-              const isHeld = held?.page === page.id && held.index === i;
-              return (
-                <button
-                  key={b?.id ?? `empty-${i}`}
-                  className={`mps-key${b ? "" : " empty"}${isHeld ? " held" : ""}`}
-                  onClick={() => tapSlot(i)}
-                  aria-label={b ? `${arranging ? "move" : "edit"} ${b.label || "button"}` : arranging ? "drop here" : "add a button"}
-                >
-                  {b ? <KeyFace button={b} /> : <MI name={arranging && held ? "arrow_downward" : "add"} />}
-                  {b?.label && <span>{b.label}</span>}
-                </button>
-              );
-            })}
-          </div>
+        {pages.length === 1 && <p className="group-foot">A pad always keeps at least one page.</p>}
 
-          <div className="mps-tools">
-            <button
-              className={`mps-arrange${arranging ? " on" : ""}`}
-              onClick={() => {
-                setArranging((a) => !a);
-                setHeld(null);
-              }}
-              aria-pressed={arranging}
-            >
-              <MI name={arranging ? "check" : "grid_view"} /> {arranging ? "done arranging" : "arrange"}
-            </button>
-            <small>
-              {arranging
-                ? held
-                  ? "now tap where it goes — any page, any slot. an empty slot leaves a gap."
-                  : "tap a button to pick it up."
-                : "tap a slot to set what it does."}
-            </small>
-          </div>
-          {error && <p className="embed-error">{error}</p>}
-        </div>
+        <MacActions />
+
+        <DeskPlacements settings={settings} onChange={onChange} />
       </div>
-
-      <MacActions />
-
-      <DeskPlacements settings={settings} onChange={onChange} />
 
       {editing !== null && (
         <ButtonEditor
@@ -384,7 +411,7 @@ export function MacapadSection({
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -422,41 +449,51 @@ function DeskPlacements({ settings, onChange }: { settings: ViewSettings; onChan
   }
 
   return (
-    <div className="mps-desk">
-      <div className="mpad-section">on this display ({settings.deviceName})</div>
-      {spots.length === 0 ? (
-        <p className="sec-note">no pads on the desk yet.</p>
-      ) : (
-        <div className="mps-spots">
-          {spots.map((s) => (
-            <div key={`${s.p}-${s.r}-${s.side}`} className="mps-spot">
-              <span>
-                page {s.p + 1} · row {s.r + 1} · {s.label}
+    <>
+      <h3 className="group-head">On this screen ({settings.deviceName})</h3>
+      <div className="group">
+        {spots.length === 0 ? (
+          <div className="group-row mps-muted">No pads on this screen yet.</div>
+        ) : (
+          spots.map((s) => (
+            <div key={`${s.p}-${s.r}-${s.side}`} className="group-row">
+              <span className="mps-ico blue">
+                <MI name="grid_view" />
               </span>
-              <button onClick={() => remove(s)} aria-label="remove from desk">
-                <MI name="close" />
+              <span className="mps-row-text">
+                {s.label.charAt(0).toUpperCase() + s.label.slice(1)}
+                <small>
+                  Page {s.p + 1}, row {s.r + 1}
+                </small>
+              </span>
+              <button className="mps-pill red" onClick={() => remove(s)} aria-label="Take off this screen">
+                Remove
               </button>
             </div>
-          ))}
-        </div>
-      )}
-      <div className="mps-add">
+          ))
+        )}
+      </div>
+
+      <h3 className="group-head">Add a pad to this screen</h3>
+      <div className="group">
         {pages.map((rows, p) => (
-          <div key={p} className="mps-add-row">
-            <span>page {p + 1}</span>
-            <button onClick={() => add(p, { type: "dual", widget: "macapad" })} disabled={rows.length >= MAX_ROWS}>
-              <MI name="add" /> big pad
+          <div key={p} className="group-row">
+            <span className="mps-row-text nowrap">Page {p + 1}</span>
+            <button className="mps-pill" onClick={() => add(p, { type: "dual", widget: "macapad" })} disabled={rows.length >= MAX_ROWS}>
+              <MI name="add" /> Big pad
             </button>
             <button
+              className="mps-pill"
               onClick={() => add(p, { type: "split", left: "macapad", right: "clock" })}
               disabled={rows.length >= MAX_ROWS}
             >
-              <MI name="add" /> small pad
+              <MI name="add" /> Small pad
             </button>
           </div>
         ))}
       </div>
-    </div>
+      <p className="group-foot">A big pad fills a whole row. A small pad shares its row with a clock.</p>
+    </>
   );
 }
 
@@ -482,6 +519,31 @@ export function KeyFace({ button, className }: { button: Pick<MacapadButton, "ic
       />
     );
   return <MI name={button.icon} className={className} />;
+}
+
+/** What an image makes of a tile: an app icon fills it like a home-screen
+ *  icon, a dark logo sits on the light plate, a picture fills it edge to edge. */
+function imageKind(image: string): "app" | "plate" | "pic" {
+  if (image.startsWith("/api/macapad/app-icon")) return "app";
+  return needsPlate(image) ? "plate" : "pic";
+}
+
+/** A key as a home-screen tile: a rounded square with a white glyph, or the
+ *  key's image filling it. The board, the pad preview and the editor share it. */
+export function KeyTile({ button, className }: { button: Pick<MacapadButton, "icon" | "image">; className?: string }) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [button.image]);
+  const kind = button.image && !broken ? imageKind(button.image) : "glyph";
+  return (
+    <span className={`mtile ${kind}${className ? ` ${className}` : ""}`}>
+      {kind === "glyph" ? (
+        <MI name={button.icon} />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- arbitrary remote logos, no next/image config
+        <img src={button.image} alt="" draggable={false} onError={() => setBroken(true)} />
+      )}
+    </span>
+  );
 }
 
 // ── what the mac offers (actions, apps, shortcuts), cached for the session ──
@@ -542,18 +604,18 @@ function byCategory(actions: MacapadAction[]) {
 // One question at a time. The key itself is the hero: its preview sits on
 // top and changes as you go. Below it, "what it does" asks for a kind first
 // (a list of plain choices), then shows only that kind's panel; "how it
-// looks" is icon or picture. A button that already does something opens
-// straight on its own panel.
+// looks" is icon or picture. Every key opens on the full list of choices,
+// with what it does now checked, so all the options stay in view.
 
 type Kind = "mac" | "app" | "web" | "keys" | "shortcut" | "sequence";
 
-const KINDS: Array<{ kind: Kind; icon: string; title: string; hint: string }> = [
-  { kind: "mac", icon: "keyboard_command_key", title: "Control your Mac", hint: "Media, windows, screenshots, tabs, emoji" },
-  { kind: "app", icon: "apps", title: "Open an app", hint: "Any app installed on your Mac" },
-  { kind: "web", icon: "language", title: "Open a website", hint: "In your default browser, with its logo" },
-  { kind: "keys", icon: "keyboard", title: "Press a keyboard shortcut", hint: "Like ⌘W or ⌃⌘Space" },
-  { kind: "shortcut", icon: "bolt", title: "Run a shortcut", hint: "From the Shortcuts app" },
-  { kind: "sequence", icon: "checklist", title: "Build a sequence", hint: "Several steps in a row, typing, AppleScript" },
+const KINDS: Array<{ kind: Kind; icon: string; color: string; title: string; hint: string }> = [
+  { kind: "app", icon: "apps", color: "blue", title: "Open an app", hint: "Any app installed on your Mac" },
+  { kind: "web", icon: "language", color: "teal", title: "Open a website", hint: "In your default browser, with its logo" },
+  { kind: "keys", icon: "keyboard", color: "gray", title: "Press a keyboard shortcut", hint: "Like ⌘W or ⌃⌘Space" },
+  { kind: "shortcut", icon: "bolt", color: "indigo", title: "Run a shortcut", hint: "From the Shortcuts app" },
+  { kind: "mac", icon: "keyboard_command_key", color: "orange", title: "Control your Mac", hint: "Music, volume, windows, screenshots, emoji" },
+  { kind: "sequence", icon: "checklist", color: "purple", title: "Do several things", hint: "Steps in a row: type, wait, AppleScript" },
 ];
 
 /** Which panel a button belongs to, from what it already does. */
@@ -589,7 +651,8 @@ function ButtonEditor({
   const [image, setImage] = useState(button?.image ?? "");
   const [steps, setSteps] = useState<MacapadStep[]>(button?.steps ?? []);
   const [view, setView] = useState<"does" | "looks">("does");
-  const [kind, setKind] = useState<Kind | null>(() => kindOf(button?.steps));
+  const [kind, setKind] = useState<Kind | null>(null);
+  const currentKind = kindOf(steps);
   const [error, setError] = useState<string | null>(null);
   // the label follows each pick until you type your own
   const autoLabel = useRef(button?.label ?? "");
@@ -633,18 +696,18 @@ function ButtonEditor({
   return (
     <EditablePopup
       open
-      title={button ? "edit key" : "new key"}
+      title={button ? "Edit key" : "New key"}
       onClose={onClose}
       className="bed-pop"
       footer={
         <>
           {button && (
-            <button className="edit-pop-muted" onClick={onClear}>
+            <button className="btn red bed-remove" onClick={onClear}>
               Remove key
             </button>
           )}
           <span style={{ flex: 1 }} />
-          <button className="edit-pop-primary" onClick={save}>
+          <button className="btn-primary bed-save" onClick={save}>
             Save
           </button>
         </>
@@ -655,12 +718,12 @@ function ButtonEditor({
       <div className="bed-side">
         <div className="bed-hero">
           <div className={`bed-key${pressed ? " pressed" : ""}`} aria-hidden>
-            <KeyFace button={{ icon, image }} />
+            <KeyTile button={{ icon, image }} />
             <span>{label || " "}</span>
           </div>
           <div className="bed-hero-text">
             <input
-              className="bed-label"
+              className="field bed-label"
               value={label}
               maxLength={40}
               placeholder="Name this key"
@@ -697,25 +760,26 @@ function ButtonEditor({
             }}
           />
         ) : !kindInfo ? (
-          <div className="bed-kinds">
-            {KINDS.map((k) => (
-              <button key={k.kind} className="bed-kind" onClick={() => setKind(k.kind)}>
-                <span className="bed-kind-icon">
-                  <MI name={k.icon} />
-                </span>
-                <span className="bed-kind-text">
-                  <b>{k.title}</b>
-                  <small>{k.hint}</small>
-                </span>
-                <MI name="chevron_right" className="bed-kind-go" />
-              </button>
-            ))}
+          <div className="bed-panel">
+            <h3 className="bed-q">What should this key do?</h3>
+            <div className="group">
+              {KINDS.filter((k) => k.kind !== "sequence").map((k) => (
+                <KindRow key={k.kind} info={k} current={currentKind === k.kind} onPick={() => setKind(k.kind)} />
+              ))}
+            </div>
+            <h4 className="group-head">For more control</h4>
+            <div className="group">
+              {KINDS.filter((k) => k.kind === "sequence").map((k) => (
+                <KindRow key={k.kind} info={k} current={currentKind === k.kind} onPick={() => setKind(k.kind)} />
+              ))}
+            </div>
           </div>
         ) : (
           <div className="bed-panel">
-            <button className="bed-back" onClick={() => setKind(null)}>
-              <MI name="chevron_left" /> {kindInfo.title}
+            <button className="bed-back" onClick={() => setKind(null)} aria-label="Choose something else">
+              <MI name="chevron_left" /> All choices
             </button>
+            <h3 className="bed-q">{kindInfo.title}</h3>
 
             {kind === "keys" ? (
               <ShortcutComposer
@@ -733,8 +797,8 @@ function ButtonEditor({
               <div className="mpe-empty">
                 {catalogError ? (
                   <>
-                    {catalogError}{" "}
-                    <button className="mpe-link" onClick={reload}>
+                    <span>{sentence(catalogError)}</span>
+                    <button className="btn" onClick={reload}>
                       Try again
                     </button>
                   </>
@@ -766,9 +830,26 @@ function ButtonEditor({
           </div>
         )}
 
-        {error && <p className="embed-error">{error}</p>}
+        {error && <p className="mps-error">{error}</p>}
       </div>
     </EditablePopup>
+  );
+}
+
+/** One choice in the "what should this key do" list: an iOS Settings row. */
+function KindRow({ info, current, onPick }: { info: (typeof KINDS)[number]; current?: boolean; onPick: () => void }) {
+  return (
+    <button className={`group-row bed-kind${current ? " current" : ""}`} onClick={onPick} aria-current={current || undefined}>
+      <span className={`mps-ico ${info.color}`}>
+        <MI name={info.icon} />
+      </span>
+      <span className="mps-row-text">
+        {info.title}
+        <small>{info.hint}</small>
+      </span>
+      {current && <MI name="check" className="bed-kind-check" />}
+      <MI name="chevron_right" className="mps-chev" />
+    </button>
   );
 }
 
@@ -805,7 +886,7 @@ function describeStep(st: MacapadStep, catalog: MacapadCatalog | null): string {
     case "media": return MEDIA_LABELS[st.key] ?? st.key;
     case "typeText": return st.text ? `types “${st.text.length > 24 ? `${st.text.slice(0, 24)}…` : st.text}”` : "types text";
     case "appleScript": return "runs AppleScript";
-    case "wait": return `waits ${st.ms} ms`;
+    case "wait": return `waits ${+(st.ms / 1000).toFixed(1)} sec`;
   }
 }
 
@@ -925,60 +1006,48 @@ function ShortcutComposer({ value, onChange }: { value: string; onChange: (combo
             </kbd>
           ))
         ) : (
-          <span className="bed-caps-empty">Choose the keys below</span>
+          <span className="bed-caps-empty">Pick the keys below</span>
         )}
       </div>
 
-      <div className="bed-row">
-        <span className="bed-row-name">Hold</span>
-        <div className="bed-chips">
-          {MODIFIERS.map((m) => (
-            <button key={m.key} className={mods.has(m.key) ? "on" : ""} onClick={() => toggle(m.key)} aria-pressed={mods.has(m.key)}>
-              <b>{m.symbol}</b> {m.name}
-            </button>
-          ))}
-          <button className={mods.has("fn") ? "on" : ""} onClick={() => toggle("fn")} aria-pressed={mods.has("fn")}>
-            fn
+      <h4 className="group-head">Hold down</h4>
+      <div className="bed-chips">
+        {MODIFIERS.map((m) => (
+          <button key={m.key} className={mods.has(m.key) ? "on" : ""} onClick={() => toggle(m.key)} aria-pressed={mods.has(m.key)}>
+            <b>{m.symbol}</b> {m.name}
           </button>
-        </div>
+        ))}
+        <button className={mods.has("fn") ? "on" : ""} onClick={() => toggle("fn")} aria-pressed={mods.has("fn")}>
+          fn
+        </button>
       </div>
 
-      <div className="bed-row">
-        <span className="bed-row-name">Then</span>
-        <div className="bed-then">
-          <input
-            className="bed-keyfield"
-            value={draft}
-            maxLength={3}
-            placeholder="A letter, number or F5"
-            aria-label="Key"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            onKeyDown={onKeyDown}
-            onChange={(e) => setKey(e.target.value === " " ? "space" : e.target.value.trim().toLowerCase())}
-          />
-          <div className="bed-chips">
-            {TAP_KEYS.map((k) => (
-              <button
-                key={k}
-                className={k === key ? "on" : ""}
-                onClick={() => setKey(k === key ? "" : k)}
-                aria-pressed={k === key}
-                aria-label={k}
-              >
-                {KEY_SYMBOLS[k]}
-                {k.length > 1 && KEY_SYMBOLS[k].length === 1 && !["up", "down", "left", "right"].includes(k) ? ` ${k}` : ""}
-              </button>
-            ))}
-          </div>
-        </div>
+      <h4 className="group-head">Then press</h4>
+      <input
+        className="field bed-keyfield"
+        value={draft}
+        maxLength={3}
+        placeholder="A letter, number or F5"
+        aria-label="Key"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        onKeyDown={onKeyDown}
+        onChange={(e) => setKey(e.target.value === " " ? "space" : e.target.value.trim().toLowerCase())}
+      />
+      <div className="bed-chips">
+        {TAP_KEYS.map((k) => (
+          <button key={k} className={k === key ? "on" : ""} onClick={() => setKey(k === key ? "" : k)} aria-pressed={k === key} aria-label={k}>
+            {KEY_SYMBOLS[k]}
+            {k.length > 1 && KEY_SYMBOLS[k].length === 1 && !["up", "down", "left", "right"].includes(k) ? ` ${k}` : ""}
+          </button>
+        ))}
       </div>
 
       {unknown ? (
-        <p className="embed-error">“{key}” isn&rsquo;t a key Macapad knows. Use a letter, a number, a symbol like / or ; , or F1–F20.</p>
+        <p className="mps-error">“{key}” isn&rsquo;t a key Macapad knows. Use a letter, a number, a symbol like / or ; , or F1–F20.</p>
       ) : (
-        <p className="bed-note">On a computer, click the box and press the whole shortcut.</p>
+        <p className="group-foot">On a computer, click the box and press the whole shortcut.</p>
       )}
     </div>
   );
@@ -1027,12 +1096,13 @@ function Appearance({
   const [mode, setMode] = useState<"icon" | "picture">(image ? "picture" : "icon");
   return (
     <div className="bed-panel">
-      <div className="bed-chips bed-mode">
-        <button className={mode === "icon" ? "on" : ""} onClick={() => setMode("icon")} aria-pressed={mode === "icon"}>
-          <MI name="star" /> Icon
+      <h3 className="bed-q">What goes on the key?</h3>
+      <div className="bed-seg small" role="tablist">
+        <button role="tab" className={mode === "icon" ? "on" : ""} onClick={() => setMode("icon")} aria-selected={mode === "icon"}>
+          An icon
         </button>
-        <button className={mode === "picture" ? "on" : ""} onClick={() => setMode("picture")} aria-pressed={mode === "picture"}>
-          <MI name="image" /> Picture
+        <button role="tab" className={mode === "picture" ? "on" : ""} onClick={() => setMode("picture")} aria-selected={mode === "picture"}>
+          A picture
         </button>
       </div>
       {mode === "icon" ? <IconGrid value={image ? null : icon} onPick={onIcon} /> : <ImagePicker image={image} onImage={onImage} />}
@@ -1059,22 +1129,28 @@ function ImagePicker({ image, onImage }: { image: string; onImage: (url: string)
 
   return (
     <div className="bed-picture">
-      <label className={`bed-upload${busy ? " busy" : ""}`}>
-        <MI name="upload" />
-        <span>
-          <b>{busy ? "Shrinking…" : "Upload a picture"}</b>
-          <small>PNG, JPG, WebP, GIF or SVG</small>
-        </span>
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (file) use(file);
-          }}
-        />
-      </label>
+      <div className="group">
+        <label className={`group-row bed-upload${busy ? " busy" : ""}`}>
+          <span className="mps-ico blue">
+            <MI name="upload" />
+          </span>
+          <span className="mps-row-text">
+            {busy ? "Shrinking…" : "Upload a picture"}
+            <small>PNG, JPG, WebP, GIF or SVG</small>
+          </span>
+          <MI name="chevron_right" className="mps-chev" />
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) use(file);
+            }}
+          />
+        </label>
+      </div>
+      <h4 className="group-head">Or use a picture from the web</h4>
       <form
         className="bed-inline"
         onSubmit={(e) => {
@@ -1083,25 +1159,27 @@ function ImagePicker({ image, onImage }: { image: string; onImage: (url: string)
         }}
       >
         <input
-          className="bed-field"
+          className="field"
           value={link}
-          placeholder="…or paste a picture link"
+          placeholder="Paste a picture link"
           inputMode="url"
           autoCapitalize="off"
           autoCorrect="off"
           onChange={(e) => setLink(e.target.value)}
         />
-        <button className="bed-go" type="submit" disabled={busy || !link.trim()}>
+        <button className="btn" type="submit" disabled={busy || !link.trim()}>
           Use
         </button>
       </form>
-      {note && <p className="bed-note ok">{note}</p>}
+      {note && <p className="group-foot ok">{note}</p>}
       {image && (
-        <button className="mpe-link" onClick={() => onImage("")}>
-          Remove the picture
-        </button>
+        <div className="group bed-unpic">
+          <button className="group-row mps-red" onClick={() => onImage("")}>
+            Take the picture off
+          </button>
+        </div>
       )}
-      {error && <p className="embed-error">{error}</p>}
+      {error && <p className="mps-error">{error}</p>}
     </div>
   );
 }
@@ -1138,9 +1216,8 @@ function IconGrid({ value, onPick }: { value: string | null; onPick: (name: stri
 function useRevealSelected() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const box = ref.current;
-    const on = box?.querySelector<HTMLElement>(".on");
-    if (box && on) box.scrollTop = on.offsetTop - box.offsetTop - box.clientHeight / 2 + on.clientHeight / 2;
+    const on = ref.current?.querySelector<HTMLElement>(".on");
+    on?.scrollIntoView({ block: "center" });
   }, []);
   return ref;
 }
@@ -1165,6 +1242,10 @@ const CATEGORY_NAMES: Record<string, string> = {
   media: "Media", system: "System", windows: "Windows", browser: "Browser", editing: "Editing", custom: "Your actions",
 };
 
+const CATEGORY_COLORS: Record<string, string> = {
+  media: "pink", system: "gray", windows: "blue", browser: "teal", editing: "orange", custom: "purple",
+};
+
 function ActionPicker({ actions, selected, onPick }: { actions: MacapadAction[]; selected: string; onPick: (a: MacapadAction) => void }) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
@@ -1175,16 +1256,20 @@ function ActionPicker({ actions, selected, onPick }: { actions: MacapadAction[];
       <SearchField value={query} onChange={setQuery} placeholder={`Search ${actions.length} actions`} />
       <div className="bed-list" ref={list}>
         {byCategory(shown).map(([category, list]) => (
-          <div key={category} className="bed-group">
-            <div className="bed-group-name">{CATEGORY_NAMES[category] ?? category}</div>
-            {list.map((a) => (
-              <button key={a.id} className={`bed-item${a.id === selected ? " on" : ""}`} onClick={() => onPick(a)}>
-                <MI name={iconOrBolt(a.icon)} />
-                <span>{a.name}</span>
-                {a.steps.length === 1 && a.steps[0].type === "keystroke" && <kbd>{prettyCombo(a.steps[0].keys)}</kbd>}
-                {a.id === selected && <MI name="check" className="bed-item-check" />}
-              </button>
-            ))}
+          <div key={category}>
+            <h4 className="group-head">{CATEGORY_NAMES[category] ?? category}</h4>
+            <div className="group">
+              {list.map((a) => (
+                <button key={a.id} className={`group-row bed-item${a.id === selected ? " on" : ""}`} onClick={() => onPick(a)} aria-pressed={a.id === selected}>
+                  <span className={`mps-ico ${CATEGORY_COLORS[category] ?? "gray"}`}>
+                    <MI name={iconOrBolt(a.icon)} />
+                  </span>
+                  <span className="mps-row-text">{a.name}</span>
+                  {a.steps.length === 1 && a.steps[0].type === "keystroke" && <kbd>{prettyCombo(a.steps[0].keys)}</kbd>}
+                  {a.id === selected && <MI name="check" className="mps-check" />}
+                </button>
+              ))}
+            </div>
           </div>
         ))}
         {shown.length === 0 && <div className="mpe-empty">No actions match “{query}”.</div>}
@@ -1201,13 +1286,25 @@ function AppPicker({ apps, selected, onPick }: { apps: MacapadApp[]; selected: s
   return (
     <>
       <SearchField value={query} onChange={setQuery} placeholder={`Search ${apps.length} apps`} />
-      <div className="mpe-apps bed-scroll" ref={list}>
-        {shown.map((app) => (
-          <button key={app.bundleId} className={app.bundleId === selected ? "on" : ""} onClick={() => onPick(app)} title={app.bundleId}>
-            <KeyFace button={{ icon: "apps", image: appIcon(app.bundleId) }} />
-            <span>{app.name}</span>
-          </button>
-        ))}
+      <div className="bed-list" ref={list}>
+        {shown.length > 0 && (
+          <div className="group">
+            {shown.map((app) => (
+              <button
+                key={app.bundleId}
+                className={`group-row bed-item${app.bundleId === selected ? " on" : ""}`}
+                onClick={() => onPick(app)}
+                aria-pressed={app.bundleId === selected}
+              >
+                <span className="bed-appicon">
+                  <KeyFace button={{ icon: "apps", image: appIcon(app.bundleId) }} />
+                </span>
+                <span className="mps-row-text">{app.name}</span>
+                {app.bundleId === selected && <MI name="check" className="mps-check" />}
+              </button>
+            ))}
+          </div>
+        )}
         {shown.length === 0 && <div className="mpe-empty">No apps match “{query}”.</div>}
       </div>
     </>
@@ -1224,13 +1321,19 @@ function ShortcutPicker({ shortcuts, selected, onPick }: { shortcuts: string[]; 
     <>
       <SearchField value={query} onChange={setQuery} placeholder={`Search ${shortcuts.length} shortcuts`} />
       <div className="bed-list" ref={list}>
-        {shown.map((name) => (
-          <button key={name} className={`bed-item${name === selected ? " on" : ""}`} onClick={() => onPick(name)}>
-            <MI name="bolt" />
-            <span>{name}</span>
-            {name === selected && <MI name="check" className="bed-item-check" />}
-          </button>
-        ))}
+        {shown.length > 0 && (
+          <div className="group">
+            {shown.map((name) => (
+              <button key={name} className={`group-row bed-item${name === selected ? " on" : ""}`} onClick={() => onPick(name)} aria-pressed={name === selected}>
+                <span className="mps-ico indigo">
+                  <MI name="bolt" />
+                </span>
+                <span className="mps-row-text">{name}</span>
+                {name === selected && <MI name="check" className="mps-check" />}
+              </button>
+            ))}
+          </div>
+        )}
         {shown.length === 0 && <div className="mpe-empty">No shortcuts match “{query}”.</div>}
       </div>
     </>
@@ -1289,7 +1392,7 @@ function WebsitePicker({
         }}
       >
         <input
-          className="bed-field"
+          className="field"
           value={url}
           placeholder="hackclub.com"
           inputMode="url"
@@ -1298,24 +1401,24 @@ function WebsitePicker({
           spellCheck={false}
           onChange={(e) => setUrl(e.target.value)}
         />
-        <button className="bed-go" type="submit" disabled={busy || !url.trim()}>
+        <button className="btn" type="submit" disabled={busy || !url.trim()}>
           {busy ? "Finding…" : "Find"}
         </button>
       </form>
-      <p className="bed-note">Opens in your Mac&rsquo;s default browser. The logo comes from the site itself.</p>
+      <p className="group-foot">Type the website&rsquo;s address. It opens in your Mac&rsquo;s default browser, and the key gets the site&rsquo;s own logo.</p>
       {meta && meta.images.length > 1 && (
         <>
-          <div className="bed-group-name">Other logos on {new URL(meta.url).hostname.replace(/^www\./, "")}</div>
+          <h4 className="group-head">Other logos on {new URL(meta.url).hostname.replace(/^www\./, "")}</h4>
           <div className="mpe-logos">
             {meta.images.slice(0, 8).map((src) => (
               <button key={src} onClick={() => use(meta, src)} aria-label="Use this logo" disabled={busy}>
-                <KeyFace button={{ icon: "language", image: src }} />
+                <KeyTile button={{ icon: "language", image: src }} />
               </button>
             ))}
           </div>
         </>
       )}
-      {error && <p className="embed-error">{error}</p>}
+      {error && <p className="mps-error">{error}</p>}
     </div>
   );
 }
@@ -1355,9 +1458,11 @@ function SequenceEditor({
           ))}
         </ol>
       )}
-      <button className="mpad-add-step" onClick={() => onChange([...steps, defaultStep(steps.length ? "wait" : "action")])}>
-        <MI name="add" /> {steps.length ? "Add another step" : "Add the first step"}
-      </button>
+      <div className="group">
+        <button className="group-row mps-blue" onClick={() => onChange([...steps, defaultStep(steps.length ? "wait" : "action")])}>
+          <MI name="add" /> {steps.length ? "Add another step" : "Add the first step"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1389,27 +1494,29 @@ function StepRow({
   return (
     <li className="mpad-step">
       <div className="mpad-step-head">
-        <b>{number}</b>
-        <select value={step.type} onChange={(e) => onChange(defaultStep(e.target.value as StepType))} aria-label="step type">
+        <b>Step {number}</b>
+        <span style={{ flex: 1 }} />
+        <button className="mps-round" onClick={onUp} disabled={!canUp} aria-label="Move step up">
+          <MI name="arrow_upward" />
+        </button>
+        <button className="mps-round" onClick={onDown} disabled={!canDown} aria-label="Move step down">
+          <MI name="arrow_downward" />
+        </button>
+        <button className="mps-round red" onClick={onRemove} aria-label="Remove step">
+          <MI name="close" />
+        </button>
+      </div>
+      <div className="mpad-step-body">
+        <select className="field" value={step.type} onChange={(e) => onChange(defaultStep(e.target.value as StepType))} aria-label="What this step does">
           {MACAPAD_STEP_TYPES.map((t) => (
             <option key={t} value={t}>
               {STEP_INFO[t].label}
             </option>
           ))}
         </select>
-        <button onClick={onUp} disabled={!canUp} aria-label="move step up">
-          <MI name="arrow_upward" />
-        </button>
-        <button onClick={onDown} disabled={!canDown} aria-label="move step down">
-          <MI name="arrow_downward" />
-        </button>
-        <button onClick={onRemove} aria-label="remove step">
-          <MI name="close" />
-        </button>
-      </div>
 
       {step.type === "media" && (
-        <select value={step.key} onChange={(e) => onChange({ ...step, key: e.target.value as typeof step.key })} aria-label="media key">
+        <select className="field" value={step.key} onChange={(e) => onChange({ ...step, key: e.target.value as typeof step.key })} aria-label="Which media key">
           {Object.entries(MEDIA_LABELS).map(([k, l]) => (
             <option key={k} value={k}>
               {l}
@@ -1419,43 +1526,47 @@ function StepRow({
       )}
       {step.type === "wait" && (
         <input
+          className="field"
           type="number"
+          inputMode="decimal"
           min={0}
-          max={60000}
-          step={100}
-          value={step.ms}
-          onChange={(e) => onChange({ ...step, ms: Number(e.target.value) })}
-          aria-label="milliseconds"
+          max={60}
+          step={0.1}
+          value={step.ms / 1000}
+          onChange={(e) => onChange({ ...step, ms: Math.round(Number(e.target.value) * 1000) })}
+          aria-label="Seconds"
         />
       )}
       {step.type === "action" && actions && (
-        <select value={step.id} onChange={(e) => onChange({ ...step, id: e.target.value })} aria-label="mac action">
-          <option value="">choose an action…</option>
+        <select className="field" value={step.id} onChange={(e) => onChange({ ...step, id: e.target.value })} aria-label="Which Mac action">
+          <option value="">Choose an action…</option>
           {byCategory(actions).map(([category, list]) => (
-            <optgroup key={category} label={category}>
+            <optgroup key={category} label={CATEGORY_NAMES[category] ?? category}>
               {list.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.name.toLowerCase()}
+                  {a.name}
                 </option>
               ))}
             </optgroup>
           ))}
-          {step.id && !actions.some((a) => a.id === step.id) && <option value={step.id}>{step.id} (missing)</option>}
+          {step.id && !actions.some((a) => a.id === step.id) && <option value={step.id}>{step.id} (not on your Mac)</option>}
         </select>
       )}
       {step.type === "keystroke" && <ShortcutComposer value={step.keys} onChange={(keys) => onChange({ ...step, keys })} />}
       {step.type === "appleScript" && (
         <textarea
+          className="field"
           value={step.source}
           placeholder={info.placeholder}
           onChange={(e) => onChange(withValue(step, e.target.value))}
-          aria-label="applescript"
+          aria-label="AppleScript"
         />
       )}
       {value !== null && step.type !== "appleScript" && step.type !== "keystroke" && !(step.type === "action" && actions) && (
         <input
+          className="field"
           value={value}
-          placeholder={step.type === "action" ? "action id, e.g. reload" : info.placeholder}
+          placeholder={step.type === "action" ? "The action's name" : info.placeholder}
           onChange={(e) => onChange(withValue(step, e.target.value))}
           inputMode={step.type === "openURL" ? "url" : undefined}
           autoCapitalize="off"
@@ -1464,6 +1575,7 @@ function StepRow({
         />
       )}
       {info.hint && <small>{info.hint}</small>}
+      </div>
     </li>
   );
 }
@@ -1484,37 +1596,49 @@ function MacActions() {
   }
 
   return (
-    <div className="mps-desk">
-      <div className="mpad-section">your actions (saved on your mac)</div>
-      <p className="sec-note">
-        named sequences any button can run with the <b>mac action</b> step — and any other app using macapad
-        can too.
-      </p>
-      {!catalog && <p className="sec-note">{error ?? "asking your mac…"}</p>}
-      {mine.length > 0 && (
-        <div className="mps-spots">
-          {mine.map((a) => (
-            <div key={a.id} className="mps-spot">
+    <>
+      <h3 className="group-head">Your actions</h3>
+      <div className="group">
+        {!catalog && (
+          <div className="group-row mps-muted">
+            <span className="mps-row-text">{error ? sentence(error) : "Asking your Mac…"}</span>
+            {error && (
+              <button className="mps-pill" onClick={reload}>
+                Try again
+              </button>
+            )}
+          </div>
+        )}
+        {mine.map((a) => (
+          <div key={a.id} className="group-row">
+            <span className="mps-ico purple">
               <MI name={iconOrBolt(a.icon)} />
-              <span>
-                {a.name} <small>· {a.steps.length} step{a.steps.length === 1 ? "" : "s"}</small>
-              </span>
-              <button onClick={() => setEditing(a)} aria-label={`edit ${a.name}`}>
-                <MI name="edit" />
-              </button>
-              <button onClick={() => remove(a)} aria-label={`delete ${a.name}`}>
-                <MI name="delete" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      {catalog && (
-        <button className="mpad-add-step" onClick={() => setEditing("new")}>
-          <MI name="add" /> new action
-        </button>
-      )}
-      {problem && <p className="embed-error">{problem}</p>}
+            </span>
+            <span className="mps-row-text">
+              {a.name}
+              <small>
+                {a.steps.length} step{a.steps.length === 1 ? "" : "s"}
+              </small>
+            </span>
+            <button className="mps-pill" onClick={() => setEditing(a)} aria-label={`Edit ${a.name}`}>
+              Edit
+            </button>
+            <button className="mps-round red" onClick={() => remove(a)} aria-label={`Delete ${a.name}`}>
+              <MI name="delete" />
+            </button>
+          </div>
+        ))}
+        {catalog && (
+          <button className="group-row mps-blue" onClick={() => setEditing("new")}>
+            <MI name="add" /> New action
+          </button>
+        )}
+      </div>
+      <p className="group-foot">
+        Saved on your Mac, so any key can run one, and so can other apps that use Macapad. Build one when a key needs to
+        do several things in a row.
+      </p>
+      {problem && <p className="mps-error">{problem}</p>}
       {editing && catalog && (
         <ActionEditor
           action={editing === "new" ? null : editing}
@@ -1526,7 +1650,7 @@ function MacActions() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -1546,12 +1670,13 @@ function ActionEditor({
   const [steps, setSteps] = useState<MacapadStep[]>(action?.steps ?? [defaultStep("keystroke")]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<"steps" | "icon">("steps");
 
   async function save() {
-    if (!name.trim()) return setError("give it a name");
-    if (!steps.length) return setError("add at least one step");
+    if (!name.trim()) return setError("Give it a name first.");
+    if (!steps.length) return setError("Add at least one step.");
     const blank = steps.findIndex((st) => stepValue(st)?.trim() === "" || (st.type === "keystroke" && !parseCombo(st.keys).key));
-    if (blank >= 0) return setError(`step ${blank + 1} isn't finished`);
+    if (blank >= 0) return setError(`Step ${blank + 1} isn't finished yet.`);
     setSaving(true);
     const res = await macapadAction("saveAction", {
       action: { id: action?.id ?? "", name: name.trim(), icon, category: action?.category ?? "custom", steps },
@@ -1564,44 +1689,82 @@ function ActionEditor({
   return (
     <EditablePopup
       open
-      title={action ? "edit action" : "new action"}
+      title={action ? "Edit action" : "New action"}
       onClose={onClose}
+      className="bed-pop"
       footer={
         <>
           <span style={{ flex: 1 }} />
-          <button className="edit-pop-primary" onClick={save} disabled={saving}>
-            {saving ? "saving…" : "save to mac"}
+          <button className="btn-primary bed-save" onClick={save} disabled={saving}>
+            {saving ? "Saving…" : "Save to Mac"}
           </button>
         </>
       }
     >
-      <label className="edit-field">
-        <span>name</span>
-        <input value={name} maxLength={40} placeholder="e.g. start focus" onChange={(e) => setName(e.target.value)} />
-      </label>
-      <div className="mpad-section">steps</div>
-      <ol className="mpad-steps">
-        {steps.map((st, i) => (
-          <StepRow
-            key={i}
-            step={st}
-            number={i + 1}
-            actions={actions.filter((a) => a.id !== action?.id)}
-            canUp={i > 0}
-            canDown={i < steps.length - 1}
-            onChange={(next) => setSteps((cur) => cur.map((x, j) => (j === i ? next : x)))}
-            onUp={() => setSteps((cur) => { const n = [...cur]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; return n; })}
-            onDown={() => setSteps((cur) => { const n = [...cur]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; return n; })}
-            onRemove={() => setSteps((cur) => cur.filter((_, j) => j !== i))}
-          />
-        ))}
-      </ol>
-      <button className="mpad-add-step" onClick={() => setSteps((cur) => [...cur, defaultStep("keystroke")])}>
-        <MI name="add" /> add a step
-      </button>
-      <div className="mpad-section">icon</div>
-      <IconGrid value={icon} onPick={setIcon} />
-      {error && <p className="embed-error">{error}</p>}
+      <div className="bed-side">
+        <div className="bed-hero">
+          <div className="bed-key" aria-hidden>
+            <KeyTile button={{ icon }} />
+            <span>{name || " "}</span>
+          </div>
+          <div className="bed-hero-text">
+            <input
+              className="field bed-label"
+              value={name}
+              maxLength={40}
+              placeholder="Name this action"
+              aria-label="Action name"
+              onChange={(e) => setName(e.target.value)}
+            />
+            <p className="bed-does">
+              {steps.length} step{steps.length === 1 ? "" : "s"}, saved on your Mac
+            </p>
+          </div>
+        </div>
+        <div className="bed-seg" role="tablist">
+          <button role="tab" aria-selected={view === "steps"} className={view === "steps" ? "on" : ""} onClick={() => setView("steps")}>
+            Steps
+          </button>
+          <button role="tab" aria-selected={view === "icon"} className={view === "icon" ? "on" : ""} onClick={() => setView("icon")}>
+            Icon
+          </button>
+        </div>
+      </div>
+
+      <div className="bed-main">
+        {view === "steps" ? (
+          <div className="bed-sequence">
+            <h3 className="bed-q">What happens, in order</h3>
+            <ol className="mpad-steps">
+              {steps.map((st, i) => (
+                <StepRow
+                  key={i}
+                  step={st}
+                  number={i + 1}
+                  actions={actions.filter((a) => a.id !== action?.id)}
+                  canUp={i > 0}
+                  canDown={i < steps.length - 1}
+                  onChange={(next) => setSteps((cur) => cur.map((x, j) => (j === i ? next : x)))}
+                  onUp={() => setSteps((cur) => { const n = [...cur]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; return n; })}
+                  onDown={() => setSteps((cur) => { const n = [...cur]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; return n; })}
+                  onRemove={() => setSteps((cur) => cur.filter((_, j) => j !== i))}
+                />
+              ))}
+            </ol>
+            <div className="group">
+              <button className="group-row mps-blue" onClick={() => setSteps((cur) => [...cur, defaultStep("keystroke")])}>
+                <MI name="add" /> Add a step
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bed-panel">
+            <h3 className="bed-q">Pick an icon</h3>
+            <IconGrid value={icon} onPick={setIcon} />
+          </div>
+        )}
+        {error && <p className="mps-error">{error}</p>}
+      </div>
     </EditablePopup>
   );
 }

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { WIDGET_INFO } from "@/lib/types";
 import EditablePopup from "../EditablePopup";
 import { clock12 } from "../alarmUtil";
-import { BigStat, Delta, Empty, MI, MiniList, Shell, StatRow, integrationGate, useIntegration } from "./kit";
+import { BigStat, Delta, Empty, MI, MiniList, Shell, integrationGate, useIntegration } from "./kit";
 import type { WidgetProps } from "./registry";
 
 interface GithubData {
@@ -21,63 +21,47 @@ interface GithubData {
   streak: { current: number; longest: number; total: number } | null;
 }
 
-export function GithubWidget({ settings, integrationSettings }: WidgetProps) {
+export function GithubWidget({ settings, integrationSettings, wide }: WidgetProps) {
   const payload = useIntegration<GithubData>("github", integrationSettings ?? settings);
   const gate = integrationGate(payload, "reading the commit log…");
 
   if (gate)
     return (
-      <Shell icon={WIDGET_INFO.github.icon} label="github">
+      <Shell icon={WIDGET_INFO.github.icon} label="GitHub">
         {gate}
       </Shell>
     );
   const d = payload!.data!;
 
   return (
-    <Shell icon={WIDGET_INFO.github.icon} label={`github · ${d.username}`}>
+    <Shell icon={WIDGET_INFO.github.icon} label={`GitHub · ${d.username}`}>
       {d.streak ? (
-        <>
-          <BigStat
-            value={
-              <span className="gh-streak">
-                <MI name="local_fire_department" className="gh-fire" />
-                {d.streak.current}
-              </span>
-            }
-            unit="day streak"
-            caption={`${d.commits} commits · last 24h`}
-          />
-          <StatRow
-            items={[
-              { label: "longest", value: d.streak.longest },
-              { label: "total", value: d.streak.total.toLocaleString() },
-              ...(d.publicRepos !== null ? [{ label: "repos", value: d.publicRepos }] : []),
-            ]}
-          />
-        </>
+        <BigStat
+          value={
+            <span className="gh-streak">
+              <MI name="local_fire_department" className="gh-fire" />
+              {d.streak.current}
+            </span>
+          }
+          unit="day coding streak"
+          caption={`${d.commits} ${d.commits === 1 ? "change" : "changes"} saved to GitHub today`}
+        />
       ) : (
         <BigStat
-          value={d.today}
-          unit={d.today === 1 ? "event" : "events"}
-          caption={`${d.commits} commits · last 24h`}
+          value={d.commits}
+          unit={d.commits === 1 ? "change today" : "changes today"}
+          caption="Saved to GitHub"
         />
       )}
-      {!d.streak && (
-        <StatRow
-          items={[
-            { label: "events 24h", value: d.today },
-            ...(d.followers !== null ? [{ label: "followers", value: d.followers }] : []),
-            ...(d.publicRepos !== null ? [{ label: "repos", value: d.publicRepos }] : []),
-          ]}
+      {wide && (
+        <MiniList
+          rows={d.latest.slice(0, 3).map((e, i) => ({
+            key: `${e.repo}${i}`,
+            left: e.verb,
+            right: e.repo,
+          }))}
         />
       )}
-      <MiniList
-        rows={d.latest.slice(0, 2).map((e, i) => ({
-          key: `${e.repo}${i}`,
-          left: e.verb,
-          right: e.repo,
-        }))}
-      />
     </Shell>
   );
 }
@@ -91,12 +75,12 @@ interface ChessData {
 
 const CHESS_MODE_KEY = "archersdesk.chessMode";
 
+/** The small round "choose" mark on tap-to-pick heroes (iOS menu chevrons). */
 export function ClickSettingsGlyph() {
   return (
     <span className="click-settings-glyph" aria-hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19 13.4a7.6 7.6 0 0 0 0-2.8l2-1.5-2-3.4-2.4 1a7.8 7.8 0 0 0-2.4-1.4L13.8 3h-3.6l-.4 2.3a7.8 7.8 0 0 0-2.4 1.4l-2.4-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 2.8l-2 1.5 2 3.4 2.4-1a7.8 7.8 0 0 0 2.4 1.4l.4 2.3h3.6l.4-2.3a7.8 7.8 0 0 0 2.4-1.4l2.4 1 2-3.4-2-1.5z" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7.5 9.5L12 5l4.5 4.5M7.5 14.5L12 19l4.5-4.5" />
       </svg>
     </span>
   );
@@ -114,7 +98,7 @@ export function ChessWidget({ settings, integrationSettings }: WidgetProps) {
 
   if (gate)
     return (
-      <Shell icon={WIDGET_INFO.chess.icon} label="chess.com">
+      <Shell icon={WIDGET_INFO.chess.icon} label="Chess.com">
         {gate}
       </Shell>
     );
@@ -128,17 +112,18 @@ export function ChessWidget({ settings, integrationSettings }: WidgetProps) {
   }
 
   return (
-    <Shell icon={WIDGET_INFO.chess.icon} label={`chess.com · ${d.username}`}>
+    <Shell icon={WIDGET_INFO.chess.icon} label={`Chess.com · ${d.username}`}>
       <button className="chess-hero" onClick={() => setOpen(true)} aria-label="choose mode">
-        <span className="chess-hero-icon">
-          <MI name="chess" className="chess-hero-mi" />
-        </span>
         <BigStat
           value={hero.rating}
-          unit={hero.mode}
-          caption={d.puzzles ? `puzzle best ${d.puzzles}` : undefined}
+          unit={hero.mode.charAt(0).toUpperCase() + hero.mode.slice(1)}
+          caption={
+            <>
+              {d.puzzles ? `Puzzle best ${d.puzzles}` : "Show another mode"}
+              <ClickSettingsGlyph />
+            </>
+          }
         />
-        <ClickSettingsGlyph />
       </button>
       <MiniList
         rows={d.modes
@@ -153,7 +138,7 @@ export function ChessWidget({ settings, integrationSettings }: WidgetProps) {
             ),
           }))}
       />
-      <EditablePopup open={open} title="show first" onClose={() => setOpen(false)}>
+      <EditablePopup open={open} title="Show first" onClose={() => setOpen(false)}>
         <div className="mood-grid">
           {d.modes.map((m) => (
             <button
@@ -182,12 +167,12 @@ export function StocksWidget({ settings, integrationSettings }: WidgetProps) {
   const gate = integrationGate(payload, "checking the tape…");
 
   return (
-    <Shell icon={WIDGET_INFO.stocks.icon} label="stocks">
+    <Shell icon={WIDGET_INFO.stocks.icon} label="Stocks">
       {gate ?? (
         <MiniList
           rows={payload!.data!.quotes.map((q) => ({
             key: q.sym,
-            left: q.sym.toLowerCase(),
+            left: <span className="k-strong">{q.sym}</span>,
             right: q.error ? (
               <small>—</small>
             ) : (
@@ -220,14 +205,14 @@ export function AnilistWidget({ settings, integrationSettings }: WidgetProps) {
   return (
     <Shell
       icon={WIDGET_INFO.anilist.icon}
-      label={`anilist${payload?.data ? ` · ${payload.data.username}` : ""}`}
+      label={`AniList${payload?.data ? ` · ${payload.data.username}` : ""}`}
     >
       {gate ?? (
         <>
           <BigStat
             value={payload!.data!.daysWatched}
             unit="days watched"
-            caption={payload!.data!.meanScore ? `mean score ${payload!.data!.meanScore}` : undefined}
+            caption={payload!.data!.meanScore ? `Mean score ${payload!.data!.meanScore}` : undefined}
           />
           <MiniList
             rows={[
@@ -271,7 +256,7 @@ export function SeptaWidget({ settings, integrationSettings }: WidgetProps) {
   return (
     <Shell
       icon={WIDGET_INFO.septa.icon}
-      label={`septa${payload?.data ? ` · ${payload.data.station.toLowerCase()}` : ""}`}
+      label={`SEPTA${payload?.data ? ` · ${payload.data.station}` : ""}`}
     >
       {gate ?? (
         <MiniList
@@ -279,7 +264,7 @@ export function SeptaWidget({ settings, integrationSettings }: WidgetProps) {
             const c = clock12(new Date(t.at));
             return {
               key: `${t.line}${i}`,
-              left: t.destination.toLowerCase(),
+              left: t.destination,
               right: (
                 <>
                   <b>
@@ -310,10 +295,10 @@ function MediaWidget({
   const gate = integrationGate(payload, "pinging the server…");
 
   return (
-    <Shell icon={WIDGET_INFO[service].icon} label={service}>
+    <Shell icon={WIDGET_INFO[service].icon} label={service === "plex" ? "Plex" : "Jellyfin"}>
       {gate ??
         (payload!.data!.playing.length === 0 ? (
-          <Empty>nothing streaming right now</Empty>
+          <Empty>Nothing is streaming right now</Empty>
         ) : (
           <>
             <BigStat
@@ -323,7 +308,7 @@ function MediaWidget({
             <MiniList
               rows={payload!.data!.playing.slice(0, 3).map((p, i) => ({
                 key: `${p.user}${i}`,
-                left: p.user.toLowerCase(),
+                left: p.user,
                 right: <b>{p.title}</b>,
               }))}
             />
@@ -351,14 +336,38 @@ interface WakatimeItem {
   percent: number | null;
 }
 
+/** "3 hrs 12 mins" as a figure: 3h 12m with small unit letters. */
+function DurationFigure({ text }: { text: string }) {
+  const h = text.match(/(\d+)\s*hr/);
+  const m = text.match(/(\d+)\s*min/);
+  if (!h && !m) return <>{text}</>;
+  return (
+    <span>
+      {h && (
+        <>
+          {h[1]}
+          <small>h</small>
+        </>
+      )}
+      {h && m && " "}
+      {m && (
+        <>
+          {m[1]}
+          <small>m</small>
+        </>
+      )}
+    </span>
+  );
+}
+
 const WAKATIME_MODE_KEY = "archersdesk.wakatimeMode";
 const WAKATIME_MODES = [
-  { key: "total", label: "Today", title: "Coding Today" },
-  { key: "languages", label: "Languages", title: "Top Language" },
-  { key: "projects", label: "Projects", title: "Top Project" },
+  { key: "total", label: "Today", title: "Coding today" },
+  { key: "languages", label: "Languages", title: "Top language" },
+  { key: "projects", label: "Projects", title: "Top project" },
   { key: "os", label: "OS", title: "Top OS" },
-  { key: "editors", label: "Editors", title: "Top Editor" },
-  { key: "categories", label: "Categories", title: "Top Category" },
+  { key: "editors", label: "Editors", title: "Top editor" },
+  { key: "categories", label: "Categories", title: "Top category" },
 ] as const;
 type WakatimeMode = (typeof WAKATIME_MODES)[number]["key"];
 
@@ -393,7 +402,7 @@ export function WakatimeWidget({ settings, integrationSettings }: WidgetProps) {
   }
 
   return (
-    <Shell icon={WIDGET_INFO.wakatime.icon} label="wakatime · today">
+    <Shell icon={WIDGET_INFO.wakatime.icon} label="WakaTime · today">
       {gate ?? (
         <>
           {(() => {
@@ -405,21 +414,23 @@ export function WakatimeWidget({ settings, integrationSettings }: WidgetProps) {
             return (
               <>
                 <button className="waka-hero" onClick={() => setOpen(true)} aria-label="choose wakatime stat">
-                  <span className="waka-hero-icon">
-                    <MI name={WIDGET_INFO.wakatime.icon} className="waka-hero-mi" />
-                  </span>
                   <BigStat
-                    value={mode === "total" ? d.total : (top?.name ?? "no data")}
+                    className={mode === "total" ? undefined : "text"}
+                    value={mode === "total" ? <DurationFigure text={d.total} /> : (top?.name ?? "Nothing yet")}
                     unit={mode === "total" ? undefined : top?.text}
-                    caption={meta.title}
+                    caption={
+                      <>
+                        {meta.title}
+                        <ClickSettingsGlyph />
+                      </>
+                    }
                   />
-                  <ClickSettingsGlyph />
                 </button>
                 {rows.length > 0 && (
                   <MiniList
                     rows={rows.map((item) => ({
                       key: item.name,
-                      left: item.name.toLowerCase(),
+                      left: item.name,
                       right: (
                         <>
                           <b>{item.text}</b>
@@ -429,7 +440,7 @@ export function WakatimeWidget({ settings, integrationSettings }: WidgetProps) {
                     }))}
                   />
                 )}
-                <EditablePopup open={open} title="show wakatime" onClose={() => setOpen(false)}>
+                <EditablePopup open={open} title="Show first" onClose={() => setOpen(false)}>
                   <div className="mood-grid">
                     {WAKATIME_MODES.map((m) => {
                       const rows = itemsFor(d, m.key);

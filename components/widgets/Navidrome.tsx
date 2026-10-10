@@ -27,6 +27,18 @@ function fmtTime(s: number): string {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
+// transport glyphs drawn as svg — the unicode ⏮ ⏸ ▶ turn into emoji on iOS
+function TransportIcon({ kind }: { kind: "prev" | "next" | "play" | "pause" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      {kind === "play" && <path d="M8 5.5v13l10.5-6.5z" />}
+      {kind === "pause" && <path d="M7 5.5h3.6v13H7zM13.4 5.5H17v13h-3.6z" />}
+      {kind === "prev" && <path d="M6 6h2.4v12H6zM19 6v12l-9-6z" />}
+      {kind === "next" && <path d="M15.6 6H18v12h-2.4zM5 6v12l9-6z" />}
+    </svg>
+  );
+}
+
 function coverUrl(id: string): string {
   return `/api/navidrome/cover?id=${encodeURIComponent(id)}`;
 }
@@ -113,7 +125,7 @@ export function NavidromeWidget({ wide, settings, integrationSettings }: WidgetP
 
   if (gate) {
     return (
-      <Shell icon={WIDGET_INFO.navidrome.icon} label="navidrome">
+      <Shell icon={WIDGET_INFO.navidrome.icon} label="Navidrome">
         <div className="navp">{gate}</div>
       </Shell>
     );
@@ -131,7 +143,6 @@ export function NavidromeWidget({ wide, settings, integrationSettings }: WidgetP
       />
       {track ? (
         <>
-          <div className="navp-ambient" style={{ backgroundImage: `url(${coverUrl(track.coverArt || track.id)})` }} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="navp-art" src={coverUrl(track.coverArt || track.id)} alt="" draggable={false} />
           <div className="navp-text">
@@ -152,26 +163,30 @@ export function NavidromeWidget({ wide, settings, integrationSettings }: WidgetP
             </div>
           </div>
           <div className="navp-controls">
-            <button className="navp-btn" onClick={prev} disabled={index === 0} aria-label="previous">
-              ⏮
+            <button className="key navp-btn" onClick={prev} disabled={index === 0} aria-label="previous">
+              <TransportIcon kind="prev" />
             </button>
-            <button className="navp-btn navp-btn-main" onClick={togglePlay} aria-label={playing ? "pause" : "play"}>
-              {playing ? "⏸" : "▶"}
+            <button
+              className={`key navp-btn navp-btn-main${playing ? " on" : ""}`}
+              onClick={togglePlay}
+              aria-label={playing ? "pause" : "play"}
+            >
+              <TransportIcon kind={playing ? "pause" : "play"} />
             </button>
-            <button className="navp-btn" onClick={next} disabled={index + 1 >= queue.length} aria-label="next">
-              ⏭
+            <button className="key navp-btn" onClick={next} disabled={index + 1 >= queue.length} aria-label="next">
+              <TransportIcon kind="next" />
             </button>
           </div>
         </>
       ) : (
-        <Empty>{wide ? "search or pick a playlist below" : "open the wide view to browse your library"}</Empty>
+        <Empty>{wide ? "Search, or pick a playlist" : "Make this a wide panel to browse your music"}</Empty>
       )}
     </>
   );
 
   if (!wide) {
     return (
-      <Shell icon={WIDGET_INFO.navidrome.icon} label="navidrome">
+      <Shell icon={WIDGET_INFO.navidrome.icon} label="Navidrome">
         <div className="navp">{player}</div>
       </Shell>
     );
@@ -181,20 +196,21 @@ export function NavidromeWidget({ wide, settings, integrationSettings }: WidgetP
   const browseAlbums: NavidromeAlbum[] = payload?.data?.recentAlbums ?? [];
 
   return (
-    <Shell icon={WIDGET_INFO.navidrome.icon} label="navidrome">
+    <Shell icon={WIDGET_INFO.navidrome.icon} label="Navidrome">
       <div className="navp navp-wide">
         <div className="navp-browse">
           <form className="navp-search" onSubmit={runSearch}>
             <input
+              className="field"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="search your library"
+              placeholder="Search your music"
               maxLength={120}
             />
           </form>
           <div className="navp-lists">
             {searching ? (
-              <Empty>searching…</Empty>
+              <Empty plain>Searching…</Empty>
             ) : results ? (
               <>
                 {results.songs.map((song, i) => (
@@ -209,14 +225,14 @@ export function NavidromeWidget({ wide, settings, integrationSettings }: WidgetP
                     <span className="navp-row-sub">{album.artist}</span>
                   </button>
                 ))}
-                {!results.songs.length && !results.albums.length && <Empty>no matches</Empty>}
+                {!results.songs.length && !results.albums.length && <Empty plain>Nothing matches that</Empty>}
               </>
             ) : (
               <>
                 {browsePlaylists.map((pl) => (
                   <button key={pl.id} className="navp-row" onClick={() => loadPlaylist(pl.id)}>
                     <span className="navp-row-title">{pl.name}</span>
-                    <span className="navp-row-sub">{pl.songCount} tracks</span>
+                    <span className="navp-row-sub">{pl.songCount} songs</span>
                   </button>
                 ))}
                 {browseAlbums.map((album) => (

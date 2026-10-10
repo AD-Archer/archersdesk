@@ -35,7 +35,16 @@ const QUOTES: Array<{ t: string; a: string }> = [
   { t: "The quieter you become, the more you can hear.", a: "Ram Dass" },
 ];
 
-export function QuoteWidget(_: WidgetProps) {
+/** Size class for a block of text, so short lines go huge and long ones
+ *  still fit the half without clipping. */
+export function lengthClass(text: string): string {
+  const n = text.length;
+  return n < 50 ? "len-s" : n < 95 ? "len-m" : n < 160 ? "len-l" : "len-xl";
+}
+
+/** A line a day: the words big and white, who said it in the tint. Tap for
+ *  another. */
+export function QuoteWidget({ wide }: WidgetProps) {
   const now = useNow(60_000);
   const [offset, setOffset] = useState(0);
   const dayOfYear = Math.floor(
@@ -45,12 +54,15 @@ export function QuoteWidget(_: WidgetProps) {
 
   return (
     <>
-      <span className="w-label">a line a day</span>
+      <span className="w-label">A line a day</span>
       <div className="w-body">
-        <button className="qt" onClick={() => setOffset((o) => o + 1)} aria-label="next quote">
-          <span className="qt-mark">&ldquo;</span>
-          <div className="qt-text">{q.t}</div>
-          <div className="qt-author">{q.a}</div>
+        <button
+          className={`qt ${lengthClass(q.t)}${wide ? " wide" : ""}`}
+          onClick={() => setOffset((o) => o + 1)}
+          aria-label="next quote"
+        >
+          <div className="qt-text">&ldquo;{q.t}&rdquo;</div>
+          <div className="qt-author">{q.a.charAt(0).toUpperCase() + q.a.slice(1)}</div>
         </button>
       </div>
     </>

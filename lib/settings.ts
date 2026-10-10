@@ -8,7 +8,6 @@ import {
   MACAPAD_MEDIA_KEYS,
   MACAPAD_SLOTS,
   MAX_ROWS,
-  THEMES,
   VIBES,
   WIDGET_PAGE_COUNT,
   WIDGETS,
@@ -24,9 +23,9 @@ import {
   type MacapadPads,
   type MacapadSize,
   type MacapadStep,
+  type NightMode,
   type Presence,
   type Settings,
-  type ThemeName,
   type Vibe,
   type WidgetName,
   type WorldClockZone,
@@ -38,7 +37,6 @@ import {
 // the db (and comes back out) is a fully-shaped Settings object.
 
 const MAX_DEVICES = 12;
-const DEFAULT_THEME: ThemeName = "ember";
 const SETTINGS_ENCRYPTION_PREFIX = "enc:v1:";
 const SETTINGS_KEY_FILE = "settings.encryption.key";
 let cachedSettingsKey: Buffer | null = null;
@@ -108,10 +106,10 @@ export const DEFAULT_SETTINGS: Settings = {
     {
       id: "default",
       name: "main",
-      theme: DEFAULT_THEME,
       location: { ...DEFAULT_LOCATION },
       layout: { rows: [...DEFAULT_LAYOUT.rows], pages: DEFAULT_LAYOUT.pages.map((p) => [...p]) },
       standby: { showTemp: true, showAlarm: true },
+      night: { enabled: true, pausedAt: null },
       presence: { ...DEFAULT_PRESENCE },
     },
   ],
@@ -475,6 +473,12 @@ function sanitizePresence(v: unknown): Presence {
   return { awayUntil, awayLocation: trimmed(p.awayLocation, "", 80), vibe };
 }
 
+function sanitizeNight(raw: unknown): NightMode {
+  const n = isRecord(raw) ? raw : {};
+  const at = typeof n.pausedAt === "string" && !Number.isNaN(Date.parse(n.pausedAt)) ? n.pausedAt : null;
+  return { enabled: n.enabled !== false, pausedAt: at };
+}
+
 function sanitizeDevice(raw: unknown, fallbackId: string, fallbackName: string): Device {
   const s = isRecord(raw) ? raw : {};
   const layout = isRecord(s.layout) ? s.layout : {};
@@ -483,7 +487,6 @@ function sanitizeDevice(raw: unknown, fallbackId: string, fallbackName: string):
   return {
     id: trimmed(s.id, "", 64) || fallbackId,
     name: trimmed(s.name, fallbackName, 40) || fallbackName,
-    theme: (THEMES as readonly string[]).includes(String(s.theme)) ? (s.theme as ThemeName) : DEFAULT_THEME,
     location: {
       name: str(loc.name, DEFAULT_LOCATION.name, 60),
       region: str(loc.region, "", 80),
@@ -492,6 +495,7 @@ function sanitizeDevice(raw: unknown, fallbackId: string, fallbackName: string):
     },
     layout: { rows: sanitizeRows(layout), pages: sanitizePages(layout) },
     standby: { showTemp: standby.showTemp !== false, showAlarm: standby.showAlarm !== false },
+    night: sanitizeNight(s.night),
     presence: sanitizePresence(s.presence),
   };
 }
@@ -594,7 +598,7 @@ export function sanitizeSettings(input: unknown): Settings {
   const lastfm = isRecord(s.lastfm) ? s.lastfm : {};
 
   // Devices: use the provided array, else migrate legacy top-level
-  // theme/location/layout/standby into a single "default" device.
+  // location/layout/standby into a single "default" device.
   let devices: Device[];
   if (Array.isArray(s.devices) && s.devices.length) {
     const seen = new Set<string>();
@@ -607,7 +611,7 @@ export function sanitizeSettings(input: unknown): Settings {
   } else {
     devices = [
       sanitizeDevice(
-        { id: "default", name: "main", theme: s.theme, location: s.location, layout: s.layout, standby: s.standby },
+        { id: "default", name: "main", location: s.location, layout: s.layout, standby: s.standby },
         "default",
         "main"
       ),
