@@ -80,6 +80,9 @@ interface ChessData {
     history?: Array<[number, number]>;
   }>;
   puzzles: number | null;
+  /** lichess turned the rating-history request away and there's no earlier
+   *  answer to show: the chart says so instead of "not enough games" */
+  historyMissing?: boolean;
 }
 
 const capWord = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -172,7 +175,7 @@ function ChessRatingsWidget({ settings, integrationSettings, site, wide }: Widge
               </div>
             )}
           </div>
-          <ChessChart history={hero.history ?? []} mode={hero.mode} />
+          <ChessChart history={hero.history ?? []} mode={hero.mode} missing={d.historyMissing} site={name} />
           <ChessResults mode={hero} who={`${d.username} on ${name}`} />
         </div>
         {modePicker}
@@ -244,9 +247,25 @@ function ChessTrend({ mode }: { mode: ChessData["modes"][number] }) {
 
 /** One series, so no legend: a 2px line in the tint over a faint wash, the
  *  high and low as quiet guides, and a dot on today's rating. */
-function ChessChart({ history, mode }: { history: Array<[number, number]>; mode: string }) {
+function ChessChart({
+  history,
+  mode,
+  missing,
+  site,
+}: {
+  history: Array<[number, number]>;
+  mode: string;
+  missing?: boolean;
+  site: string;
+}) {
   if (history.length < 2) {
-    return <div className="chess-chart empty">Not enough recent games for a chart</div>;
+    return (
+      <div className="chess-chart empty">
+        {missing
+          ? `Couldn't get your rating history from ${site}. It'll try again in a few minutes.`
+          : `Not enough ${mode} games yet for a chart`}
+      </div>
+    );
   }
   const W = 600;
   const H = 200;

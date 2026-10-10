@@ -398,6 +398,11 @@ async function chessComHistory(username: string): Promise<Record<string, RatingP
   }
 }
 
+/** the last rating history and per-mode stats lichess gave for each player,
+ *  so a turned-away request (429, a timeout) keeps the chart instead of
+ *  blanking it */
+const lichessLast: Record<string, { history: any[] | null; perf: Record<string, unknown> }> = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
+
 const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
   github: {
     ttl: 5 * 60 * 1000,
@@ -1118,26 +1123,35 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
       if (!modes.length) return need(`no rated games for "${username}" yet`);
       // rating history (one call) and each mode's win/loss/draw + streak
       // (one call per mode). Recent games need a sign-in on lichess now, so
-      // the totals stand in for a game-by-game strip.
+      // the totals stand in for a game-by-game strip. Lichess asks for one
+      // request at a time (bursts get a 429), so these go in turn; anything
+      // it turns away falls back to the last good answer for this player.
       const name = encodeURIComponent(username);
-      const [histRes, perfStats] = await Promise.all([
-        grab(`https://lichess.org/api/user/${name}/rating-history`).catch(() => null),
-        Promise.all(
-          modes.map((m) =>
-            grab(`https://lichess.org/api/user/${name}/perf/${m.mode}`)
-              .then((r) => (r.ok ? r.json() : null))
-              .catch(() => null)
-          )
-        ),
-      ]);
-      const histJson = histRes?.ok ? await histRes.json().catch(() => []) : [];
+      const last = (lichessLast[username.toLowerCase()] ??= { history: null, perf: {} });
+      const getJson = async (url: string) => {
+        try {
+          const r = await grab(url, { Accept: "application/json" });
+          return r.ok ? await r.json() : null;
+        } catch {
+          return null;
+        }
+      };
+      const histJson = await getJson(`https://lichess.org/api/user/${name}/rating-history`);
+      if (Array.isArray(histJson)) last.history = histJson;
+      const historyMissing = !last.history;
+      const perfStats: unknown[] = [];
+      for (const m of modes) {
+        const stat = await getJson(`https://lichess.org/api/user/${name}/perf/${m.mode}`);
+        if (stat) last.perf[m.mode] = stat;
+        perfStats.push(last.perf[m.mode] ?? null);
+      }
       const histByMode: Record<string, RatingPoint[]> = {};
-      for (const h of Array.isArray(histJson) ? histJson : []) {
+      for (const h of last.history ?? []) {
         const key = String(h?.name ?? "").toLowerCase();
         histByMode[key] = (h?.points ?? []).map((p: number[]) => [Date.UTC(p[0], p[1], p[2]), p[3]] as RatingPoint);
       }
       const rich = modes.map((m, i) => {
-        const stat = perfStats[i]?.stat;
+        const stat = (perfStats[i] as { stat?: any } | null)?.stat; // eslint-disable-line @typescript-eslint/no-explicit-any
         const c = stat?.count;
         const cur = stat?.resultStreak;
         const winCur = cur?.win?.cur?.v ?? 0;
@@ -1154,7 +1168,7 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
       modes.splice(0, modes.length, ...rich);
       const top = [...modes].sort((a, b) => b.rating - a.rating)[0];
       const puzzle = perfs.puzzle?.games > 0 ? (perfs.puzzle.rating as number) : null;
-      return { configured: true, data: { username: u.username ?? username, top, modes, puzzles: puzzle } };
+      return { configured: true, data: { username: u.username ?? username, top, modes, puzzles: puzzle, historyMissing } };
     },
   },
 
