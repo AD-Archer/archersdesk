@@ -53,37 +53,6 @@ tap a result), and accounts.
 Account widgets need a username/key in **settings → accounts**; feeds need
 nothing.
 
-The **macapad** widget is a stream-deck pad for your mac, driven by
-macapad (the menu bar app) running on it: 4 buttons a page in a square panel,
-8 in a dual row. Each pad has its own pages — swipe sideways inside the panel
-or tap its dots. Edit everything in **settings → macapad** (the widget's gear
-jumps there): pick a pad and page, tap a slot to set what it does: pick one of
-the mac's actions (emoji picker, reload, minimise, full screen, screenshot
-tools, media keys…), any installed app (with its real icon), a shortcut from
-the shortcuts app, or a website (its logo is found automatically) — or build
-your own steps, add/rename/
-reorder pages, and **arrange** to pick a button up and drop it on any slot of
-any page (an empty slot leaves a gap). Buttons can show a picture instead of an icon — upload one or paste an image
-link. The desk shrinks it to a 256px WebP that keeps transparency (an 80 KB
-png ends up around 2 KB) and keeps it in `DATA_DIR/macapad-images/`, so back
-that folder up with the database. Website logos and mac app icons go through
-the same compressor. The same tab adds or removes pads on
-the desk's own pages, and manages **your actions**: named step sequences
-saved on the mac itself (so anything else talking to macapad can run them). Put the macapad url + token in settings → accounts; the
-desk *server* calls the mac, so the url must be reachable from wherever the
-server runs (its tailscale ip works). Presses only send a button id; the
-server runs that button's saved steps. Weather/forecast/sun use Open-Meteo (no key). Stocks come from
-Yahoo's public chart endpoint. GitHub works keyless (60 req/hr) and pulls
-GitHub Streak Stats JSON when available — add a token for headroom. WakaTime
-defaults to `https://api.wakatime.com/api/v1` and accepts an **api url**
-override so self-hosted wakapi or hackatime work
-(`https://hackatime.hackclub.com/api/hackatime/v1`).
-
-Settings are encrypted before they are stored in SQLite. Set
-`SETTINGS_ENCRYPTION_KEY` in production so backups can be restored elsewhere;
-if it is omitted, the app creates `DATA_DIR/settings.encryption.key` and uses
-that file. Keep that key with the database backup.
-
 ### look
 
 One look, no themes: iOS StandBy. Widgets sit straight on black, each in its
