@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const pollCache = new Map<string, { at: number; data: unknown }>();
 const pollInflight = new Map<string, Promise<unknown>>();
@@ -116,4 +116,50 @@ export function useWakeLock() {
       document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
+}
+
+/** Wheel and trackpad scrolling as whole steps (a page at a time): deltas
+ *  add up to a threshold, then one step, and the rest of that gesture —
+ *  trackpad inertia, a spun wheel — is swallowed until the wheel goes quiet.
+ *  When `canStep` says no (already at the end), the event is left to bubble
+ *  so an outer pager can take it; once a gesture has stepped it stays ours.
+ *  `axis: "x"` only answers sideways scrolling. */
+export function useWheelStep({
+  axis,
+  canStep,
+  onStep,
+}: {
+  axis: "x" | "both";
+  canStep: (dir: 1 | -1) => boolean;
+  onStep: (dir: 1 | -1) => void;
+}) {
+  const gesture = useRef<{ acc: number; spent: boolean; timer: ReturnType<typeof setTimeout> | null }>({
+    acc: 0,
+    spent: false,
+    timer: null,
+  });
+  return (e: React.WheelEvent) => {
+    const g = gesture.current;
+    const sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+    if (axis === "x" && !sideways && !g.spent) return;
+    // line/page delta modes (some mice, firefox) → roughly pixels
+    const scale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+    const d = (sideways ? e.deltaX : e.deltaY) * scale;
+    if (!d) return;
+    const dir = d > 0 ? 1 : -1;
+    if (!g.spent && !canStep(dir)) return;
+    e.stopPropagation();
+    if (g.timer) clearTimeout(g.timer);
+    g.timer = setTimeout(() => {
+      g.acc = 0;
+      g.spent = false;
+    }, 160);
+    if (g.spent) return;
+    g.acc += d;
+    if (Math.abs(g.acc) >= 40) {
+      g.spent = true;
+      g.acc = 0;
+      onStep(dir);
+    }
+  };
 }

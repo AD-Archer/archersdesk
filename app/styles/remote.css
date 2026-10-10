@@ -578,6 +578,63 @@
   aspect-ratio: 1;
 }
 
+/* the remote's own pad page: as many columns as its grid has */
+.rpad-grid.screen {
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rpad-grid.screen .rpad-key {
+  aspect-ratio: 1;
+  gap: 6px;
+  border-radius: 20px;
+}
+
+.rpad-grid.screen .rpad-face {
+  height: 36px;
+}
+
+.rpad-grid.screen .rpad-face .mi {
+  font-size: 30px;
+}
+
+.rpad-grid.screen .rpad-face .mpad-img {
+  width: 36px;
+  height: 36px;
+}
+
+.rpad-grid.screen .rpad-label {
+  font-size: 13px;
+}
+
+/* four columns or more on a phone: smaller keys, smaller faces */
+.rpad-grid.screen.dense {
+  gap: 8px;
+}
+
+.rpad-grid.screen.dense .rpad-key {
+  padding: 6px;
+  gap: 4px;
+  border-radius: 16px;
+}
+
+.rpad-grid.screen.dense .rpad-face {
+  height: 26px;
+}
+
+.rpad-grid.screen.dense .rpad-face .mi {
+  font-size: 24px;
+}
+
+.rpad-grid.screen.dense .rpad-face .mpad-img {
+  width: 26px;
+  height: 26px;
+}
+
+.rpad-grid.screen.dense .rpad-label {
+  font-size: 11px;
+}
+
 .rpad-face {
   display: grid;
   place-items: center;
@@ -1094,6 +1151,10 @@ input.ral-time-field::-webkit-calendar-picker-indicator {
 
   .rpad-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .rpad-grid.screen {
+    grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
   }
 
   .rpad-grid .rpad-key,

@@ -233,6 +233,7 @@ export default function SettingsSheet({
   activePage,
   macapadFocus,
   deviceId,
+  padScreen,
   onChooseDevice,
   onClose,
   onChange,
@@ -247,6 +248,8 @@ export default function SettingsSheet({
   activePage?: number;
   macapadFocus?: MacapadFocus | null;
   deviceId: string;
+  /** whose pad page settings → macapad opens on: this screen, or "remote" */
+  padScreen?: string;
   onChooseDevice: (id: string) => void;
   onClose: () => void;
   onChange: (next: ViewSettings) => void;
@@ -369,7 +372,7 @@ export default function SettingsSheet({
               {tab === "layout" && (
                 <LayoutSection settings={settings} onChange={onChange} initialPage={activePage} />
               )}
-              {tab === "macapad" && <MacapadSection settings={settings} onChange={onChange} focus={macapadFocus} />}
+              {tab === "macapad" && <MacapadSection settings={settings} onChange={onChange} focus={macapadFocus} screen={padScreen ?? deviceId} />}
               {tab === "alarms" && <AlarmsSection settings={settings} onChange={onChange} />}
               {tab === "calendar" && <CalendarSection settings={settings} onChange={onChange} />}
               {tab === "location" && <LocationSection settings={settings} onChange={onChange} />}

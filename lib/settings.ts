@@ -3,9 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { getDb } from "./db";
 import { env } from "./env";
+import { defaultScreenPad } from "./macapad";
 import {
+  MACAPAD_GRID,
   MACAPAD_MAX_PAGES,
   MACAPAD_MEDIA_KEYS,
+  MACAPAD_REMOTE,
   MACAPAD_SLOTS,
   MAX_ROWS,
   VIBES,
@@ -21,7 +24,7 @@ import {
   type MacapadMediaKey,
   type MacapadPage,
   type MacapadPads,
-  type MacapadSize,
+  type MacapadScreenPad,
   type MacapadStep,
   type NightMode,
   type Presence,
@@ -98,6 +101,8 @@ const DEFAULT_MACAPAD: MacapadPads = {
       ],
     },
   ],
+  // each screen's pad page (and the remote's) is filled in by sanitizeMacapad
+  screens: {},
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -137,7 +142,10 @@ export const DEFAULT_SETTINGS: Settings = {
     macapad: { url: "", token: "" },
   },
   embeds: [],
-  macapad: DEFAULT_MACAPAD,
+  macapad: {
+    ...DEFAULT_MACAPAD,
+    screens: { default: defaultScreenPad("default"), [MACAPAD_REMOTE]: defaultScreenPad(MACAPAD_REMOTE) },
+  },
   alarms: [],
   worldclock: [
     { label: "london", tz: "Europe/London" },
@@ -386,29 +394,54 @@ export function sanitizeMacapadButton(v: unknown): MacapadButton | null {
   };
 }
 
-function sanitizeMacapad(v: unknown): MacapadPads {
-  if (!isRecord(v)) return DEFAULT_MACAPAD;
-  const pad = (raw: unknown, size: MacapadSize): MacapadPage[] => {
-    if (!Array.isArray(raw)) return DEFAULT_MACAPAD[size];
-    // the first shape was one flat list of buttons — that becomes page 1
-    const isPage = (x: unknown) => isRecord(x) && Array.isArray(x.buttons);
-    const rawPages = raw.some(isPage) ? raw.filter(isPage) : [{ id: "page-1", name: "page 1", buttons: raw }];
-    const seen = new Set<string>();
-    const pages = rawPages.slice(0, MACAPAD_MAX_PAGES).map((p, i) => {
-      const page = p as Record<string, unknown>;
-      let id = trimmed(page.id, "", 64) || `page-${i + 1}`;
-      while (seen.has(id)) id = `${id}-${i + 1}`;
-      seen.add(id);
-      const buttons = page.buttons as unknown[];
-      return {
-        id,
-        name: trimmed(page.name, "", 30) || `page ${i + 1}`,
-        buttons: Array.from({ length: MACAPAD_SLOTS[size] }, (_, j) => sanitizeMacapadButton(buttons[j])),
-      };
-    });
-    return pages.length ? pages : DEFAULT_MACAPAD[size];
+/** A pad's pages, `slots` buttons each; `fallback` when there are none. */
+function sanitizePadPages(raw: unknown, slots: number, fallback: () => MacapadPage[]): MacapadPage[] {
+  if (!Array.isArray(raw)) return fallback();
+  // the first shape was one flat list of buttons — that becomes page 1
+  const isPage = (x: unknown) => isRecord(x) && Array.isArray(x.buttons);
+  const rawPages = raw.some(isPage) ? raw.filter(isPage) : [{ id: "page-1", name: "page 1", buttons: raw }];
+  const seen = new Set<string>();
+  const pages = rawPages.slice(0, MACAPAD_MAX_PAGES).map((p, i) => {
+    const page = p as Record<string, unknown>;
+    let id = trimmed(page.id, "", 64) || `page-${i + 1}`;
+    while (seen.has(id)) id = `${id}-${i + 1}`;
+    seen.add(id);
+    const buttons = page.buttons as unknown[];
+    return {
+      id,
+      name: trimmed(page.name, "", 30) || `page ${i + 1}`,
+      buttons: Array.from({ length: slots }, (_, j) => sanitizeMacapadButton(buttons[j])),
+    };
+  });
+  return pages.length ? pages : fallback();
+}
+
+const gridInt = (v: unknown, fallback: number, min: number, max: number) => Math.round(num(v, fallback, min, max));
+
+/** The pads, with exactly one pad page per screen key (each device, plus the
+ *  remote): a new screen gets a starter pad, a deleted one's pad goes. */
+function sanitizeMacapad(v: unknown, screenKeys: string[]): MacapadPads {
+  const m = isRecord(v) ? v : {};
+  const rawScreens = isRecord(m.screens) ? m.screens : {};
+  const screens: Record<string, MacapadScreenPad> = {};
+  screenKeys.forEach((key, i) => {
+    const raw = rawScreens[key];
+    if (isRecord(raw)) {
+      const cols = gridInt(raw.cols, 5, MACAPAD_GRID.minCols, MACAPAD_GRID.maxCols);
+      const rows = gridInt(raw.rows, 3, MACAPAD_GRID.minRows, MACAPAD_GRID.maxRows);
+      screens[key] = { cols, rows, pages: sanitizePadPages(raw.pages, cols * rows, () => defaultScreenPad(key).pages) };
+    } else if (i === 0 && Array.isArray(m.full)) {
+      // the pad page was briefly one shared 5×3 pad ("full"): the first screen keeps it
+      screens[key] = { cols: 5, rows: 3, pages: sanitizePadPages(m.full, 15, () => defaultScreenPad(key).pages) };
+    } else {
+      screens[key] = defaultScreenPad(key);
+    }
+  });
+  return {
+    small: sanitizePadPages(m.small, MACAPAD_SLOTS.small, () => DEFAULT_MACAPAD.small),
+    big: sanitizePadPages(m.big, MACAPAD_SLOTS.big, () => DEFAULT_MACAPAD.big),
+    screens,
   };
-  return { small: pad(v.small, "small"), big: pad(v.big, "big") };
 }
 
 function sanitizeRowsValue(v: unknown): LayoutRow[] {
@@ -640,7 +673,7 @@ export function sanitizeSettings(input: unknown): Settings {
     },
     integrations: sanitizeIntegrations(s.integrations),
     embeds: sanitizeEmbeds(s.embeds),
-    macapad: sanitizeMacapad(s.macapad),
+    macapad: sanitizeMacapad(s.macapad, [...devices.map((d) => d.id), MACAPAD_REMOTE]),
     alarms: sanitizeAlarms(s.alarms, validIds),
     worldclock: sanitizeZones(s.worldclock),
     calendars: sanitizeCalendars(s.calendars),

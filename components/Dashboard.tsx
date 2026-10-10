@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { WIDGET_PAGE_COUNT } from "@/lib/types";
+import { MACAPAD_REMOTE, WIDGET_PAGE_COUNT } from "@/lib/types";
 import type { Alarm, Device, LayoutRow, Presence, Settings, ViewSettings } from "@/lib/types";
 import { fromView, toView } from "@/lib/view";
 import { MainRow, WidgetPanel } from "./widgets/registry";
+import { MacapadPage } from "./widgets/Macapad";
 import Standby from "./Standby";
 import SettingsSheet, { type Tab as SheetTab } from "./SettingsSheet";
 import type { MacapadFocus } from "./MacapadSettings";
@@ -16,11 +17,14 @@ import { alarmMatches } from "./alarmUtil";
 import { alarmsForDevice } from "./alarmUtil";
 import { pushPresence } from "./presence";
 import { unlockAudio } from "./audio";
-import { useNow, usePoll, useWakeLock } from "./hooks";
+import { useNow, usePoll, useWakeLock, useWheelStep } from "./hooks";
 import { useWeather } from "./widgets/Weather";
 import { nightState } from "./night";
 
-const PAGES = 1 + WIDGET_PAGE_COUNT; // 0 = standby, 1..n = widget pages
+// 0 = standby, 1..n = widget pages, last = the macapad page. StandBy and the
+// pad page are fixed; only the widget pages in between are laid out.
+const PAGES = 1 + WIDGET_PAGE_COUNT + 1;
+const PAD_PAGE = PAGES - 1;
 const DEVICE_KEY = "archersdesk.deviceId";
 const LAST_DEVICE_KEY = "archersdesk.lastDeviceId";
 type PaneSide = "left" | "right";
@@ -91,6 +95,7 @@ export default function Dashboard({
     id: number;
     axis: "h" | "v" | null;
     side: PaneSide;
+    onControl: boolean; // began on a key: a tap there is the key's, not a HUD tap
   } | null>(null);
   const settingsRef = useRef<Settings>(settings);
   const deviceIdRef = useRef<string | null>(deviceId);
@@ -122,8 +127,9 @@ export default function Dashboard({
   viewRef.current = view;
 
   const pages = widgetPages(view);
-  const activeWidgetPage = Math.max(0, page - 1);
-  const activeRows = pages[activeWidgetPage] ?? pages[0] ?? [];
+  const onWidgetPage = page > 0 && page < PAD_PAGE;
+  const activeWidgetPage = Math.min(WIDGET_PAGE_COUNT - 1, Math.max(0, page - 1));
+  const activeRows = onWidgetPage ? (pages[activeWidgetPage] ?? []) : [];
 
   const onDisplay = ready && deviceId !== null && deviceId !== "remote";
   const activeAwayUntil = onDisplay ? view.presence.awayUntil : null;
@@ -469,8 +475,9 @@ export default function Dashboard({
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
       if (e.key === "ArrowRight") setPage((p) => Math.min(PAGES - 1, p + 1));
       if (e.key === "ArrowLeft") setPage((p) => Math.max(0, p - 1));
-      if (e.key === "ArrowDown" && pageRef.current > 0) moveBothRows(pageRef.current - 1, 1);
-      if (e.key === "ArrowUp" && pageRef.current > 0) moveBothRows(pageRef.current - 1, -1);
+      const onRows = pageRef.current > 0 && pageRef.current < PAD_PAGE;
+      if (e.key === "ArrowDown" && onRows) moveBothRows(pageRef.current - 1, 1);
+      if (e.key === "ArrowUp" && onRows) moveBothRows(pageRef.current - 1, -1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -513,8 +520,19 @@ export default function Dashboard({
     }
   }
 
+  // a sideways trackpad swipe / shift+wheel turns the desk's pages (the pad
+  // takes wheel events itself until it runs out of pages, then hands them up)
+  const onWheel = useWheelStep({
+    axis: "x",
+    canStep: (dir) => (dir > 0 ? pageRef.current < PAGES - 1 : pageRef.current > 0),
+    onStep: (dir) => setPage((p) => Math.min(PAGES - 1, Math.max(0, p + dir))),
+  });
+
   function onPointerDown(e: React.PointerEvent) {
-    if ((e.target as HTMLElement).closest("button, input, textarea, a, label")) return;
+    // controls keep their pointer — except the macapad's keys, which still
+    // let a swipe that starts on them carry on to the desk ([data-swipe-through])
+    const control = (e.target as HTMLElement).closest("button, input, textarea, a, label");
+    if (control && !control.closest("[data-swipe-through]")) return;
     // swipes starting on a panel steer that panel's stack; swipes starting on
     // the background (screen edges included) steer whichever half they're in
     const slot = (e.target as HTMLElement).closest<HTMLElement>("[data-slot]")?.dataset.slot;
@@ -524,18 +542,32 @@ export default function Dashboard({
         : e.clientX > window.innerWidth / 2
           ? "right"
           : "left";
-    start.current = { x: e.clientX, y: e.clientY, id: e.pointerId, axis: null, side };
+    start.current = { x: e.clientX, y: e.clientY, id: e.pointerId, axis: null, side, onControl: Boolean(control) };
   }
   function onPointerMove(e: React.PointerEvent) {
     const s = start.current;
     if (!s || e.pointerId !== s.id) return;
+    // the button came up where we didn't hear it (outside the window, or a
+    // widget kept the pointerup): drop the drag instead of following hover
+    if (e.pointerType === "mouse" && e.buttons === 0) {
+      start.current = null;
+      setDrag(null);
+      setDragY(null);
+      return;
+    }
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
     if (!s.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 12) {
       s.axis = Math.abs(dx) >= Math.abs(dy) ? "h" : "v";
+      // keep the drag even if the mouse leaves the window mid-swipe
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // pointer already gone
+      }
     }
     if (s.axis === "h") setDrag(dx);
-    else if (s.axis === "v" && page > 0 && activeRows.length > 1) {
+    else if (s.axis === "v" && onWidgetPage && activeRows.length > 1) {
       setDragY({ pageIndex: page - 1, side: s.side, dy });
     }
   }
@@ -552,11 +584,11 @@ export default function Dashboard({
       const threshold = Math.min(80, window.innerWidth * 0.1);
       if (dx < -threshold) setPage((p) => Math.min(PAGES - 1, p + 1));
       else if (dx > threshold) setPage((p) => Math.max(0, p - 1));
-    } else if (axis === "v" && page > 0) {
+    } else if (axis === "v" && onWidgetPage) {
       const threshold = Math.min(70, window.innerHeight * 0.12);
       if (dy < -threshold) movePaneRow(page - 1, s.side, 1);
       else if (dy > threshold) movePaneRow(page - 1, s.side, -1);
-    } else if (!axis) {
+    } else if (!axis && !s.onControl) {
       showHud();
     }
   }
@@ -640,6 +672,7 @@ export default function Dashboard({
           activePage={activeWidgetPage}
           macapadFocus={macapadFocus}
           deviceId={activeDevice.id}
+          padScreen={MACAPAD_REMOTE}
           onChooseDevice={chooseDevice}
           onClose={() => setSettingsOpen(false)}
           onChange={updateSettings}
@@ -656,6 +689,7 @@ export default function Dashboard({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onWheel={onWheel}
       >
         <div
           className={`pager-track${drag === null ? " animate" : ""}`}
@@ -669,6 +703,9 @@ export default function Dashboard({
               {renderWidgetPage(i)}
             </section>
           ))}
+          <section className="page">
+            <MacapadPage settings={view} integrationSettings={savedView} />
+          </section>
         </div>
       </div>
 
@@ -725,7 +762,7 @@ export default function Dashboard({
         ))}
       </div>
 
-      {page > 0 && activeRows.length > 1 && (
+      {onWidgetPage && activeRows.length > 1 && (
         <div className={`vdots${hud ? " show" : ""}`} aria-hidden>
           {activeRows.map((_, i) => (
             <i

@@ -1,8 +1,10 @@
 "use client";
 
 // Macapad — a stream-deck pad for the mac. A square panel shows the small
-// pad (2×2), a dual row the big one (4×2); each pad has its own pages, swiped
-// sideways inside the panel (or picked from the page dots). Keys look like
+// pad (2×2), a dual row the big one (4×2), and the desk's own pad page (the
+// last page, always there) this screen's pad, in the grid chosen for it
+// (settings → macapad). Each pad has its own pages, swiped sideways inside the pad, scrolled with a wheel or
+// trackpad, or picked from the page dots / arrows. Keys look like
 // home-screen tiles: rounded squares with a white glyph, or the app icon /
 // site logo filling the tile, the label underneath. Tapping a key asks
 // the desk server to press it; the server looks up the saved steps and runs
@@ -11,7 +13,9 @@
 // pointed at this pad and page.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { MACAPAD_SLOTS, WIDGET_INFO, type MacapadButton, type MacapadSize } from "@/lib/types";
+import { padOf, screenPad } from "@/lib/macapad";
+import { WIDGET_INFO, type MacapadButton, type MacapadPadId, type ViewSettings } from "@/lib/types";
+import { useWheelStep } from "../hooks";
 import { KeyTile, type MacapadFocus } from "../MacapadSettings";
 import { Empty, MI, plainWords, Shell, useIntegration, useIntegrationAction } from "./kit";
 import type { WidgetProps } from "./registry";
@@ -26,14 +30,39 @@ export function openMacapadSettings(focus: MacapadFocus) {
 }
 
 export function MacapadWidget({ wide, settings, integrationSettings }: WidgetProps) {
-  const size: MacapadSize = wide ? "big" : "small";
+  return <MacapadPad pad={wide ? "big" : "small"} settings={settings} integrationSettings={integrationSettings} />;
+}
+
+/** The desk's pad page: this screen's own pad on a panel that fills the page. */
+export function MacapadPage({ settings, integrationSettings }: { settings: ViewSettings; integrationSettings?: ViewSettings }) {
+  return (
+    <section className="panel deck" data-widget="macapad">
+      <MacapadPad pad={screenPad(settings.deviceId)} settings={settings} integrationSettings={integrationSettings} />
+    </section>
+  );
+}
+
+function MacapadPad({
+  pad,
+  settings,
+  integrationSettings,
+}: {
+  pad: MacapadPadId;
+  settings: ViewSettings;
+  integrationSettings?: ViewSettings;
+}) {
   const status = useIntegration<{ online: boolean }>("macapad", integrationSettings ?? settings, 30 * 1000);
   const act = useIntegrationAction("macapad");
 
-  const pages = settings.macapad?.[size] ?? [];
+  const found = padOf(settings.macapad, pad);
+  const pages = found?.pages ?? [];
+  const cols = found?.cols ?? 2;
+  const rows = found?.rows ?? 2;
+  const slots = cols * rows;
   const [pageIndex, setPageIndex] = useState(0);
   const current = Math.min(pageIndex, Math.max(0, pages.length - 1));
   const page = pages[current];
+  const last = pages.length - 1;
 
   // per-button press feedback: busy while the mac runs it, then ok/err briefly
   const [flash, setFlash] = useState<Record<string, "busy" | "ok" | "err">>({});
@@ -49,20 +78,31 @@ export function MacapadWidget({ wide, settings, integrationSettings }: WidgetPro
   // sideways swipe between pad pages. like SwipeCarousel: once a drag locks
   // horizontal it stops propagating so the desk doesn't change page, and the
   // click that follows a swipe is swallowed so it doesn't press a button.
+  // Past the first or last page the drag is left to the desk ("pass"), so
+  // the desk's pages are one continuous swipe away. A mouse drag captures
+  // the pointer, so letting go outside the pad still ends it.
   const drag = useRef<{
     x: number;
     y: number;
     id: number;
-    axis: "h" | "v" | null;
+    axis: "h" | "v" | "pass" | null;
   } | null>(null);
   const swiped = useRef(false);
   const [dragX, setDragX] = useState<number | null>(null);
 
-  // tiles are squares sized to the panel: measure the pad's box and fit the
-  // grid (tile + its label under it) the way a home screen does
+  // wheel / trackpad: a page per gesture, either direction (handed to the
+  // desk at the ends, like a drag)
+  const onWheel = useWheelStep({
+    axis: "both",
+    canStep: (dir) => (dir > 0 ? current < last : current > 0),
+    onStep: (dir) => setPageIndex(Math.min(last, Math.max(0, current + dir))),
+  });
+
+  // tiles are sized to the panel: measure the pad's box and fit the grid
+  // (tile + its label under it) the way a home screen does, then stretch it
+  // to fill
   const viewport = useRef<HTMLDivElement>(null);
   const [tile, setTile] = useState<React.CSSProperties | undefined>(undefined);
-  const cols = size === "big" ? 4 : 2;
   useLayoutEffect(() => {
     const el = viewport.current;
     if (!el) return;
@@ -73,26 +113,32 @@ export function MacapadWidget({ wide, settings, integrationSettings }: WidgetPro
       const below = note ? note.offsetHeight + 8 : 0;
       const h = el.clientHeight - below;
       if (!w || !h) return;
-      const rows = 2;
       const fitT = (lab: number) =>
-        Math.min(w / (cols + (cols - 1) * 0.26), (h - rows * lab) / (rows + (rows - 1) * 0.12));
+        Math.min(w / (cols + (cols - 1) * 0.2), (h - rows * lab) / (rows + (rows - 1) * 0.12));
       let lab = 30;
       let t = fitT(lab);
       if (t < 120) t = fitT((lab = 22));
+      if (t < 64) t = fitT((lab = 18)); // dense grids: smaller labels
       t = Math.max(40, Math.floor(t));
-      // the pad is exactly as tall as its grid, so the dots sit right under it
-      const gh = Math.ceil(rows * (t + lab) + (rows - 1) * t * 0.12);
+      // then fill the pad both ways: keys stretch up to 1.4× in whichever
+      // direction has room left, and anything past that goes into the gaps
+      // (the grid is spread edge to edge in css), so there's never a band of
+      // empty pad around the keys
+      const tw = Math.max(t, Math.floor(Math.min(t * 1.4, (w - (cols - 1) * t * 0.2) / cols)));
+      const th = Math.max(t, Math.floor(Math.min(t * 1.4, (h - rows * lab - (rows - 1) * t * 0.12) / rows)));
       setTile({
         "--t": `${t}px`,
+        "--tw": `${tw}px`,
+        "--th": `${th}px`,
         "--lab": `${lab}px`,
-        "--gh": `${gh}px`,
+        "--cols": cols,
       } as React.CSSProperties);
     };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [cols, status?.configured, status?.data?.online, pages.length]);
+  }, [cols, rows, status?.configured, status?.data?.online, pages.length]);
 
   function onPointerDown(e: React.PointerEvent) {
     drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId, axis: null };
@@ -101,10 +147,27 @@ export function MacapadWidget({ wide, settings, integrationSettings }: WidgetPro
 
   function onPointerMove(e: React.PointerEvent) {
     const d = drag.current;
-    if (!d || e.pointerId !== d.id || pages.length < 2) return;
+    if (!d || e.pointerId !== d.id) return;
+    // a mouse that let go somewhere we didn't hear about: that drag is over
+    if (e.pointerType === "mouse" && e.buttons === 0) {
+      drag.current = null;
+      setDragX(null);
+      return;
+    }
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
-    if (!d.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 12) d.axis = Math.abs(dx) >= Math.abs(dy) ? "h" : "v";
+    if (!d.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 12) {
+      if (Math.abs(dx) < Math.abs(dy)) d.axis = "v";
+      else if (pages.length < 2 || (dx > 0 ? current === 0 : current === last)) d.axis = "pass";
+      else {
+        d.axis = "h";
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          // pointer already gone
+        }
+      }
+    }
     if (d.axis === "h") {
       e.stopPropagation();
       setDragX(dx);
@@ -116,12 +179,13 @@ export function MacapadWidget({ wide, settings, integrationSettings }: WidgetPro
     if (!d || e.pointerId !== d.id) return;
     drag.current = null;
     setDragX(null);
+    // any drag, ours or the desk's, isn't a press
+    if (d.axis) swiped.current = true;
     if (d.axis !== "h") return;
     e.stopPropagation();
-    swiped.current = true;
     const dx = e.clientX - d.x;
     const threshold = Math.min(60, e.currentTarget.clientWidth * 0.15);
-    if (dx < -threshold) setPageIndex(Math.min(pages.length - 1, current + 1));
+    if (dx < -threshold) setPageIndex(Math.min(last, current + 1));
     else if (dx > threshold) setPageIndex(Math.max(0, current - 1));
   }
 
@@ -160,7 +224,7 @@ export function MacapadWidget({ wide, settings, integrationSettings }: WidgetPro
       return;
     }
     if (b) press(b);
-    else openMacapadSettings({ size, page: page?.id, index });
+    else openMacapadSettings({ pad, page: page?.id, index });
   }
 
   if (!status) {
@@ -193,18 +257,20 @@ export function MacapadWidget({ wide, settings, integrationSettings }: WidgetPro
     <Shell icon={WIDGET_INFO.macapad.icon} label={label}>
       <button
         className="mpad-edit"
-        onClick={() => openMacapadSettings({ size, page: page?.id })}
+        onClick={() => openMacapadSettings({ pad, page: page?.id })}
         aria-label="edit keys"
       >
         Edit
       </button>
       <div ref={viewport} className="mpad-fit" style={tile}>
         <div
-          className={`mpad-viewport ${size}${offline ? " offline" : ""}`}
+          className={`mpad-viewport${offline ? " offline" : ""}${rows === 1 ? " one-row" : ""}`}
+          data-swipe-through
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
+          onWheel={onWheel}
         >
           <div
             className={`mpad-track${dragX === null ? " animate" : ""}`}
@@ -214,7 +280,7 @@ export function MacapadWidget({ wide, settings, integrationSettings }: WidgetPro
           >
             {pages.map((pg) => (
               <div key={pg.id} className="mpad">
-                {Array.from({ length: MACAPAD_SLOTS[size] }, (_, i) => pg.buttons[i] ?? null).map((b, i) =>
+                {Array.from({ length: slots }, (_, i) => pg.buttons[i] ?? null).map((b, i) =>
                   b ? (
                     <button
                       key={b.id}
@@ -250,14 +316,31 @@ export function MacapadWidget({ wide, settings, integrationSettings }: WidgetPro
         ) : (
           pages.length > 1 && (
             <div className="mpad-dots">
+              {/* arrows for a mouse; touch screens swipe (hidden there in css) */}
+              <button
+                className="mpad-arrow"
+                onClick={() => setPageIndex(Math.max(0, current - 1))}
+                disabled={current === 0}
+                aria-label="previous page"
+              >
+                <MI name="chevron_left" />
+              </button>
               {pages.map((pg, i) => (
                 <button
                   key={pg.id}
-                  className={i === current ? "on" : ""}
+                  className={`mpad-dot${i === current ? " on" : ""}`}
                   onClick={() => setPageIndex(i)}
                   aria-label={`${pg.name} (page ${i + 1} of ${pages.length})`}
                 />
               ))}
+              <button
+                className="mpad-arrow"
+                onClick={() => setPageIndex(Math.min(last, current + 1))}
+                disabled={current === last}
+                aria-label="next page"
+              >
+                <MI name="chevron_right" />
+              </button>
             </div>
           )
         )}

@@ -132,9 +132,10 @@
   padding-top: 4px;
 }
 
+/* the pad takes all the room under the heading; its grid spreads to fill it */
 .mpad-viewport {
   position: relative;
-  flex: 0 1 var(--gh, 100%);
+  flex: 1 1 auto;
   width: 100%;
   min-height: 0;
   overflow: hidden;
@@ -155,29 +156,39 @@
   min-width: 0;
   height: 100%;
   display: grid;
-  grid-template-columns: repeat(2, var(--t, 96px));
+  grid-template-columns: repeat(var(--cols, 2), var(--tw, var(--t, 96px)));
   grid-auto-rows: auto;
-  column-gap: calc(var(--t, 96px) * 0.26);
+  column-gap: calc(var(--t, 96px) * 0.2);
   row-gap: calc(var(--t, 96px) * 0.12);
-  align-content: center;
-  justify-content: center;
+  /* edge to edge both ways: room the keys can't use goes between them */
+  align-content: space-between;
+  justify-content: space-between;
 }
 
-.mpad-viewport.big .mpad {
-  grid-template-columns: repeat(4, var(--t, 96px));
+/* one row has nothing to spread between: it sits in the middle */
+.mpad-viewport.one-row .mpad {
+  align-content: center;
+}
+
+/* keys stretch a little to fill the pad (--tw × --th, measured by the
+   widget); corners and glyphs follow the shorter side (--t) */
+.mpad .mtile {
+  width: var(--tw, var(--t, 96px));
+  height: var(--th, var(--t, 96px));
+  border-radius: calc(var(--t, 96px) * 0.225);
 }
 
 .mpad-key {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: var(--t, 96px);
+  width: var(--tw, var(--t, 96px));
   min-width: 0;
 }
 
 .mpad-label {
   display: block;
-  width: calc(var(--t, 96px) * 1.2);
+  width: calc(var(--tw, var(--t, 96px)) + var(--t, 96px) * 0.2);
   height: var(--lab, 30px);
   padding-top: calc(var(--lab, 30px) * 0.24);
   font-size: calc(var(--lab, 30px) * 0.5 + 1px);
@@ -248,18 +259,19 @@
   flex: 0 0 auto;
   display: flex;
   justify-content: center;
+  align-items: center;
   height: 22px;
   margin-top: 4px;
 }
 
-.mpad-dots button {
+.mpad-dot {
   width: 22px;
   height: 22px;
   display: grid;
   place-items: center;
 }
 
-.mpad-dots button::before {
+.mpad-dot::before {
   content: "";
   width: 7px;
   height: 7px;
@@ -268,8 +280,61 @@
   transition: background 0.3s;
 }
 
-.mpad-dots button.on::before {
+.mpad-dot.on::before {
   background: var(--label);
+}
+
+/* previous / next page, for a mouse: touch screens swipe instead */
+.mpad-arrow {
+  display: none;
+  width: 32px;
+  height: 32px;
+  margin: 0 6px;
+  border-radius: 50%;
+  place-items: center;
+  color: var(--label-2);
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.mpad-arrow .mi {
+  font-size: 24px;
+}
+
+.mpad-arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mpad-dots {
+    height: 32px;
+  }
+
+  .mpad-arrow {
+    display: grid;
+  }
+
+  .mpad-arrow:hover:not(:disabled) {
+    background: var(--fill-2);
+    color: var(--label);
+  }
+
+  .mpad-dot:hover:not(.on)::before {
+    background: rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* the desk's pad page: the pad's panel fills the whole page */
+.panel.deck {
+  width: 100%;
+  height: 100%;
+}
+
+/* the desk's controls flash in the top right on every page change, so on
+   the pad page "Edit" sits bottom right, level with the page dots */
+.panel.deck .mpad-edit {
+  top: auto;
+  bottom: -8px;
 }
 
 /* ── shared iOS list bits (settings tab + editors) ────────────────── */
@@ -525,6 +590,106 @@ button.group-row:disabled:active {
   column-gap: 14px;
 }
 
+/* a pad page: as many columns as its grid, tiles shrinking to fit */
+.mps-grid.page {
+  --t: min(64px, calc((min(100vw, 560px) - 64px - (var(--cols) - 1) * 10px) / var(--cols)));
+  grid-template-columns: repeat(var(--cols), var(--t));
+  column-gap: 10px;
+}
+
+.mps-grid.page .mps-key-label {
+  width: calc(var(--t) + 8px);
+  font-size: 11px;
+}
+
+/* "Editing: kitchen's pad page  [Change]" — which pad, for which screen */
+.mps-which {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  min-height: 60px;
+  padding: 8px 10px 8px 12px;
+  border-radius: var(--r-row, 12px);
+  background: var(--fill-1);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.mps-which:active {
+  background: var(--fill-2);
+}
+
+.mps-which .mps-row-text {
+  font-weight: 600;
+}
+
+.mps-which .mps-row-text small {
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+
+/* "this screen" beside a pad's name in the picker */
+.mps-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(10, 132, 255, 0.2);
+  color: var(--blue);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  vertical-align: 2px;
+}
+
+/* the "which pad?" and "add a page" sheets: rows one step lighter */
+.mps-pick-pop .edit-pop-body {
+  gap: 0;
+}
+
+.mps-pick-pop .group {
+  background: var(--fill-2);
+}
+
+.mps-pick-pop button.group-row:active {
+  background: var(--fill-3);
+}
+
+.mps-pick-pop .group-head:first-child {
+  padding-top: 4px;
+}
+
+.mps-pick-note {
+  padding: 0 4px 12px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--label-2);
+}
+
+.mps-pick-note b {
+  color: var(--label);
+  font-weight: 600;
+}
+
+/* the number between a grid stepper's − and + */
+.mps-count {
+  min-width: 28px;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.group-row .mps-round {
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--blue);
+}
+
 .mps-key {
   display: flex;
   flex-direction: column;
@@ -606,6 +771,162 @@ button.group-row:disabled:active {
 .mps-lists {
   width: 100%;
   min-width: 0;
+}
+
+/* a page row outside edit mode: tap the name to show it; "Edit" sits at the
+   end, shown on hover (or focus) where there's a mouse, always on touch */
+.group-row.mps-page-pick {
+  gap: 8px;
+  padding-right: 10px;
+}
+
+.mps-page-select {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  text-align: left;
+}
+
+.mps-page-pick:has(.mps-page-select:active) {
+  background: var(--fill-2);
+}
+
+.mps-page-edit {
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mps-page-edit {
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .mps-page-pick:hover .mps-page-edit,
+  .mps-page-edit:focus-visible {
+    opacity: 1;
+  }
+}
+
+.group-row.mps-pages-done {
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* the page list in edit mode: ≡ · position · name · ⊖ */
+.mps-pages .mps-page-row {
+  gap: 10px;
+  padding-left: 10px;
+  padding-right: 6px;
+  background: var(--fill-1);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group-row.mps-page-row + .group-row.mps-page-row::before {
+  left: 60px;
+}
+
+.mps-pages.dragging .mps-page-row::before {
+  display: none;
+}
+
+/* the row being dragged lifts off the list */
+.mps-page-row.lifted {
+  border-radius: 10px;
+  background: var(--fill-2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.mps-page-del {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--red);
+}
+
+.mps-page-del .mi {
+  font-size: 24px;
+}
+
+.mps-page-del:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* typed position: a small number field */
+.mps-pos {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  outline: none;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.mps-pos:focus {
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+
+.mps-page-name {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--label);
+  font-size: 17px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.mps-page-name::placeholder {
+  color: var(--label-3);
+}
+
+.mps-page-name:focus {
+  color: var(--label);
+}
+
+/* drag grip: grab it to move the row (no scrolling from here) */
+.mps-grip {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--label-3);
+  cursor: grab;
+  touch-action: none;
+}
+
+.mps-grip .mi {
+  font-size: 24px;
+}
+
+.mps-pages.dragging,
+.mps-pages.dragging .mps-grip {
+  cursor: grabbing;
+}
+
+.mps-grip:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -4px;
+  border-radius: 8px;
 }
 
 /* page name: label on the left, the name typed on the right */
@@ -1195,7 +1516,14 @@ button.group-row:disabled:active {
     column-gap: 10px;
   }
 
-  .mps-grid.big .mps-key-label {
+  .mps-grid.page {
+    --t: min(64px, calc((232px - (var(--cols) - 1) * 8px) / var(--cols)));
+    column-gap: 8px;
+    row-gap: 6px;
+  }
+
+  .mps-grid.big .mps-key-label,
+  .mps-grid.page .mps-key-label {
     font-size: 11px;
   }
 
@@ -1284,6 +1612,8 @@ button.group-row:disabled:active {
   .mps-grid.big {
     --t: min(72px, calc((100vw - 96px) / 4));
   }
+
+
 
   .group-row .mps-pill {
     padding: 0 10px;

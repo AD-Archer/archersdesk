@@ -12,6 +12,7 @@ import type {
   Settings,
 } from "./types";
 import { expandEvents, parseIcs } from "./ical";
+import { allPadButtons } from "./macapad";
 import { navidromeAlbumSongs, navidromePlaylistSongs, navidromePlaylists, navidromeRecentAlbums, navidromeSearch } from "./navidrome";
 
 // Fetchers read global credentials from Settings, plus the active device's
@@ -1003,9 +1004,7 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
 
       switch (name) {
         case "press": {
-          const button = [...settings.macapad.small, ...settings.macapad.big]
-            .flatMap((page) => page.buttons)
-            .find((b) => b?.id === p.id);
+          const button = allPadButtons(settings.macapad).find((b) => b.id === p.id);
           if (!button) return fail("that button no longer exists");
           const result = await macapadRun(url, token, button.steps);
           return result.ok ? { configured: true, data: { ok: true } } : fail(result.error);

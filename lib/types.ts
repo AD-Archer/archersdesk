@@ -228,19 +228,41 @@ export interface SiteMeta {
 }
 
 /** Square panels show the small pad (4 slots a page), dual rows the big one
- *  (8). Each pad has its own pages; empty slots are null so buttons keep
- *  their positions (that's how you space them out). */
+ *  (8). Every screen also has its own pad page — always the desk's last page,
+ *  like StandBy is always the first — and so does the phone remote; each of
+ *  those picks its own grid (columns × rows) and keeps its own keys. Each pad
+ *  has its own pages; empty slots are null so buttons keep their positions
+ *  (that's how you space them out). */
 export const MACAPAD_SLOTS = { small: 4, big: 8 } as const;
 export const MACAPAD_MAX_PAGES = 8;
 export type MacapadSize = keyof typeof MACAPAD_SLOTS;
 
+/** Grid limits for a screen's pad page. */
+export const MACAPAD_GRID = { minCols: 2, maxCols: 8, minRows: 1, maxRows: 6 } as const;
+/** The phone remote's pad page lives under this key, beside the screens' ids. */
+export const MACAPAD_REMOTE = "remote";
+
 export interface MacapadPage {
   id: string;
   name: string;
-  buttons: (MacapadButton | null)[]; // always MACAPAD_SLOTS[size] long
+  buttons: (MacapadButton | null)[]; // always as long as its pad has slots
 }
 
-export type MacapadPads = Record<MacapadSize, MacapadPage[]>; // never empty
+/** A screen's (or the remote's) pad page: its grid and its own pages. */
+export interface MacapadScreenPad {
+  cols: number;
+  rows: number;
+  pages: MacapadPage[]; // never empty; buttons are cols × rows, row by row
+}
+
+export interface MacapadPads {
+  small: MacapadPage[]; // never empty
+  big: MacapadPage[];
+  screens: Record<string, MacapadScreenPad>; // device id or MACAPAD_REMOTE → pad
+}
+
+/** Which pad: a widget size, or a pad page ("screen:<device id>", "screen:remote"). */
+export type MacapadPadId = MacapadSize | `screen:${string}`;
 
 /** One vertically-swipeable row of the main view: two squares or one wide. */
 export type LayoutRow =

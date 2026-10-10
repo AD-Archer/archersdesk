@@ -1,8 +1,10 @@
 "use client";
 
-// settings → macapad: the one place pads are edited. Pick a pad (small = the
-// 4-slot square panel, big = the 8-slot dual row) and one of its pages, then
-// tap a slot to set what it does. "arrange" picks a button up and drops it on
+// settings → macapad: the one place pads are edited. Pick a pad (page = a
+// screen's own pad page, each screen and the phone remote with its own grid
+// and keys; small = the 4-slot square panel; big = the 8-slot dual row) and
+// one of its pages, then tap a slot to set what it does. A template adds a
+// ready-made page (volume, developer, browser…). "arrange" picks a button up and drops it on
 // any slot of any page — dropping on an empty slot leaves a gap where it was,
 // which is how you space buttons out. "on this display" shows where the pads
 // sit on the desk's own pages. Writes go through /api/macapad; the updated
@@ -10,28 +12,31 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  MACAPAD_GRID,
   MACAPAD_MAX_PAGES,
+  MACAPAD_REMOTE,
   MACAPAD_STEP_TYPES,
-  MAX_ROWS,
-  WIDGET_PAGE_COUNT,
   type IntegrationPayload,
-  type LayoutRow,
   type MacapadAction,
   type MacapadApp,
   type MacapadButton,
   type MacapadCatalog,
+  type MacapadPadId,
+  type MacapadPage,
   type MacapadPads,
   type MacapadSize,
   type MacapadStep,
   type SiteMeta,
   type ViewSettings,
 } from "@/lib/types";
+import { gridLabel, padOf, padScreens, screenKey, screenPad } from "@/lib/macapad";
+import { MACAPAD_TEMPLATES, type MacapadTemplate } from "@/lib/macapadTemplates";
 import EditablePopup from "./EditablePopup";
 import { MI } from "./widgets/kit";
 
-/** Where the widget asked the sheet to open (its size/page, and a slot to edit). */
+/** Where the widget asked the sheet to open (its pad/page, and a slot to edit). */
 export interface MacapadFocus {
-  size: MacapadSize;
+  pad: MacapadPadId;
   page?: string;
   index?: number;
 }
@@ -192,24 +197,45 @@ async function callMacapad(
   }
 }
 
-const SIZE_INFO: Record<MacapadSize, { label: string; blurb: string }> = {
-  small: { label: "Small pad", blurb: "4 keys, square panel" },
-  big: { label: "Big pad", blurb: "8 keys, wide panel" },
-};
+type PadKind = "page" | MacapadSize;
+
+/** How a pad is named and described everywhere in the editor, so "which pad,
+ *  on which screen" is never a guess. */
+function describePad(
+  pad: MacapadPadId,
+  pads: MacapadPads,
+  screens: Array<{ key: string; name: string }>
+): { icon: string; color: string; title: string; detail: string } {
+  if (pad === "big")
+    return { icon: "web_asset", color: "orange", title: "Big pad widget", detail: "8 keys, fills a row of a screen's layout. Same keys on every screen." };
+  if (pad === "small")
+    return { icon: "grid_view", color: "teal", title: "Small pad widget", detail: "4 keys, half a row of a screen's layout. Same keys on every screen." };
+  const key = screenKey(pad);
+  const found = padOf(pads, pad);
+  const grid = found ? gridLabel(found.cols, found.rows) : "";
+  if (key === MACAPAD_REMOTE)
+    return { icon: "smartphone", color: "green", title: "Phone remote's pad", detail: `${grid} · the Pad tab on your phone` };
+  const name = screens.find((sc) => sc.key === key)?.name ?? "this screen";
+  return { icon: "desktop_mac", color: "blue", title: `${name}'s pad page`, detail: `${grid} · the last page on ${name}` };
+}
 
 export function MacapadSection({
   settings,
   onChange,
   focus,
+  screen,
 }: {
   settings: ViewSettings;
   onChange: (next: ViewSettings) => void;
   focus?: MacapadFocus | null;
+  /** the screen this sheet is open on: a device id, or "remote" */
+  screen: string;
 }) {
   const pads = settings.macapad;
-  const [size, setSize] = useState<MacapadSize>(focus?.size ?? "small");
+  const [padChoice, setPad] = useState<MacapadPadId>(focus?.pad ?? screenPad(screen));
   const [pageId, setPageId] = useState<string | null>(focus?.page ?? null);
   const [editing, setEditing] = useState<number | null>(focus?.index ?? null);
+  const [picking, setPicking] = useState<"pad" | "page" | null>(null);
   // arrange mode: a picked-up button waits for a slot to drop onto
   const [arranging, setArranging] = useState(false);
   const [held, setHeld] = useState<{ page: string; index: number } | null>(null);
@@ -218,39 +244,61 @@ export function MacapadSection({
   // the widget can reopen the sheet pointed at a different pad/page/slot
   useEffect(() => {
     if (!focus) return;
-    setSize(focus.size);
+    setPad(focus.pad);
     setPageId(focus.page ?? null);
     setEditing(focus.index ?? null);
   }, [focus]);
 
-  const pages = pads[size];
+  // a screen deleted elsewhere takes its pad with it: fall back to this one
+  const pad: MacapadPadId = padOf(pads, padChoice) ? padChoice : screenPad(screen);
+  const found = padOf(pads, pad) ?? padOf(pads, "small")!;
+  const kind: PadKind = pad === "small" || pad === "big" ? pad : "page";
+  const screens = padScreens(settings.devices);
+  const about = describePad(pad, pads, screens);
+  const padScreenName = screens.find((sc) => sc.key === screenKey(pad))?.name ?? "this screen";
+  const { cols, rows } = found;
+  const pages = found.pages;
   const page = pages.find((p) => p.id === pageId) ?? pages[0];
   const pageIndex = pages.indexOf(page);
+  const pageName = (p: { name: string }, i: number) => p.name || `page ${i + 1}`;
 
   async function write(action: string, payload: Record<string, unknown>) {
     setError(null);
-    const res = await callMacapad(action, { size, ...payload });
+    const res = await callMacapad(action, { pad, ...payload });
     if (res.macapad) onChange({ ...settings, macapad: res.macapad });
     if (res.error) setError(res.error);
     return res;
   }
 
-  function chooseSize(next: MacapadSize) {
-    setSize(next);
+  function choosePad(next: MacapadPadId) {
+    setPad(next);
     setPageId(null);
     setHeld(null);
+    setArranging(false);
+    setPicking(null);
   }
 
-  async function addPage() {
-    const res = await write("addPage", {});
-    if (res.page) setPageId(res.page);
+  async function setGrid(nextCols: number, nextRows: number) {
+    setHeld(null);
+    setEditing(null);
+    await write("setGrid", { cols: nextCols, rows: nextRows });
   }
 
-  async function removePage() {
-    const name = page.name || `page ${pageIndex + 1}`;
-    if (!confirm(`delete "${name}" and its buttons?`)) return;
-    await write("removePage", { page: page.id });
-    setPageId(null);
+  async function addPage(template?: MacapadTemplate) {
+    setPicking(null);
+    const res = await write("addPage", template ? { template: template.id } : {});
+    if (res.page) {
+      setPageId(res.page);
+      setArranging(false);
+      setHeld(null);
+    }
+  }
+
+  async function removePage(id: string) {
+    const i = pages.findIndex((p) => p.id === id);
+    if (i < 0 || !confirm(`delete "${pageName(pages[i], i)}" and its keys?`)) return;
+    await write("removePage", { page: id });
+    if (id === page.id) setPageId(null);
   }
 
   async function tapSlot(index: number) {
@@ -273,19 +321,26 @@ export function MacapadSection({
       {/* the pad itself: a live preview you tap to edit. Beside the lists on
           short landscape screens (Echo Show), above them on phones. */}
       <div className="mps-pad">
-        <div className="mps-seg" role="tablist" aria-label="Which pad">
-          {(Object.keys(SIZE_INFO) as MacapadSize[]).map((s) => (
-            <button key={s} role="tab" className={s === size ? "on" : ""} onClick={() => chooseSize(s)} aria-selected={s === size}>
-              {SIZE_INFO[s].label}
-            </button>
-          ))}
-        </div>
+        {/* which pad, for which screen: always spelled out, one tap to change */}
+        <button className="mps-which" onClick={() => setPicking("pad")} aria-label={`Editing ${about.title}. Change pad`}>
+          <span className={`mps-ico ${about.color}`}>
+            <MI name={about.icon} />
+          </span>
+          <span className="mps-row-text">
+            <small>Editing</small>
+            {about.title}
+          </span>
+          <span className="mps-pill">Change</span>
+        </button>
         <p className="mps-sub">
-          {SIZE_INFO[size].blurb}
-          {pages.length > 1 ? ` · ${page.name || `page ${pageIndex + 1}`}` : ""}
+          {about.detail}
+          {pages.length > 1 ? ` · showing “${pageName(page, pageIndex)}”` : ""}
         </p>
 
-        <div className={`mps-grid ${size}${arranging ? " arranging" : ""}`}>
+        <div
+          className={`mps-grid ${kind}${arranging ? " arranging" : ""}`}
+          style={kind === "page" ? ({ "--cols": cols } as React.CSSProperties) : undefined}
+        >
           {slots.map((b, i) => {
             const isHeld = held?.page === page.id && held.index === i;
             return (
@@ -331,74 +386,94 @@ export function MacapadSection({
       </div>
 
       <div className="mps-lists">
-        <h3 className="group-head">Pages</h3>
-        <div className="group">
-          {pages.map((p, i) => (
-            <button key={p.id} className="group-row" onClick={() => setPageId(p.id)} aria-pressed={p.id === page.id}>
-              <span className="mps-row-text">{p.name || `page ${i + 1}`}</span>
-              {p.id === page.id && <MI name="check" className="mps-check" />}
-            </button>
-          ))}
-          {pages.length < MACAPAD_MAX_PAGES && (
-            <button className="group-row mps-blue" onClick={addPage}>
-              <MI name="add" /> Add a page
-            </button>
-          )}
-        </div>
-        <p className="group-foot">Each pad has its own pages. Swipe sideways on the pad to change page.</p>
-
-        <h3 className="group-head">This page</h3>
-        <div className="group">
-          <label className="group-row mps-name">
-            <span>Name</span>
-            <input
-              key={page.id}
-              defaultValue={page.name}
-              maxLength={30}
-              placeholder={`page ${pageIndex + 1}`}
-              aria-label="Page name"
-              onBlur={(e) => {
-                const name = e.target.value.trim();
-                if (name !== page.name) write("renamePage", { page: page.id, name });
-              }}
-              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-            />
-          </label>
-          {pages.length > 1 && (
-            <div className="group-row">
-              <span className="mps-row-text">Order</span>
-              <button
-                className="mps-pill"
-                onClick={() => write("movePage", { page: page.id, by: -1 })}
-                disabled={pageIndex === 0}
-                aria-label="Move page earlier"
-              >
-                <MI name="chevron_left" /> Earlier
-              </button>
-              <button
-                className="mps-pill"
-                onClick={() => write("movePage", { page: page.id, by: 1 })}
-                disabled={pageIndex === pages.length - 1}
-                aria-label="Move page later"
-              >
-                Later <MI name="chevron_right" />
-              </button>
+        {kind === "page" && (
+          <>
+            <h3 className="group-head">Size</h3>
+            <div className="group">
+              <GridStepper
+                label="Columns"
+                value={cols}
+                min={MACAPAD_GRID.minCols}
+                max={MACAPAD_GRID.maxCols}
+                onChange={(v) => setGrid(v, rows)}
+              />
+              <GridStepper
+                label="Rows"
+                value={rows}
+                min={MACAPAD_GRID.minRows}
+                max={MACAPAD_GRID.maxRows}
+                onChange={(v) => setGrid(cols, v)}
+              />
             </div>
-          )}
-          <button className="group-row mps-red" onClick={removePage} disabled={pages.length === 1}>
-            Delete this page
-          </button>
-        </div>
-        {pages.length === 1 && <p className="group-foot">A pad always keeps at least one page.</p>}
+            <p className="group-foot">
+              {screenKey(pad) === MACAPAD_REMOTE
+                ? "Only your phone remote uses this size and these keys."
+                : `Only ${padScreenName} uses this size and these keys; it's always ${padScreenName}'s last page.`}{" "}
+              Keys stay put when the size changes; any that no longer fit move to empty slots, then onto a new page.
+            </p>
+          </>
+        )}
+
+        <PageList
+          pages={pages}
+          current={page.id}
+          onSelect={setPageId}
+          onRename={(id, name) => write("renamePage", { page: id, name })}
+          onMove={(id, to) => write("movePage", { page: id, to })}
+          onDelete={removePage}
+          onAdd={() => setPicking("page")}
+        />
 
         <MacActions />
-
-        <DeskPlacements settings={settings} onChange={onChange} />
       </div>
+
+      {picking === "pad" && (
+        <PadPicker
+          current={pad}
+          screen={screen}
+          pads={pads}
+          screens={screens}
+          onPick={choosePad}
+          onClose={() => setPicking(null)}
+        />
+      )}
+
+      {picking === "page" && (
+        <EditablePopup open title="Add a page" onClose={() => setPicking(null)} className="mps-pick-pop">
+          <p className="mps-pick-note">
+            Adds a page to <b>{about.title.toLowerCase()}</b>. Change any key after.
+          </p>
+          <div className="group">
+            <button className="group-row bed-item" onClick={() => addPage()}>
+              <span className="mps-ico gray">
+                <MI name="add" />
+              </span>
+              <span className="mps-row-text">
+                Blank page
+                <small>Empty slots to fill yourself</small>
+              </span>
+            </button>
+          </div>
+          <h4 className="group-head">From a template</h4>
+          <div className="group">
+            {MACAPAD_TEMPLATES.map((t) => (
+              <button key={t.id} className="group-row bed-item" onClick={() => addPage(t)}>
+                <span className={`mps-ico ${t.color}`}>
+                  <MI name={t.icon} />
+                </span>
+                <span className="mps-row-text">
+                  {t.name}
+                  <small>{t.blurb}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </EditablePopup>
+      )}
 
       {editing !== null && (
         <ButtonEditor
-          key={`${size}-${page.id}-${editing}`}
+          key={`${pad}-${page.id}-${editing}`}
           button={editingButton}
           onClose={() => setEditing(null)}
           onSave={async (button) => {
@@ -415,85 +490,276 @@ export function MacapadSection({
   );
 }
 
-/** Where pads sit on this display's desk pages, with quick add/remove. Edits
- *  the layout itself (normal settings autosave), same as the layout tab. */
-function DeskPlacements({ settings, onChange }: { settings: ViewSettings; onChange: (next: ViewSettings) => void }) {
-  const pages = Array.from({ length: WIDGET_PAGE_COUNT }, (_, i) => settings.layout.pages[i] ?? []);
-  type Spot = { p: number; r: number; side: "left" | "right" | null; label: string };
-  const spots: Spot[] = pages.flatMap((rows, p) =>
-    rows.flatMap((row, r): Spot[] => {
-      if (row.type === "dual") return row.widget === "macapad" ? [{ p, r, side: null, label: "big pad" }] : [];
-      return (["left", "right"] as const)
-        .filter((side) => row[side] === "macapad")
-        .map((side) => ({ p, r, side, label: `small pad (${side})` }));
-    })
+/** Which pad to edit: each screen's own pad page (this screen first), the
+ *  phone remote's, then the two widget pads every screen shares. */
+function PadPicker({
+  current,
+  screen,
+  pads,
+  screens,
+  onPick,
+  onClose,
+}: {
+  current: MacapadPadId;
+  screen: string;
+  pads: MacapadPads;
+  screens: Array<{ key: string; name: string }>;
+  onPick: (pad: MacapadPadId) => void;
+  onClose: () => void;
+}) {
+  const ordered = [...screens].sort((a, b) => Number(b.key === screen) - Number(a.key === screen));
+  const row = (id: MacapadPadId, tag?: string) => {
+    const d = describePad(id, pads, screens);
+    return (
+      <button key={id} className="group-row bed-item" onClick={() => onPick(id)} aria-pressed={id === current}>
+        <span className={`mps-ico ${d.color}`}>
+          <MI name={d.icon} />
+        </span>
+        <span className="mps-row-text">
+          <span>
+            {d.title}
+            {tag && <em className="mps-tag">{tag}</em>}
+          </span>
+          <small>{d.detail}</small>
+        </span>
+        {id === current && <MI name="check" className="mps-check" />}
+      </button>
+    );
+  };
+  return (
+    <EditablePopup open title="Which pad?" onClose={onClose} className="mps-pick-pop">
+      <h4 className="group-head">Each screen's own pad</h4>
+      <div className="group">
+        {ordered.map((sc) => row(screenPad(sc.key), sc.key === screen ? (sc.key === MACAPAD_REMOTE ? "this phone" : "this screen") : undefined))}
+      </div>
+      <p className="group-foot">Its own keys and size. On a screen it's the last page; on the remote it's the Pad tab.</p>
+      <h4 className="group-head">Pad widgets</h4>
+      <div className="group">
+        {row("big")}
+        {row("small")}
+      </div>
+      <p className="group-foot">Put in a screen's layout like any widget. Every screen showing one shows the same keys.</p>
+    </EditablePopup>
   );
+}
 
-  function setRows(p: number, rows: LayoutRow[]) {
-    const next = pages.map((r, i) => (i === p ? rows : r));
-    onChange({ ...settings, layout: { ...settings.layout, pages: next, rows: next[0] } });
+/** A pad's pages: tap one to show it. "Edit" (on a row when you hover it,
+ *  always there on touch screens) turns the list into the page editor — each
+ *  row gets a grip to drag it up or down, its position (type a number), its
+ *  name, and delete; "Done" at the bottom ends it. */
+function PageList({
+  pages,
+  current,
+  onSelect,
+  onRename,
+  onMove,
+  onDelete,
+  onAdd,
+}: {
+  pages: MacapadPage[];
+  current: string;
+  onSelect: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+  onMove: (id: string, to: number) => void;
+  onDelete: (id: string) => void;
+  onAdd: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  // the row whose Edit was tapped gets its name field focused
+  const [focusId, setFocusId] = useState<string | null>(null);
+  // a drag in progress: which row, how far it has moved, where it would land
+  const [drag, setDrag] = useState<{ from: number; dy: number; to: number; h: number } | null>(null);
+  const dragStart = useRef<{ y: number; id: number } | null>(null);
+  // the order a drop asked for, shown until the saved pages come back
+  const [pending, setPending] = useState<string[] | null>(null);
+  useEffect(() => setPending(null), [pages]);
+
+  const shown = pending
+    ? pending.map((id) => pages.find((p) => p.id === id)).filter((p): p is MacapadPage => Boolean(p))
+    : pages;
+  const name = (p: MacapadPage, i: number) => p.name || `page ${i + 1}`;
+
+  function move(id: string, to: number) {
+    const from = shown.findIndex((p) => p.id === id);
+    const target = Math.min(shown.length - 1, Math.max(0, to));
+    if (from < 0 || target === from) return;
+    const ids = shown.map((p) => p.id);
+    ids.splice(target, 0, ...ids.splice(from, 1));
+    setPending(ids);
+    onMove(id, target);
   }
 
-  function add(p: number, row: LayoutRow) {
-    if (pages[p].length >= MAX_ROWS) return;
-    setRows(p, [...pages[p], row]);
+  function gripDown(e: React.PointerEvent<HTMLElement>, from: number) {
+    const row = e.currentTarget.closest<HTMLElement>(".mps-page-row");
+    if (!row) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStart.current = { y: e.clientY, id: e.pointerId };
+    setDrag({ from, dy: 0, to: from, h: row.offsetHeight });
   }
 
-  function remove(spot: Spot) {
-    const rows = [...pages[spot.p]];
-    const row = rows[spot.r];
-    // a dual row goes away; a split keeps its other square (macapad → clock)
-    if (row.type === "dual") rows.splice(spot.r, 1);
-    else rows[spot.r] = { ...row, [spot.side!]: "clock" };
-    setRows(spot.p, rows);
+  function gripMove(e: React.PointerEvent) {
+    const st = dragStart.current;
+    if (!st || !drag || e.pointerId !== st.id) return;
+    const dy = e.clientY - st.y;
+    const to = Math.min(shown.length - 1, Math.max(0, drag.from + Math.round(dy / drag.h)));
+    setDrag({ ...drag, dy, to });
+  }
+
+  function gripUp(e: React.PointerEvent) {
+    const st = dragStart.current;
+    if (!st || !drag || e.pointerId !== st.id) return;
+    dragStart.current = null;
+    setDrag(null);
+    if (drag.to !== drag.from) move(shown[drag.from].id, drag.to);
+  }
+
+  /** where a row sits while another is being dragged past it */
+  function rowStyle(i: number): React.CSSProperties | undefined {
+    if (!drag) return undefined;
+    if (i === drag.from) return { transform: `translateY(${drag.dy}px)`, transition: "none", zIndex: 2 };
+    if (drag.from < drag.to && i > drag.from && i <= drag.to) return { transform: `translateY(${-drag.h}px)` };
+    if (drag.from > drag.to && i >= drag.to && i < drag.from) return { transform: `translateY(${drag.h}px)` };
+    return { transform: "none" };
   }
 
   return (
     <>
-      <h3 className="group-head">On this screen ({settings.deviceName})</h3>
-      <div className="group">
-        {spots.length === 0 ? (
-          <div className="group-row mps-muted">No pads on this screen yet.</div>
-        ) : (
-          spots.map((s) => (
-            <div key={`${s.p}-${s.r}-${s.side}`} className="group-row">
-              <span className="mps-ico blue">
-                <MI name="grid_view" />
+      <h3 className="group-head">Pages in this pad</h3>
+      <div className={`group mps-pages${editing ? " editing" : ""}${drag ? " dragging" : ""}`}>
+        {shown.map((p, i) =>
+          editing ? (
+            <div
+              key={p.id}
+              className={`group-row mps-page-row${drag?.from === i ? " lifted" : ""}`}
+              style={rowStyle(i)}
+            >
+              <span
+                className="mps-grip"
+                role="button"
+                tabIndex={0}
+                aria-label={`Drag ${name(p, i)} up or down`}
+                onPointerDown={(e) => gripDown(e, i)}
+                onPointerMove={gripMove}
+                onPointerUp={gripUp}
+                onPointerCancel={gripUp}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowUp") move(p.id, i - 1);
+                  if (e.key === "ArrowDown") move(p.id, i + 1);
+                }}
+              >
+                <MI name="menu" />
               </span>
-              <span className="mps-row-text">
-                {s.label.charAt(0).toUpperCase() + s.label.slice(1)}
-                <small>
-                  Page {s.p + 1}, row {s.r + 1}
-                </small>
-              </span>
-              <button className="mps-pill red" onClick={() => remove(s)} aria-label="Take off this screen">
-                Remove
+              <input
+                key={`${p.id}-${i}`}
+                className="mps-pos"
+                inputMode="numeric"
+                defaultValue={i + 1}
+                aria-label={`Position of ${name(p, i)} (1 to ${shown.length})`}
+                onFocus={(e) => e.target.select()}
+                onBlur={(e) => {
+                  const n = Number.parseInt(e.target.value, 10);
+                  if (Number.isInteger(n) && n - 1 !== i) move(p.id, n - 1);
+                  else e.target.value = String(i + 1);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              />
+              <input
+                key={p.id}
+                className="mps-page-name"
+                defaultValue={p.name}
+                maxLength={30}
+                placeholder={`page ${i + 1}`}
+                aria-label={`Name of page ${i + 1}`}
+                autoFocus={p.id === focusId}
+                onBlur={(e) => {
+                  const next = e.target.value.trim();
+                  if (next !== p.name) onRename(p.id, next);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              />
+              <button
+                className="mps-page-del"
+                onClick={() => onDelete(p.id)}
+                disabled={shown.length === 1}
+                aria-label={`Delete ${name(p, i)}`}
+              >
+                <MI name="remove_circle" />
               </button>
             </div>
-          ))
+          ) : (
+            <div key={p.id} className="group-row mps-page-pick">
+              <button className="mps-page-select" onClick={() => onSelect(p.id)} aria-pressed={p.id === current}>
+                <span className="mps-row-text">{name(p, i)}</span>
+                {p.id === current && <MI name="check" className="mps-check" />}
+              </button>
+              <button
+                className="mps-pill mps-page-edit"
+                onClick={() => {
+                  setFocusId(p.id);
+                  setEditing(true);
+                }}
+                aria-label={`Edit pages (rename, reorder, delete), starting with ${name(p, i)}`}
+              >
+                Edit
+              </button>
+            </div>
+          )
+        )}
+        {editing ? (
+          <button
+            className="group-row mps-blue mps-pages-done"
+            onClick={() => {
+              setEditing(false);
+              setFocusId(null);
+            }}
+          >
+            Done
+          </button>
+        ) : (
+          <button className="group-row mps-blue" onClick={onAdd} disabled={shown.length >= MACAPAD_MAX_PAGES}>
+            <MI name="add" /> Add a page…
+          </button>
         )}
       </div>
-
-      <h3 className="group-head">Add a pad to this screen</h3>
-      <div className="group">
-        {pages.map((rows, p) => (
-          <div key={p} className="group-row">
-            <span className="mps-row-text nowrap">Page {p + 1}</span>
-            <button className="mps-pill" onClick={() => add(p, { type: "dual", widget: "macapad" })} disabled={rows.length >= MAX_ROWS}>
-              <MI name="add" /> Big pad
-            </button>
-            <button
-              className="mps-pill"
-              onClick={() => add(p, { type: "split", left: "macapad", right: "clock" })}
-              disabled={rows.length >= MAX_ROWS}
-            >
-              <MI name="add" /> Small pad
-            </button>
-          </div>
-        ))}
-      </div>
-      <p className="group-foot">A big pad fills a whole row. A small pad shares its row with a clock.</p>
+      <p className="group-foot">
+        {editing
+          ? "Drag ≡ or type a number to change the order. The name shows at the top of the pad."
+          : shown.length >= MACAPAD_MAX_PAGES
+            ? `A pad holds up to ${MACAPAD_MAX_PAGES} pages. Delete one to add another.`
+            : "Swipe sideways on the pad to flip between its pages. Edit on a page renames, reorders or deletes."}
+      </p>
     </>
+  );
+}
+
+/** − n + for a grid's columns or rows. */
+function GridStepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="group-row">
+      <span className="mps-row-text">{label}</span>
+      <button className="mps-round" onClick={() => onChange(value - 1)} disabled={value <= min} aria-label={`Fewer ${label.toLowerCase()}`}>
+        −
+      </button>
+      <b className="mps-count" aria-live="polite">
+        {value}
+      </b>
+      <button className="mps-round" onClick={() => onChange(value + 1)} disabled={value >= max} aria-label={`More ${label.toLowerCase()}`}>
+        +
+      </button>
+    </div>
   );
 }
 

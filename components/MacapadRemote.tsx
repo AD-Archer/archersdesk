@@ -7,12 +7,16 @@
 // the large-title page head and the iOS sheet.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { MACAPAD_SLOTS, type MacapadButton, type MacapadSize, type Settings } from "@/lib/types";
+import { padOf, screenPad } from "@/lib/macapad";
+import { MACAPAD_REMOTE, type MacapadButton, type MacapadPadId, type Settings } from "@/lib/types";
 import { KeyFace } from "./MacapadSettings";
 import { openMacapadSettings } from "./widgets/Macapad";
 import { useIntegrationAction } from "./widgets/kit";
 
-const PAD_NAMES: Record<MacapadSize, string> = { big: "Big pad", small: "Small pad" };
+// the remote's own pad page first (its own grid and keys), then the desk's widget pads
+const REMOTE_PAD = screenPad(MACAPAD_REMOTE);
+const PAD_ORDER: MacapadPadId[] = [REMOTE_PAD, "big", "small"];
+const PAD_NAMES: Record<string, string> = { [REMOTE_PAD]: "Remote", big: "Big pad", small: "Small pad" };
 
 /* ── shared remote pieces ─────────────────────────────────────────────── */
 
@@ -175,16 +179,18 @@ export function Sheet({ title, onDone, children }: { title: string; onDone: () =
 
 export function RemotePad({ settings, onClose }: { settings: Settings; onClose: () => void }) {
   const act = useIntegrationAction("macapad");
-  const has = (s: MacapadSize) => settings.macapad[s].some((p) => p.buttons.some(Boolean));
-  const [size, setSize] = useState<MacapadSize>(has("big") || !has("small") ? "big" : "small");
+  const has = (s: MacapadPadId) => padOf(settings.macapad, s)?.pages.some((p) => p.buttons.some(Boolean)) ?? false;
+  const [size, setSize] = useState<MacapadPadId>(() => PAD_ORDER.find(has) ?? REMOTE_PAD);
   const [pageIndex, setPageIndex] = useState(0);
   const [flash, setFlash] = useState<Record<string, "busy" | "ok" | "err">>({});
   const [message, setMessage] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const pages = settings.macapad[size];
+  const pad = padOf(settings.macapad, size);
+  const pages = pad?.pages ?? [];
+  const cols = pad?.cols ?? 2;
   const page = pages[Math.min(pageIndex, pages.length - 1)];
-  const slots = Array.from({ length: MACAPAD_SLOTS[size] }, (_, i) => page?.buttons[i] ?? null);
+  const slots = Array.from({ length: pad?.slots ?? 0 }, (_, i) => page?.buttons[i] ?? null);
 
   function say(text: string) {
     setMessage(text);
@@ -217,7 +223,7 @@ export function RemotePad({ settings, onClose }: { settings: Settings; onClose: 
 
   function edit(index?: number) {
     onClose();
-    openMacapadSettings({ size, page: page?.id, index });
+    openMacapadSettings({ pad: size, page: page?.id, index });
   }
 
   return (
@@ -232,7 +238,7 @@ export function RemotePad({ settings, onClose }: { settings: Settings; onClose: 
       />
 
       <div className="rm-seg" role="tablist" aria-label="Which pad">
-        {(["big", "small"] as MacapadSize[]).map((s) => (
+        {PAD_ORDER.map((s) => (
           <button
             key={s}
             role="tab"
@@ -263,7 +269,10 @@ export function RemotePad({ settings, onClose }: { settings: Settings; onClose: 
         </div>
       )}
 
-      <div className={`rpad-grid ${size}`}>
+      <div
+        className={`rpad-grid ${size === REMOTE_PAD ? "screen" : size}${cols >= 4 && size === REMOTE_PAD ? " dense" : ""}`}
+        style={size === REMOTE_PAD ? ({ "--cols": cols } as React.CSSProperties) : undefined}
+      >
         {slots.map((b, i) =>
           b ? (
             <button
