@@ -818,6 +818,15 @@ function imageKind(image: string): "app" | "plate" | "pic" {
 
 /** A key as a home-screen tile: a rounded square with a white glyph, or the
  *  key's image filling it. The board, the pad preview and the editor share it. */
+/** A full url from what was typed: "localhost:3000" is a host and port, not
+ *  a scheme, so only `x://` or a known scheme counts; local hosts get http. */
+function fullUrl(input: string): string {
+  const v = input.trim();
+  if (/^([a-z][a-z0-9+.-]*:\/\/|(mailto|tel|sms|facetime|file|data):)/i.test(v)) return v;
+  const local = /^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|\[::1\]|[^/:]+\.local)(?=[:/?#]|$)/i.test(v);
+  return `${local ? "http" : "https"}://${v}`;
+}
+
 export function KeyTile({ button, className }: { button: Pick<MacapadButton, "icon" | "image">; className?: string }) {
   const [broken, setBroken] = useState(false);
   // the picture's own width: a small logo is never drawn past 1.5× it (css
@@ -1016,9 +1025,7 @@ function ButtonEditor({
     if (!steps.length) return setError("Choose what this key does first.");
     const cleaned = steps.map((st) =>
       // macapad needs a full url; assume https for bare hosts
-      st.type === "openURL" && st.url.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(st.url.trim())
-        ? { ...st, url: `https://${st.url.trim()}` }
-        : st
+      st.type === "openURL" && st.url.trim() ? { ...st, url: fullUrl(st.url) } : st
     );
     const unfinished = cleaned.findIndex(
       (st) => stepValue(st)?.trim() === "" || (st.type === "keystroke" && !parseCombo(st.keys).key)
@@ -1220,7 +1227,7 @@ function describeStep(st: MacapadStep, catalog: MacapadCatalog | null): string {
     }
     case "openURL": {
       try {
-        return `opens ${new URL(/^[a-z][a-z0-9+.-]*:/i.test(st.url) ? st.url : `https://${st.url}`).hostname.replace(/^www\./, "")}`;
+        return `opens ${new URL(fullUrl(st.url)).hostname.replace(/^www\./, "")}`;
       } catch {
         return "opens a website (not set yet)";
       }

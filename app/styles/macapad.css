@@ -190,9 +190,18 @@
   height: calc(var(--t, 96px) * 0.62);
 }
 
+/* an app icon sits inside the key's own rectangular plate, centered at
+   ~76% of the shorter side, instead of being a bare square that makes the
+   key read as square */
+.mpad .mtile.app {
+  background: var(--fill-2);
+}
+
 .mpad .mtile.app img {
-  width: var(--t, 96px);
-  height: var(--t, 96px);
+  width: calc(var(--t, 96px) * 0.76);
+  height: calc(var(--t, 96px) * 0.76);
+  transform: none;
+  object-fit: contain;
 }
 
 /* never blow a small picture up past 1.5× its own size: it sits crisp in
