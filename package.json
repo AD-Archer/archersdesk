@@ -15,10 +15,10 @@
     "bcryptjs": "^3.0.2",
     "better-sqlite3": "^12.0.0",
     "epic-free-games": "^4.1.4",
-    "next": "^15.5.21",
+    "next": "^15.5.27",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
