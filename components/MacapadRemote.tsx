@@ -7,8 +7,16 @@
 // the large-title page head and the iOS sheet.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { padOf, screenPad } from "@/lib/macapad";
-import { MACAPAD_REMOTE, type MacapadButton, type MacapadPadId, type Settings } from "@/lib/types";
+import { buttonMode, padOf, screenPad } from "@/lib/macapad";
+import {
+  MACAPAD_REMOTE,
+  type IntegrationPayload,
+  type MacapadButton,
+  type MacapadPadId,
+  type MacapadStatus,
+  type Settings,
+} from "@/lib/types";
+import { usePoll } from "./hooks";
 import { KeyFace } from "./MacapadSettings";
 import { openMacapadSettings } from "./widgets/Macapad";
 import { useIntegrationAction } from "./widgets/kit";
@@ -185,6 +193,19 @@ export function RemotePad({ settings, onClose }: { settings: Settings; onClose: 
   const [flash, setFlash] = useState<Record<string, "busy" | "ok" | "err">>({});
   const [message, setMessage] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // which of the mac's modes are on, so keep-awake / jiggler keys light up;
+  // a press of one bumps `poke` to refetch straight away
+  const [poke, setPoke] = useState(0);
+  const status = usePoll<IntegrationPayload<MacapadStatus>>(
+    `/api/integrations/macapad?device=${MACAPAD_REMOTE}`,
+    30 * 1000,
+    [poke]
+  );
+  const modes = status?.data?.modes;
+  const modeOn = (b: MacapadButton) => {
+    const m = buttonMode(b);
+    return Boolean(m && modes?.[m]?.on);
+  };
 
   const pad = padOf(settings.macapad, size);
   const pages = pad?.pages ?? [];
@@ -210,6 +231,7 @@ export function RemotePad({ settings, onClose }: { settings: Settings; onClose: 
       say("Couldn't reach the desk.");
     }
     setFlash((f) => ({ ...f, [b.id]: ok ? "ok" : "err" }));
+    if (ok && buttonMode(b)) setPoke((n) => n + 1);
     setTimeout(
       () =>
         setFlash((f) => {
@@ -277,9 +299,10 @@ export function RemotePad({ settings, onClose }: { settings: Settings; onClose: 
           b ? (
             <button
               key={b.id}
-              className={`rpad-key${flash[b.id] ? ` ${flash[b.id]}` : ""}`}
+              className={`rpad-key${flash[b.id] ? ` ${flash[b.id]}` : modeOn(b) ? " on" : ""}`}
               onClick={() => press(b)}
               aria-label={b.label || "key"}
+              aria-pressed={buttonMode(b) && modes ? modeOn(b) : undefined}
             >
               <span className="rpad-face">
                 <KeyFace button={b} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { MACAPAD_REMOTE, WIDGET_PAGE_COUNT } from "@/lib/types";
 import type { Alarm, Device, LayoutRow, Presence, Settings, ViewSettings } from "@/lib/types";
 import { fromView, toView } from "@/lib/view";
@@ -113,6 +113,7 @@ export default function Dashboard({
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncedVersion = useRef(initialSettings.version);
   const refetching = useRef(false);
+  const offsets = useRef<number[]>([]); // each page's offset last render (see pageOffset)
 
   settingsRef.current = settings;
   deviceIdRef.current = deviceId;
@@ -268,6 +269,10 @@ export default function Dashboard({
   useEffect(() => {
     if (page > pageCount - 1) setPage(pageCount - 1);
   }, [page, pageCount]);
+
+  useLayoutEffect(() => {
+    offsets.current = Array.from({ length: pageCount }, (_, i) => pageOffset(i));
+  });
 
   // page and row changes flash the dots, like StandBy's stack indicator
   useEffect(() => {
@@ -481,12 +486,19 @@ export default function Dashboard({
     return () => window.removeEventListener("archersdesk:open-settings", onOpen);
   }, []);
 
+  // the desk's pages go round: past the pad page is StandBy again, and back
+  // from StandBy is the pad page
+  function turnPage(dir: 1 | -1) {
+    const n = pageCountRef.current;
+    setPage((p) => (p + dir + n) % n);
+  }
+
   // arrow keys on desktop: ←→ pages, ↑↓ rows
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
-      if (e.key === "ArrowRight") setPage((p) => Math.min(pageCountRef.current - 1, p + 1));
-      if (e.key === "ArrowLeft") setPage((p) => Math.max(0, p - 1));
+      if (e.key === "ArrowRight") turnPage(1);
+      if (e.key === "ArrowLeft") turnPage(-1);
       const onRows = pageRef.current > 0 && pageRef.current <= LAST_WIDGET_PAGE;
       if (e.key === "ArrowDown" && onRows) moveBothRows(pageRef.current - 1, 1);
       if (e.key === "ArrowUp" && onRows) moveBothRows(pageRef.current - 1, -1);
@@ -536,8 +548,8 @@ export default function Dashboard({
   // takes wheel events itself until it runs out of pages, then hands them up)
   const onWheel = useWheelStep({
     axis: "x",
-    canStep: (dir) => (dir > 0 ? pageRef.current < pageCountRef.current - 1 : pageRef.current > 0),
-    onStep: (dir) => setPage((p) => Math.min(pageCountRef.current - 1, Math.max(0, p + dir))),
+    canStep: () => pageCountRef.current > 1,
+    onStep: turnPage,
   });
 
   function onPointerDown(e: React.PointerEvent) {
@@ -594,8 +606,8 @@ export default function Dashboard({
     setDragY(null);
     if (axis === "h") {
       const threshold = Math.min(80, window.innerWidth * 0.1);
-      if (dx < -threshold) setPage((p) => Math.min(pageCountRef.current - 1, p + 1));
-      else if (dx > threshold) setPage((p) => Math.max(0, p - 1));
+      if (dx < -threshold) turnPage(1);
+      else if (dx > threshold) turnPage(-1);
     } else if (axis === "v" && onWidgetPage) {
       const threshold = Math.min(70, window.innerHeight * 0.12);
       if (dy < -threshold) movePaneRow(page - 1, s.side, 1);
@@ -629,6 +641,17 @@ export default function Dashboard({
         style={paneStyle(pageIndex, side)}
       />
     );
+  }
+
+  // where page i sits from the one showing, going round: ±1 are the
+  // neighbours either side, so a swipe off either end finds the other end
+  // waiting. With an even count the page opposite goes on whichever side
+  // the drag is heading.
+  function pageOffset(i: number) {
+    const n = pageCount;
+    let offset = (((i - page) % n) + n) % n;
+    if (offset > n / 2 || (offset === n / 2 && (drag ?? 0) > 0)) offset -= n;
+    return offset;
   }
 
   function renderWidgetPage(pageIndex: number) {
@@ -703,23 +726,27 @@ export default function Dashboard({
         onPointerCancel={onPointerUp}
         onWheel={onWheel}
       >
-        <div
-          className={`pager-track${drag === null ? " animate" : ""}`}
-          style={{ transform: `translateX(calc(${-page * 100}% + ${drag ?? 0}px))` }}
-        >
-          <section className="page">
-            <Standby settings={view} />
-          </section>
-          {pages.map((_, i) => (
-            <section className="page" key={i}>
-              {renderWidgetPage(i)}
-            </section>
-          ))}
-          {padOn && (
-            <section className="page">
-              <MacapadPage settings={view} integrationSettings={savedView} />
-            </section>
-          )}
+        <div className="pager-track">
+          {[
+            <Standby key="standby" settings={view} />,
+            ...pages.map((_, i) => <Fragment key={i}>{renderWidgetPage(i)}</Fragment>),
+            ...(padOn ? [<MacapadPage key="pad" settings={view} integrationSettings={savedView} />] : []),
+          ].map((content, i) => {
+            const offset = pageOffset(i);
+            // a page coming round the back (wrapping from one end to the
+            // other) jumps there instead of sliding across the screen
+            const animate = drag === null && Math.abs(offset - (offsets.current[i] ?? offset)) <= 1;
+            return (
+              <section
+                key={content.key}
+                className={`page${animate ? " animate" : ""}`}
+                style={{ transform: `translateX(calc(${offset * 100}% + ${drag ?? 0}px))` }}
+                aria-hidden={offset !== 0}
+              >
+                {content}
+              </section>
+            );
+          })}
         </div>
       </div>
 

@@ -363,6 +363,15 @@ function sanitizeMacapadStep(v: unknown): MacapadStep | null {
       return { type: "wait", ms: Math.round(num(v.ms, 500, 0, 60_000)) };
     case "action":
       return /^[a-z0-9][a-z0-9-]{0,47}$/.test(String(v.id)) ? { type: "action", id: String(v.id) } : null;
+    case "keepAwake":
+    case "jiggler": {
+      const minutes = typeof v.minutes === "number" ? Math.round(num(v.minutes, 0, 1, 1440)) : null;
+      return {
+        type: v.type,
+        ...(typeof v.on === "boolean" ? { on: v.on } : {}),
+        ...(minutes && v.on !== false ? { minutes } : {}),
+      };
+    }
     default:
       return null;
   }

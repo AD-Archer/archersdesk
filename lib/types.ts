@@ -174,7 +174,20 @@ export type MacapadStep =
   | { type: "shortcut"; name: string } // a macos shortcuts.app shortcut
   | { type: "appleScript"; source: string }
   | { type: "wait"; ms: number }
-  | { type: "action"; id: string }; // a built-in or custom action on the mac
+  | { type: "action"; id: string } // a built-in or custom action on the mac
+  // the mac's two modes (macapad 1.0+): keep it from sleeping, or nudge the
+  // pointer when idle so it never counts as away. `on` left out switches it;
+  // `minutes` left out keeps it on until it's turned off
+  | { type: MacapadMode; on?: boolean; minutes?: number };
+
+export const MACAPAD_MODES = ["keepAwake", "jiggler"] as const;
+export type MacapadMode = (typeof MACAPAD_MODES)[number];
+
+/** What the pad polls: is the mac there, and is each mode on (and until when). */
+export interface MacapadStatus {
+  online: boolean;
+  modes?: Partial<Record<MacapadMode, { on: boolean; until?: string }>>;
+}
 
 export const MACAPAD_MEDIA_KEYS = ["playPause", "next", "previous", "volumeUp", "volumeDown", "mute"] as const;
 export type MacapadMediaKey = (typeof MACAPAD_MEDIA_KEYS)[number];
@@ -188,6 +201,8 @@ export const MACAPAD_STEP_TYPES = [
   "appleScript",
   "wait",
   "action",
+  "keepAwake",
+  "jiggler",
 ] as const;
 
 /** A pad button: runs its steps in order on the mac when pressed. */

@@ -672,12 +672,15 @@
   background: var(--fill-2);
 }
 
-.rpad-key.ok {
+/* ok flashes white; a keep-awake / jiggler key stays white while it's on */
+.rpad-key.ok,
+.rpad-key.on {
   background: #fff;
   color: #000;
 }
 
-.rpad-key.ok .rpad-label {
+.rpad-key.ok .rpad-label,
+.rpad-key.on .rpad-label {
   color: rgba(0, 0, 0, 0.6);
 }
 

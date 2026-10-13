@@ -6,6 +6,7 @@ import {
   MACAPAD_REMOTE,
   MACAPAD_SLOTS,
   type MacapadButton,
+  type MacapadMode,
   type MacapadPadId,
   type MacapadPads,
   type MacapadPage,
@@ -78,6 +79,18 @@ export function defaultScreenPad(key: string): MacapadScreenPad {
       };
     }),
   };
+}
+
+// the mac's built-in actions that switch each mode
+const MODE_ACTIONS: Record<string, MacapadMode> = { "keep-awake": "keepAwake", jiggler: "jiggler" };
+
+/** The mode a key switches (its one step is that mode, or the mac's built-in
+ *  action for it), so the pad can light it while the mode is on. */
+export function buttonMode(button: MacapadButton): MacapadMode | null {
+  if (button.steps.length !== 1) return null;
+  const st = button.steps[0];
+  if (st.type === "keepAwake" || st.type === "jiggler") return st.type;
+  return st.type === "action" ? (MODE_ACTIONS[st.id] ?? null) : null;
 }
 
 /** A grid label: "5 × 3". */

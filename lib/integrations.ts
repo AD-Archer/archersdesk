@@ -1,4 +1,5 @@
 import { EpicFreeGames } from "epic-free-games";
+import { MACAPAD_MODES } from "./types";
 import type {
   FeedService,
   IntegrationPayload,
@@ -7,6 +8,8 @@ import type {
   MacapadAction,
   MacapadApp,
   MacapadCatalog,
+  MacapadMode,
+  MacapadStatus,
   SiteMeta,
   ProxyService,
   Settings,
@@ -1003,13 +1006,29 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
 
   macapad: {
     ttl: 15 * 1000,
-    // status only: an empty run checks the mac is up and the token works
+    // status only: an empty run checks the mac is up and the token works (and
+    // this screen is inside its schedule); /api/status says which modes are
+    // on, for the keys that switch them (missing before macapad 1.0)
     async fetch(settings) {
       const { url, token } = settings.integrations.macapad;
       if (!url || !token) return need("set your macapad url + token in settings → accounts");
-      const result = await macapadRun(url, token, macapadClientHeaders(settings.devices, settings.screen), []);
+      const client = macapadClientHeaders(settings.devices, settings.screen);
+      const [result, status] = await Promise.all([
+        macapadRun(url, token, client, []),
+        macapadApi<Partial<Record<MacapadMode, { on?: boolean; until?: string }>>>(url, token, client, "/api/status", {
+          timeout: 5000,
+        }),
+      ]);
       if (!result.ok) return { configured: true, reason: result.error };
-      return { configured: true, data: { online: true } };
+      const modes: MacapadStatus["modes"] = {};
+      if (status.ok) {
+        for (const m of MACAPAD_MODES) {
+          const mode = status.data[m];
+          if (mode) modes[m] = { on: Boolean(mode.on), ...(mode.on && mode.until ? { until: mode.until } : {}) };
+        }
+      }
+      const data: MacapadStatus = { online: true, modes };
+      return { configured: true, data };
     },
     //   press        {id}      run a *saved* button — the browser never sends raw steps
     //   catalog                what the mac offers: actions, installed apps, shortcuts

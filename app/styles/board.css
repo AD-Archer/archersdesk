@@ -12,19 +12,18 @@
   touch-action: none;
 }
 
+/* the pages go round, so each is placed by its own offset from the one
+   showing (Dashboard's pageOffset) rather than by one sliding strip */
 .pager-track {
-  display: flex;
+  position: relative;
+  height: var(--app-height);
+}
+
+.pager-track > .page {
+  position: absolute;
+  inset: 0;
   height: var(--app-height);
   will-change: transform;
-}
-
-.pager-track.animate {
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.page {
-  flex: 0 0 100%;
-  height: var(--app-height);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -32,8 +31,12 @@
   padding: var(--pad);
 }
 
+.pager-track > .page.animate {
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (orientation: portrait) {
-  .page {
+  .pager-track > .page {
     padding: calc(var(--safe-t) + 8px) var(--pad) calc(var(--safe-b) + 8px);
   }
 }

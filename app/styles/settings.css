@@ -1060,8 +1060,10 @@ input:focus-visible + .tick {
 }
 
 /* ── wide screens (the Echo): iPad split view ──────────────────────── */
+/* not on a phone turned sideways (wide but under ~460px tall): there the
+   sidebar would squeeze the section, so it keeps the phone's drill-in */
 
-@media (min-width: 700px) {
+@media (min-width: 700px) and (min-height: 460px) {
   .sheet {
     display: flex;
   }
@@ -1147,7 +1149,7 @@ input:focus-visible + .tick {
 }
 
 /* the Echo is short: tighten what repeats down the page */
-@media (min-width: 700px) and (max-height: 520px) {
+@media (min-width: 700px) and (min-height: 460px) and (max-height: 520px) {
   .alarm-time {
     font-size: 44px;
   }

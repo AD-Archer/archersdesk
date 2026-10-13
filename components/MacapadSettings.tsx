@@ -21,6 +21,7 @@ import {
   type MacapadApp,
   type MacapadButton,
   type MacapadCatalog,
+  type MacapadMode,
   type MacapadPadId,
   type MacapadPage,
   type MacapadPads,
@@ -53,7 +54,11 @@ const STEP_INFO: Record<StepType, { label: string; placeholder?: string; hint?: 
   appleScript: { label: "Run AppleScript", placeholder: 'tell application "Finder" to activate' },
   wait: { label: "Wait a moment", hint: "Seconds to wait before the next step." },
   action: { label: "Do a Mac action", hint: "One of your Mac's actions, built in or your own." },
+  keepAwake: { label: "Keep the Mac awake", hint: "Stops the screen and the Mac from going to sleep." },
+  jiggler: { label: "Jiggle the mouse", hint: "Nudges the pointer when the Mac sits idle, so Slack and Teams never show you as away." },
 };
+
+const MODE_NAMES: Record<MacapadMode, string> = { keepAwake: "keep awake", jiggler: "the mouse jiggler" };
 
 const MEDIA_LABELS: Record<string, string> = {
   playPause: "play or pause",
@@ -142,6 +147,8 @@ function defaultStep(type: StepType): MacapadStep {
     case "appleScript": return { type, source: "" };
     case "wait": return { type, ms: 500 };
     case "action": return { type, id: "" };
+    case "keepAwake":
+    case "jiggler": return { type };
   }
 }
 
@@ -945,9 +952,11 @@ function byCategory(actions: MacapadAction[]) {
 // ── button editor ────────────────────────────────────────────────────
 // One question at a time. The key itself is the hero: its preview sits on
 // top and changes as you go. Below it, "what it does" asks for a kind first
-// (a list of plain choices), then shows only that kind's panel; "how it
-// looks" is icon or picture. Every key opens on the full list of choices,
-// with what it does now checked, so all the options stay in view.
+// (a list of plain choices, under a search across everything on the Mac),
+// then shows only that kind's panel; "how it looks" is icon or picture, and
+// a pick from a list goes straight on to it. Every key opens on the full
+// list of choices, with what it does now checked, so all the options stay
+// in view.
 
 type Kind = "mac" | "custom" | "app" | "web" | "keys" | "shortcut" | "sequence";
 
@@ -998,6 +1007,10 @@ function ButtonEditor({
   const [steps, setSteps] = useState<MacapadStep[]>(button?.steps ?? []);
   const [view, setView] = useState<"does" | "looks">("does");
   const [kind, setKind] = useState<Kind | null>(null);
+  // the search at the top of the first question, across everything on the Mac;
+  // "Show all" opens that kind's list still searching for it
+  const [query, setQuery] = useState("");
+  const [kindQuery, setKindQuery] = useState("");
   const currentKind = kindOf(steps, catalog?.actions);
   const [error, setError] = useState<string | null>(null);
   // the label follows each pick until you type your own
@@ -1009,7 +1022,9 @@ function ButtonEditor({
     setTimeout(() => setPressed(false), 160);
   };
 
-  function choose(next: { label: string; icon?: string; image?: string; steps: MacapadStep[] }) {
+  // `quiet` for a pick that changes as you type (a website's address), so
+  // the preview doesn't bounce on every letter
+  function choose(next: { label: string; icon?: string; image?: string; steps: MacapadStep[] }, quiet = false) {
     if (!label.trim() || label === autoLabel.current) {
       setLabel(next.label);
       autoLabel.current = next.label;
@@ -1018,7 +1033,20 @@ function ButtonEditor({
     setImage(next.image ?? "");
     setSteps(next.steps);
     setError(null);
-    press();
+    if (!quiet) press();
+  }
+
+  // a pick from a list (not the shortcut builder or the steps, which take
+  // several taps) goes straight on to how the key looks, like the Vita's editor
+  function pick(next: Parameters<typeof choose>[0]) {
+    choose(next);
+    setQuery("");
+    setView("looks");
+  }
+
+  function openKind(k: Kind, search = "") {
+    setKind(k);
+    setKindQuery(search);
   }
 
   function save() {
@@ -1030,6 +1058,8 @@ function ButtonEditor({
     const unfinished = cleaned.findIndex(
       (st) => stepValue(st)?.trim() === "" || (st.type === "keystroke" && !parseCombo(st.keys).key)
     );
+    if (unfinished >= 0 && cleaned.length === 1 && cleaned[0].type === "openURL")
+      return setError("Type the website's address first.");
     if (unfinished >= 0)
       return setError(cleaned.length > 1 ? `Step ${unfinished + 1} isn't finished yet.` : "Finish setting this up first.");
     onSave({ id: button?.id ?? newId(), label: label.trim(), icon, ...(image ? { image } : {}), steps: cleaned });
@@ -1106,17 +1136,32 @@ function ButtonEditor({
         ) : !kindInfo ? (
           <div className="bed-panel">
             <h3 className="bed-q">What should this key do?</h3>
-            <div className="group">
-              {KINDS.filter((k) => k.kind !== "sequence").map((k) => (
-                <KindRow key={k.kind} info={k} current={currentKind === k.kind} onPick={() => setKind(k.kind)} />
-              ))}
-            </div>
-            <h4 className="group-head">For more control</h4>
-            <div className="group">
-              {KINDS.filter((k) => k.kind === "sequence").map((k) => (
-                <KindRow key={k.kind} info={k} current={currentKind === k.kind} onPick={() => setKind(k.kind)} />
-              ))}
-            </div>
+            <SearchField value={query} onChange={setQuery} placeholder="Search actions, apps, Shortcuts" />
+            {query.trim() ? (
+              <CatalogSearch
+                query={query}
+                catalog={catalog}
+                error={catalogError}
+                onRetry={reload}
+                steps={steps}
+                onPick={pick}
+                onShowAll={(k) => openKind(k, query.trim())}
+              />
+            ) : (
+              <div className="bed-list">
+                <div className="group">
+                  {KINDS.filter((k) => k.kind !== "sequence").map((k) => (
+                    <KindRow key={k.kind} info={k} current={currentKind === k.kind} onPick={() => openKind(k.kind)} />
+                  ))}
+                </div>
+                <h4 className="group-head">For more control</h4>
+                <div className="group">
+                  {KINDS.filter((k) => k.kind === "sequence").map((k) => (
+                    <KindRow key={k.kind} info={k} current={currentKind === k.kind} onPick={() => openKind(k.kind)} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="bed-panel">
@@ -1133,7 +1178,9 @@ function ButtonEditor({
             ) : kind === "web" ? (
               <WebsitePicker
                 current={steps.length === 1 && steps[0].type === "openURL" ? steps[0].url : ""}
-                onPick={choose}
+                hasLogo={Boolean(image)}
+                onType={(next) => choose(next, true)}
+                onLogo={choose}
               />
             ) : kind === "sequence" ? (
               <SequenceEditor steps={steps} actions={catalog?.actions} onChange={setSteps} />
@@ -1154,28 +1201,29 @@ function ButtonEditor({
               <CustomActionPicker
                 actions={catalog.actions}
                 selected={steps.length === 1 && steps[0].type === "action" ? steps[0].id : ""}
-                onPick={(a) => choose({ label: a.name.toLowerCase(), icon: iconOrBolt(a.icon), steps: [{ type: "action", id: a.id }] })}
+                onPick={(a) => pick(actionKey(a))}
                 onChanged={reload}
               />
             ) : kind === "mac" ? (
               <ActionPicker
                 actions={catalog.actions.filter((a) => !a.custom)}
                 selected={steps.length === 1 && steps[0].type === "action" ? steps[0].id : ""}
-                onPick={(a) => choose({ label: a.name.toLowerCase(), icon: iconOrBolt(a.icon), steps: [{ type: "action", id: a.id }] })}
+                initialQuery={kindQuery}
+                onPick={(a) => pick(actionKey(a))}
               />
             ) : kind === "app" ? (
               <AppPicker
                 apps={catalog.apps}
                 selected={steps.length === 1 && steps[0].type === "openApp" ? steps[0].app : ""}
-                onPick={(app) =>
-                  choose({ label: app.name.toLowerCase(), icon: "apps", image: appIcon(app.bundleId), steps: [{ type: "openApp", app: app.bundleId }] })
-                }
+                initialQuery={kindQuery}
+                onPick={(app) => pick(appKey(app))}
               />
             ) : (
               <ShortcutPicker
                 shortcuts={catalog.shortcuts}
                 selected={steps.length === 1 && steps[0].type === "shortcut" ? steps[0].name : ""}
-                onPick={(name) => choose({ label: name.toLowerCase(), icon: "bolt", steps: [{ type: "shortcut", name }] })}
+                initialQuery={kindQuery}
+                onPick={(name) => pick(shortcutKey(name))}
               />
             )}
           </div>
@@ -1184,6 +1232,165 @@ function ButtonEditor({
         {error && <p className="mps-error">{error}</p>}
       </div>
     </EditablePopup>
+  );
+}
+
+// what a key gets from each kind of pick: its label, face and one step
+const actionKey = (a: MacapadAction) => ({ label: a.name.toLowerCase(), icon: iconOrBolt(a.icon), steps: [{ type: "action", id: a.id } as MacapadStep] });
+const appKey = (app: MacapadApp) => ({
+  label: app.name.toLowerCase(),
+  icon: "apps",
+  image: appIcon(app.bundleId),
+  steps: [{ type: "openApp", app: app.bundleId } as MacapadStep],
+});
+const shortcutKey = (name: string) => ({ label: name.toLowerCase(), icon: "bolt", steps: [{ type: "shortcut", name } as MacapadStep] });
+
+const SEARCH_SHOWN = 6; // per group; "Show all" opens the rest in that kind's list
+
+/** Everything on the Mac that matches, in groups: its actions, your own,
+ *  apps, Shortcuts. Names that start with what was typed come first. */
+function CatalogSearch({
+  query,
+  catalog,
+  error,
+  onRetry,
+  steps,
+  onPick,
+  onShowAll,
+}: {
+  query: string;
+  catalog: MacapadCatalog | null;
+  error: string | null;
+  onRetry: () => void;
+  steps: MacapadStep[];
+  onPick: (next: { label: string; icon?: string; image?: string; steps: MacapadStep[] }) => void;
+  onShowAll: (kind: Kind) => void;
+}) {
+  if (!catalog) {
+    return (
+      <div className="mpe-empty">
+        {error ? (
+          <>
+            <span>{sentence(error)}</span>
+            <button className="btn" onClick={onRetry}>
+              Try again
+            </button>
+          </>
+        ) : (
+          "Asking your Mac…"
+        )}
+      </div>
+    );
+  }
+
+  const q = query.trim().toLowerCase();
+  const words = q.split(/\s+/);
+  const rank = (name: string) => {
+    const n = name.toLowerCase();
+    return n.startsWith(q) ? 0 : n.split(/[\s-]+/).some((w) => w.startsWith(words[0])) ? 1 : 2;
+  };
+  function find<T>(items: T[], name: (t: T) => string, more: (t: T) => string = () => "") {
+    return items
+      .filter((t) => {
+        const hay = `${name(t)} ${more(t)}`.toLowerCase();
+        return words.every((w) => hay.includes(w));
+      })
+      .sort((a, b) => rank(name(a)) - rank(name(b)));
+  }
+
+  const one = steps.length === 1 ? steps[0] : null;
+  const groups = [
+    {
+      kind: "mac" as Kind,
+      title: "Control your Mac",
+      items: find(
+        catalog.actions.filter((a) => !a.custom),
+        (a) => a.name,
+        (a) => `${a.id} ${CATEGORY_NAMES[a.category] ?? a.category}`
+      ).map((a) => ({
+        key: `a:${a.id}`,
+        on: one?.type === "action" && one.id === a.id,
+        face: (
+          <span className={`mps-ico ${CATEGORY_COLORS[a.category] ?? "gray"}`}>
+            <MI name={iconOrBolt(a.icon)} />
+          </span>
+        ),
+        name: a.name,
+        extra: a.steps.length === 1 && a.steps[0].type === "keystroke" ? <kbd>{prettyCombo(a.steps[0].keys)}</kbd> : null,
+        next: actionKey(a),
+      })),
+    },
+    {
+      kind: "custom" as Kind,
+      title: "Your actions",
+      items: find(catalog.actions.filter((a) => a.custom), (a) => a.name, (a) => a.id).map((a) => ({
+        key: `c:${a.id}`,
+        on: one?.type === "action" && one.id === a.id,
+        face: <ActionIcon icon={a.icon} />,
+        name: a.name,
+        extra: null,
+        next: actionKey(a),
+      })),
+    },
+    {
+      kind: "app" as Kind,
+      title: "Apps",
+      items: find(catalog.apps, (a) => a.name, (a) => a.bundleId).map((app) => ({
+        key: `p:${app.bundleId}`,
+        on: one?.type === "openApp" && one.app === app.bundleId,
+        face: (
+          <span className="bed-appicon">
+            <KeyFace button={{ icon: "apps", image: appIcon(app.bundleId) }} />
+          </span>
+        ),
+        name: app.name,
+        extra: null,
+        next: appKey(app),
+      })),
+    },
+    {
+      kind: "shortcut" as Kind,
+      title: "Shortcuts",
+      items: find(catalog.shortcuts, (n) => n).map((name) => ({
+        key: `s:${name}`,
+        on: one?.type === "shortcut" && one.name === name,
+        face: (
+          <span className="mps-ico indigo">
+            <MI name="bolt" />
+          </span>
+        ),
+        name,
+        extra: null,
+        next: shortcutKey(name),
+      })),
+    },
+  ].filter((g) => g.items.length);
+
+  if (!groups.length) return <div className="mpe-empty">Nothing on your Mac matches “{query.trim()}”.</div>;
+
+  return (
+    <div className="bed-list">
+      {groups.map((g) => (
+        <div key={g.kind}>
+          <h4 className="group-head">{g.title}</h4>
+          <div className="group">
+            {g.items.slice(0, SEARCH_SHOWN).map((it) => (
+              <button key={it.key} className={`group-row bed-item${it.on ? " on" : ""}`} onClick={() => onPick(it.next)} aria-pressed={it.on}>
+                {it.face}
+                <span className="mps-row-text">{it.name}</span>
+                {it.extra}
+                {it.on && <MI name="check" className="mps-check" />}
+              </button>
+            ))}
+            {g.items.length > SEARCH_SHOWN && (
+              <button className="group-row mps-blue" onClick={() => onShowAll(g.kind)}>
+                Show all {g.items.length}
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1238,7 +1445,19 @@ function describeStep(st: MacapadStep, catalog: MacapadCatalog | null): string {
     case "typeText": return st.text ? `types “${st.text.length > 24 ? `${st.text.slice(0, 24)}…` : st.text}”` : "types text";
     case "appleScript": return "runs AppleScript";
     case "wait": return `waits ${+(st.ms / 1000).toFixed(1)} sec`;
+    case "keepAwake":
+    case "jiggler": {
+      const what = MODE_NAMES[st.type];
+      if (st.on === false) return `turns off ${what}`;
+      const span = st.minutes ? ` for ${minutesText(st.minutes)}` : "";
+      return st.on ? `turns on ${what}${span}` : `switches ${what} on or off${span}`;
+    }
   }
+}
+
+function minutesText(m: number) {
+  if (m % 60 === 0) return m === 60 ? "an hour" : `${m / 60} hours`;
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
 }
 
 // ── keyboard shortcuts ───────────────────────────────────────────────
@@ -1597,8 +1816,18 @@ const CATEGORY_COLORS: Record<string, string> = {
   media: "pink", system: "gray", windows: "blue", browser: "teal", editing: "orange", custom: "purple",
 };
 
-function ActionPicker({ actions, selected, onPick }: { actions: MacapadAction[]; selected: string; onPick: (a: MacapadAction) => void }) {
-  const [query, setQuery] = useState("");
+function ActionPicker({
+  actions,
+  selected,
+  initialQuery = "",
+  onPick,
+}: {
+  actions: MacapadAction[];
+  selected: string;
+  initialQuery?: string;
+  onPick: (a: MacapadAction) => void;
+}) {
+  const [query, setQuery] = useState(initialQuery);
   const q = query.trim().toLowerCase();
   const shown = q ? actions.filter((a) => `${a.name} ${a.id} ${a.category}`.toLowerCase().includes(q)) : actions;
   const list = useRevealSelected();
@@ -1690,8 +1919,18 @@ function CustomActionPicker({
   );
 }
 
-function AppPicker({ apps, selected, onPick }: { apps: MacapadApp[]; selected: string; onPick: (app: MacapadApp) => void }) {
-  const [query, setQuery] = useState("");
+function AppPicker({
+  apps,
+  selected,
+  initialQuery = "",
+  onPick,
+}: {
+  apps: MacapadApp[];
+  selected: string;
+  initialQuery?: string;
+  onPick: (app: MacapadApp) => void;
+}) {
+  const [query, setQuery] = useState(initialQuery);
   const q = query.trim().toLowerCase();
   const shown = q ? apps.filter((a) => a.name.toLowerCase().includes(q) || a.bundleId.toLowerCase().includes(q)) : apps;
   const list = useRevealSelected();
@@ -1723,8 +1962,18 @@ function AppPicker({ apps, selected, onPick }: { apps: MacapadApp[]; selected: s
   );
 }
 
-function ShortcutPicker({ shortcuts, selected, onPick }: { shortcuts: string[]; selected: string; onPick: (name: string) => void }) {
-  const [query, setQuery] = useState("");
+function ShortcutPicker({
+  shortcuts,
+  selected,
+  initialQuery = "",
+  onPick,
+}: {
+  shortcuts: string[];
+  selected: string;
+  initialQuery?: string;
+  onPick: (name: string) => void;
+}) {
+  const [query, setQuery] = useState(initialQuery);
   const list = useRevealSelected();
   if (!shortcuts.length) return <div className="mpe-empty">Your Shortcuts app has no shortcuts yet.</div>;
   const q = query.trim().toLowerCase();
@@ -1752,17 +2001,37 @@ function ShortcutPicker({ shortcuts, selected, onPick }: { shortcuts: string[]; 
   );
 }
 
+/** A website key: the address is all it needs (it's on the key as you type,
+ *  with a globe); "Get logo" is an optional extra that puts the site's own
+ *  logo and name on it, with its other logos to choose from. */
 function WebsitePicker({
   current,
-  onPick,
+  hasLogo,
+  onType,
+  onLogo,
 }: {
   current: string;
-  onPick: (b: { label: string; image?: string; icon?: string; steps: MacapadStep[] }) => void;
+  hasLogo: boolean;
+  onType: (b: { label: string; icon: string; steps: MacapadStep[] }) => void;
+  onLogo: (b: { label: string; image?: string; icon?: string; steps: MacapadStep[] }) => void;
 }) {
   const [url, setUrl] = useState(current);
   const [meta, setMeta] = useState<SiteMeta | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function type(v: string) {
+    setUrl(v);
+    setMeta(null);
+    setError(null);
+    let host = v.trim();
+    try {
+      host = new URL(fullUrl(host)).hostname.replace(/^www\./, "") || host;
+    } catch {
+      // not an address yet: the label is what's typed
+    }
+    onType({ label: host.toLowerCase(), icon: "language", steps: [{ type: "openURL", url: v.trim() }] });
+  }
 
   async function find() {
     if (!url.trim() || busy) return;
@@ -1791,8 +2060,10 @@ function WebsitePicker({
       }
       if (candidate === logo && !/\.ico(\?|$)/i.test(candidate)) break; // the one they picked failed for a real reason
     }
-    onPick({ label: m.title.toLowerCase(), icon: "language", image: image || logo, steps: [{ type: "openURL", url: m.url }] });
+    onLogo({ label: m.title.toLowerCase(), icon: "language", image: image || logo, steps: [{ type: "openURL", url: m.url }] });
   }
+
+  const ready = Boolean(url.trim());
 
   return (
     <div className="bed-picture">
@@ -1811,13 +2082,19 @@ function WebsitePicker({
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          onChange={(e) => setUrl(e.target.value)}
+          onChange={(e) => type(e.target.value)}
         />
-        <button className="btn" type="submit" disabled={busy || !url.trim()}>
-          {busy ? "Finding…" : "Find"}
+        <button className="btn" type="submit" disabled={busy || !ready}>
+          {busy ? "Getting logo…" : "Get logo"}
         </button>
       </form>
-      <p className="group-foot">Type the website&rsquo;s address. It opens in your Mac&rsquo;s default browser, and the key gets the site&rsquo;s own logo.</p>
+      <p className="group-foot">
+        {!ready
+          ? "Type the website’s address. The key opens it in your Mac’s default browser."
+          : hasLogo
+            ? "Ready to save, with the site’s logo."
+            : "Ready to save with a globe, or tap Get logo to use the site’s own logo and name."}
+      </p>
       {meta && meta.images.length > 1 && (
         <>
           <h4 className="group-head">Other logos on {new URL(meta.url).hostname.replace(/^www\./, "")}</h4>
@@ -1963,6 +2240,38 @@ function StepRow({
           ))}
           {step.id && !actions.some((a) => a.id === step.id) && <option value={step.id}>{step.id} (not on your Mac)</option>}
         </select>
+      )}
+      {(step.type === "keepAwake" || step.type === "jiggler") && (
+        <>
+          <select
+            className="field"
+            value={step.on === undefined ? "switch" : step.on ? "on" : "off"}
+            onChange={(e) => {
+              const v = e.target.value;
+              onChange(v === "switch" ? { type: step.type, minutes: step.minutes } : v === "on" ? { ...step, on: true } : { type: step.type, on: false });
+            }}
+            aria-label="On or off"
+          >
+            <option value="switch">Switch it on or off</option>
+            <option value="on">Turn it on</option>
+            <option value="off">Turn it off</option>
+          </select>
+          {step.on !== false && (
+            <select
+              className="field"
+              value={step.minutes ?? ""}
+              onChange={(e) => onChange({ ...step, minutes: e.target.value ? Number(e.target.value) : undefined })}
+              aria-label="For how long"
+            >
+              <option value="">Until it's turned off</option>
+              {[15, 30, 60, 120, 240, 480].map((m) => (
+                <option key={m} value={m}>
+                  For {minutesText(m)}
+                </option>
+              ))}
+            </select>
+          )}
+        </>
       )}
       {step.type === "keystroke" && <ShortcutComposer value={step.keys} onChange={(keys) => onChange({ ...step, keys })} />}
       {step.type === "appleScript" && (

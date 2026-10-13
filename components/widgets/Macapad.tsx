@@ -13,9 +13,10 @@
 // pointed at this pad and page.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { padOf, screenPad } from "@/lib/macapad";
-import { WIDGET_INFO, type MacapadButton, type MacapadPadId, type ViewSettings } from "@/lib/types";
-import { useWheelStep } from "../hooks";
+import { buttonMode, padOf, screenPad } from "@/lib/macapad";
+import { WIDGET_INFO, type MacapadButton, type MacapadPadId, type MacapadStatus, type ViewSettings } from "@/lib/types";
+import { clock12 } from "../alarmUtil";
+import { useNow, useWheelStep } from "../hooks";
 import { KeyTile, type MacapadFocus } from "../MacapadSettings";
 import { Empty, MI, plainWords, Shell, useIntegration, useIntegrationAction } from "./kit";
 import type { WidgetProps } from "./registry";
@@ -33,10 +34,15 @@ export function MacapadWidget({ wide, settings, integrationSettings }: WidgetPro
   return <MacapadPad pad={wide ? "big" : "small"} settings={settings} integrationSettings={integrationSettings} />;
 }
 
-/** The desk's pad page: this screen's own pad on a panel that fills the page. */
+/** The desk's pad page: this screen's own pad on a panel that fills the page,
+ *  the time in its top right like a status bar (the page hides StandBy). */
 export function MacapadPage({ settings, integrationSettings }: { settings: ViewSettings; integrationSettings?: ViewSettings }) {
+  const { time } = clock12(useNow(10_000));
   return (
     <section className="panel deck" data-widget="macapad">
+      <time className="mpad-clock" suppressHydrationWarning>
+        {time}
+      </time>
       <MacapadPad pad={screenPad(settings.deviceId)} settings={settings} integrationSettings={integrationSettings} />
     </section>
   );
@@ -51,8 +57,11 @@ function MacapadPad({
   settings: ViewSettings;
   integrationSettings?: ViewSettings;
 }) {
-  // status and presses both name this screen to the mac, which may keep it on a schedule
-  const status = useIntegration<{ online: boolean }>("macapad", integrationSettings ?? settings, 30 * 1000);
+  // status and presses both name this screen to the mac, which may keep it on a schedule.
+  // A press of a keep-awake / jiggler key bumps `poke` to refetch, so it lights at once
+  const [poke, setPoke] = useState(0);
+  const status = useIntegration<MacapadStatus>("macapad", integrationSettings ?? settings, 30 * 1000, poke);
+  const modes = status?.data?.modes;
   const act = useIntegrationAction("macapad", (integrationSettings ?? settings).deviceId);
 
   const found = padOf(settings.macapad, pad);
@@ -124,14 +133,19 @@ function MacapadPad({
       // then fill the pad both ways: keys stretch up to 1.4× in whichever
       // direction has room left, and anything past that goes into the gaps
       // (the grid is spread edge to edge in css), so there's never a band of
-      // empty pad around the keys
+      // empty pad around the keys. Rows only part up to half a key, though:
+      // on a tall phone the rest is left above and below the grid, which
+      // sits in the middle, rather than one wide band splitting the pad
       const tw = Math.max(t, Math.floor(Math.min(t * 1.4, (w - (cols - 1) * t * 0.2) / cols)));
       const th = Math.max(t, Math.floor(Math.min(t * 1.4, (h - rows * lab - (rows - 1) * t * 0.12) / rows)));
+      const spare = h - rows * (th + lab);
+      const rowGap = rows > 1 ? Math.min(t * 0.5, Math.max(t * 0.12, spare / (rows - 1))) : 0;
       setTile({
         "--t": `${t}px`,
         "--tw": `${tw}px`,
         "--th": `${th}px`,
         "--lab": `${lab}px`,
+        "--rgap": `${Math.floor(rowGap)}px`,
         "--cols": cols,
       } as React.CSSProperties);
     };
@@ -208,6 +222,7 @@ function MacapadPad({
       say("couldn't reach the desk");
     }
     setFlash((f) => ({ ...f, [b.id]: ok ? "ok" : "err" }));
+    if (ok && buttonMode(b)) setPoke((n) => n + 1);
     setTimeout(
       () =>
         setFlash((f) => {
@@ -217,6 +232,12 @@ function MacapadPad({
         }),
       ok ? 350 : 900
     );
+  }
+
+  // a keep-awake / jiggler key is lit while its mode is on, like a Control Center toggle
+  function modeOn(b: MacapadButton) {
+    const m = buttonMode(b);
+    return Boolean(m && modes?.[m]?.on);
   }
 
   function tap(b: MacapadButton | null, index: number) {
@@ -265,7 +286,7 @@ function MacapadPad({
       </button>
       <div ref={viewport} className="mpad-fit" style={tile}>
         <div
-          className={`mpad-viewport${offline ? " offline" : ""}${rows === 1 ? " one-row" : ""}`}
+          className={`mpad-viewport${offline ? " offline" : ""}`}
           data-swipe-through
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -285,9 +306,10 @@ function MacapadPad({
                   b ? (
                     <button
                       key={b.id}
-                      className={`mpad-key${flash[b.id] ? ` ${flash[b.id]}` : ""}`}
+                      className={`mpad-key${flash[b.id] ? ` ${flash[b.id]}` : ""}${modeOn(b) ? " on" : ""}`}
                       onClick={() => tap(b, i)}
                       aria-label={b.label || "button"}
+                      aria-pressed={buttonMode(b) && modes ? modeOn(b) : undefined}
                     >
                       <KeyTile button={b} />
                       <span className="mpad-label">{b.label}</span>
