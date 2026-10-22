@@ -1,0 +1,4018 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "archer's desk",
+    "version": "1.0.0",
+    "description": "Everything on an archer's desk account: screens and their pages, cards, set times, location, alarms, calendars, world clocks and accounts. Each tool is also an MCP tool at /api/mcp (Streamable HTTP). Authenticate with a desk token from settings → MCP; its scopes decide which operations it can call and it may be limited to some screens."
+  },
+  "servers": [
+    {
+      "url": "https://your-desk.example.com",
+      "description": "your desk"
+    }
+  ],
+  "security": [
+    {
+      "desk": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "read",
+      "description": "See screens, pages, alarms, calendars and which accounts are set up. Never secrets."
+    },
+    {
+      "name": "screens",
+      "description": "Pages, cards, set times, location, away and each screen's own options."
+    },
+    {
+      "name": "alarms",
+      "description": "Add, change and remove alarms."
+    },
+    {
+      "name": "calendars",
+      "description": "Add, change and remove calendar feeds."
+    },
+    {
+      "name": "time",
+      "description": "World clocks and units."
+    },
+    {
+      "name": "accounts",
+      "description": "Set the usernames, addresses and keys widgets sign in with. Keys can be written, never read back."
+    }
+  ],
+  "paths": {
+    "/api/v1/get_desk": {
+      "post": {
+        "operationId": "get_desk",
+        "summary": "Get the desk",
+        "description": "Start here. The account, its screens (each with its pages in order), units, world clocks, how many alarms and calendars there are, which accounts are set up, and what this token may do.\n\nNeeds the `read` scope.",
+        "tags": [
+          "read"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/get_screen": {
+      "post": {
+        "operationId": "get_screen",
+        "summary": "Get a screen",
+        "description": "One screen in full: its pages and their rows of cards, its set times, where it goes when left alone, its location, standby options, night mode and away status.\n\nNeeds the `read` scope.",
+        "tags": [
+          "read"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/list_widgets": {
+      "post": {
+        "operationId": "list_widgets",
+        "summary": "List widgets",
+        "description": "Every widget a card can show, by category, with what it shows. Widgets in the \"your accounts\" category need that account set up (list_accounts).\n\nNeeds the `read` scope.",
+        "tags": [
+          "read"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/list_accounts": {
+      "post": {
+        "operationId": "list_accounts",
+        "summary": "List accounts",
+        "description": "The services widgets sign in to (GitHub, Plex, Home Assistant, Phantom…), what's filled in, and which widgets use each. Keys, tokens and passwords only ever show as \"set\" or \"not set\".\n\nNeeds the `read` scope.",
+        "tags": [
+          "read"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/list_alarms": {
+      "post": {
+        "operationId": "list_alarms",
+        "summary": "List alarms",
+        "description": "The alarms, numbered, with their times, days and the screens they ring on.\n\nNeeds the `read` scope.",
+        "tags": [
+          "read"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/list_calendars": {
+      "post": {
+        "operationId": "list_calendars",
+        "summary": "List calendars",
+        "description": "The calendar feeds the agenda and calendar widgets read.\n\nNeeds the `read` scope.",
+        "tags": [
+          "read"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/create_page": {
+      "post": {
+        "operationId": "create_page",
+        "summary": "Create a page",
+        "description": "Add a page to a screen, optionally named and filled with rows. It goes at the end unless position says where (1 = first after Standby). Set times pointing at pages after it follow them along.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "description": "What the page is called, like \"Phantom\"."
+                  },
+                  "rows": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "A row: two square cards side by side ({left, right}) or one wide card ({wide}).",
+                      "properties": {
+                        "left": {
+                          "type": "string",
+                          "enum": [
+                            "clock",
+                            "analog",
+                            "date",
+                            "datetime",
+                            "calendar",
+                            "weather",
+                            "forecast",
+                            "sun",
+                            "moon",
+                            "worldclock",
+                            "nowplaying",
+                            "alarms",
+                            "timer",
+                            "quote",
+                            "dnd",
+                            "please_disturb",
+                            "away_until",
+                            "vibe",
+                            "github",
+                            "chess",
+                            "lichess",
+                            "stocks",
+                            "anilist",
+                            "wakatime",
+                            "monkeytype",
+                            "dog",
+                            "cat",
+                            "fox",
+                            "duck",
+                            "shibe",
+                            "catfact",
+                            "dogfact",
+                            "spacenews",
+                            "f1",
+                            "citybikes",
+                            "flights",
+                            "septa",
+                            "jellyfin",
+                            "plex",
+                            "adguard",
+                            "pihole",
+                            "homeassistant",
+                            "macapad",
+                            "seerr",
+                            "qbittorrent",
+                            "transmission",
+                            "agenda",
+                            "epicgames",
+                            "navidrome",
+                            "embed",
+                            "archerhours",
+                            "phantom_traffic",
+                            "phantom_active",
+                            "phantom_people",
+                            "phantom_orders",
+                            "phantom_projects",
+                            "phantom_funnel",
+                            "phantom_ledger",
+                            "phantom_money"
+                          ],
+                          "description": "A widget; list_widgets describes them all."
+                        },
+                        "right": {
+                          "type": "string",
+                          "enum": [
+                            "clock",
+                            "analog",
+                            "date",
+                            "datetime",
+                            "calendar",
+                            "weather",
+                            "forecast",
+                            "sun",
+                            "moon",
+                            "worldclock",
+                            "nowplaying",
+                            "alarms",
+                            "timer",
+                            "quote",
+                            "dnd",
+                            "please_disturb",
+                            "away_until",
+                            "vibe",
+                            "github",
+                            "chess",
+                            "lichess",
+                            "stocks",
+                            "anilist",
+                            "wakatime",
+                            "monkeytype",
+                            "dog",
+                            "cat",
+                            "fox",
+                            "duck",
+                            "shibe",
+                            "catfact",
+                            "dogfact",
+                            "spacenews",
+                            "f1",
+                            "citybikes",
+                            "flights",
+                            "septa",
+                            "jellyfin",
+                            "plex",
+                            "adguard",
+                            "pihole",
+                            "homeassistant",
+                            "macapad",
+                            "seerr",
+                            "qbittorrent",
+                            "transmission",
+                            "agenda",
+                            "epicgames",
+                            "navidrome",
+                            "embed",
+                            "archerhours",
+                            "phantom_traffic",
+                            "phantom_active",
+                            "phantom_people",
+                            "phantom_orders",
+                            "phantom_projects",
+                            "phantom_funnel",
+                            "phantom_ledger",
+                            "phantom_money"
+                          ],
+                          "description": "A widget; list_widgets describes them all."
+                        },
+                        "wide": {
+                          "type": "string",
+                          "enum": [
+                            "clock",
+                            "analog",
+                            "date",
+                            "datetime",
+                            "calendar",
+                            "weather",
+                            "forecast",
+                            "sun",
+                            "moon",
+                            "worldclock",
+                            "nowplaying",
+                            "alarms",
+                            "timer",
+                            "quote",
+                            "dnd",
+                            "please_disturb",
+                            "away_until",
+                            "vibe",
+                            "github",
+                            "chess",
+                            "lichess",
+                            "stocks",
+                            "anilist",
+                            "wakatime",
+                            "monkeytype",
+                            "dog",
+                            "cat",
+                            "fox",
+                            "duck",
+                            "shibe",
+                            "catfact",
+                            "dogfact",
+                            "spacenews",
+                            "f1",
+                            "citybikes",
+                            "flights",
+                            "septa",
+                            "jellyfin",
+                            "plex",
+                            "adguard",
+                            "pihole",
+                            "homeassistant",
+                            "macapad",
+                            "seerr",
+                            "qbittorrent",
+                            "transmission",
+                            "agenda",
+                            "epicgames",
+                            "navidrome",
+                            "embed",
+                            "archerhours",
+                            "phantom_traffic",
+                            "phantom_active",
+                            "phantom_people",
+                            "phantom_orders",
+                            "phantom_projects",
+                            "phantom_funnel",
+                            "phantom_ledger",
+                            "phantom_money"
+                          ],
+                          "description": "A widget; list_widgets describes them all."
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "maxItems": 12,
+                    "description": "Its rows, top to bottom. Defaults to one row: clock and calendar."
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Where it goes among the pages. Defaults to the end."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/update_page": {
+      "post": {
+        "operationId": "update_page",
+        "summary": "Update a page",
+        "description": "Rename a page, replace all its rows, or move it. Leave out what shouldn't change. To change a single card use set_card.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "page": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ],
+                    "description": "A page: its number (1 is the first page after Standby) or its name."
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "description": "A new name; \"\" goes back to \"Page N\"."
+                  },
+                  "rows": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "A row: two square cards side by side ({left, right}) or one wide card ({wide}).",
+                      "properties": {
+                        "left": {
+                          "type": "string",
+                          "enum": [
+                            "clock",
+                            "analog",
+                            "date",
+                            "datetime",
+                            "calendar",
+                            "weather",
+                            "forecast",
+                            "sun",
+                            "moon",
+                            "worldclock",
+                            "nowplaying",
+                            "alarms",
+                            "timer",
+                            "quote",
+                            "dnd",
+                            "please_disturb",
+                            "away_until",
+                            "vibe",
+                            "github",
+                            "chess",
+                            "lichess",
+                            "stocks",
+                            "anilist",
+                            "wakatime",
+                            "monkeytype",
+                            "dog",
+                            "cat",
+                            "fox",
+                            "duck",
+                            "shibe",
+                            "catfact",
+                            "dogfact",
+                            "spacenews",
+                            "f1",
+                            "citybikes",
+                            "flights",
+                            "septa",
+                            "jellyfin",
+                            "plex",
+                            "adguard",
+                            "pihole",
+                            "homeassistant",
+                            "macapad",
+                            "seerr",
+                            "qbittorrent",
+                            "transmission",
+                            "agenda",
+                            "epicgames",
+                            "navidrome",
+                            "embed",
+                            "archerhours",
+                            "phantom_traffic",
+                            "phantom_active",
+                            "phantom_people",
+                            "phantom_orders",
+                            "phantom_projects",
+                            "phantom_funnel",
+                            "phantom_ledger",
+                            "phantom_money"
+                          ],
+                          "description": "A widget; list_widgets describes them all."
+                        },
+                        "right": {
+                          "type": "string",
+                          "enum": [
+                            "clock",
+                            "analog",
+                            "date",
+                            "datetime",
+                            "calendar",
+                            "weather",
+                            "forecast",
+                            "sun",
+                            "moon",
+                            "worldclock",
+                            "nowplaying",
+                            "alarms",
+                            "timer",
+                            "quote",
+                            "dnd",
+                            "please_disturb",
+                            "away_until",
+                            "vibe",
+                            "github",
+                            "chess",
+                            "lichess",
+                            "stocks",
+                            "anilist",
+                            "wakatime",
+                            "monkeytype",
+                            "dog",
+                            "cat",
+                            "fox",
+                            "duck",
+                            "shibe",
+                            "catfact",
+                            "dogfact",
+                            "spacenews",
+                            "f1",
+                            "citybikes",
+                            "flights",
+                            "septa",
+                            "jellyfin",
+                            "plex",
+                            "adguard",
+                            "pihole",
+                            "homeassistant",
+                            "macapad",
+                            "seerr",
+                            "qbittorrent",
+                            "transmission",
+                            "agenda",
+                            "epicgames",
+                            "navidrome",
+                            "embed",
+                            "archerhours",
+                            "phantom_traffic",
+                            "phantom_active",
+                            "phantom_people",
+                            "phantom_orders",
+                            "phantom_projects",
+                            "phantom_funnel",
+                            "phantom_ledger",
+                            "phantom_money"
+                          ],
+                          "description": "A widget; list_widgets describes them all."
+                        },
+                        "wide": {
+                          "type": "string",
+                          "enum": [
+                            "clock",
+                            "analog",
+                            "date",
+                            "datetime",
+                            "calendar",
+                            "weather",
+                            "forecast",
+                            "sun",
+                            "moon",
+                            "worldclock",
+                            "nowplaying",
+                            "alarms",
+                            "timer",
+                            "quote",
+                            "dnd",
+                            "please_disturb",
+                            "away_until",
+                            "vibe",
+                            "github",
+                            "chess",
+                            "lichess",
+                            "stocks",
+                            "anilist",
+                            "wakatime",
+                            "monkeytype",
+                            "dog",
+                            "cat",
+                            "fox",
+                            "duck",
+                            "shibe",
+                            "catfact",
+                            "dogfact",
+                            "spacenews",
+                            "f1",
+                            "citybikes",
+                            "flights",
+                            "septa",
+                            "jellyfin",
+                            "plex",
+                            "adguard",
+                            "pihole",
+                            "homeassistant",
+                            "macapad",
+                            "seerr",
+                            "qbittorrent",
+                            "transmission",
+                            "agenda",
+                            "epicgames",
+                            "navidrome",
+                            "embed",
+                            "archerhours",
+                            "phantom_traffic",
+                            "phantom_active",
+                            "phantom_people",
+                            "phantom_orders",
+                            "phantom_projects",
+                            "phantom_funnel",
+                            "phantom_ledger",
+                            "phantom_money"
+                          ],
+                          "description": "A widget; list_widgets describes them all."
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 12,
+                    "description": "Every row, top to bottom, replacing the ones there."
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Move the page here among the pages."
+                  }
+                },
+                "required": [
+                  "page"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/delete_page": {
+      "post": {
+        "operationId": "delete_page",
+        "summary": "Delete a page",
+        "description": "Remove a page and its rows. Set times and the idle return that pointed at it go to Standby instead. A screen keeps at least one page.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "page": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ],
+                    "description": "A page: its number (1 is the first page after Standby) or its name."
+                  }
+                },
+                "required": [
+                  "page"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/set_card": {
+      "post": {
+        "operationId": "set_card",
+        "summary": "Set a card",
+        "description": "Put a widget in one spot on a page: the left or right square of a row, or \"wide\" for the whole row. Setting a side of a wide row splits it (the old widget keeps the other side); setting \"wide\" on a split row joins it.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "page": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ],
+                    "description": "A page: its number (1 is the first page after Standby) or its name."
+                  },
+                  "row": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Which row, 1 at the top."
+                  },
+                  "slot": {
+                    "type": "string",
+                    "enum": [
+                      "left",
+                      "right",
+                      "wide"
+                    ],
+                    "description": "Which spot in the row."
+                  },
+                  "widget": {
+                    "type": "string",
+                    "enum": [
+                      "clock",
+                      "analog",
+                      "date",
+                      "datetime",
+                      "calendar",
+                      "weather",
+                      "forecast",
+                      "sun",
+                      "moon",
+                      "worldclock",
+                      "nowplaying",
+                      "alarms",
+                      "timer",
+                      "quote",
+                      "dnd",
+                      "please_disturb",
+                      "away_until",
+                      "vibe",
+                      "github",
+                      "chess",
+                      "lichess",
+                      "stocks",
+                      "anilist",
+                      "wakatime",
+                      "monkeytype",
+                      "dog",
+                      "cat",
+                      "fox",
+                      "duck",
+                      "shibe",
+                      "catfact",
+                      "dogfact",
+                      "spacenews",
+                      "f1",
+                      "citybikes",
+                      "flights",
+                      "septa",
+                      "jellyfin",
+                      "plex",
+                      "adguard",
+                      "pihole",
+                      "homeassistant",
+                      "macapad",
+                      "seerr",
+                      "qbittorrent",
+                      "transmission",
+                      "agenda",
+                      "epicgames",
+                      "navidrome",
+                      "embed",
+                      "archerhours",
+                      "phantom_traffic",
+                      "phantom_active",
+                      "phantom_people",
+                      "phantom_orders",
+                      "phantom_projects",
+                      "phantom_funnel",
+                      "phantom_ledger",
+                      "phantom_money"
+                    ],
+                    "description": "A widget; list_widgets describes them all."
+                  }
+                },
+                "required": [
+                  "page",
+                  "row",
+                  "slot",
+                  "widget"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/add_row": {
+      "post": {
+        "operationId": "add_row",
+        "summary": "Add a row",
+        "description": "Add a row of cards to a page, at the bottom unless position says where.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "page": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ],
+                    "description": "A page: its number (1 is the first page after Standby) or its name."
+                  },
+                  "row": {
+                    "type": "object",
+                    "description": "A row: two square cards side by side ({left, right}) or one wide card ({wide}).",
+                    "properties": {
+                      "left": {
+                        "type": "string",
+                        "enum": [
+                          "clock",
+                          "analog",
+                          "date",
+                          "datetime",
+                          "calendar",
+                          "weather",
+                          "forecast",
+                          "sun",
+                          "moon",
+                          "worldclock",
+                          "nowplaying",
+                          "alarms",
+                          "timer",
+                          "quote",
+                          "dnd",
+                          "please_disturb",
+                          "away_until",
+                          "vibe",
+                          "github",
+                          "chess",
+                          "lichess",
+                          "stocks",
+                          "anilist",
+                          "wakatime",
+                          "monkeytype",
+                          "dog",
+                          "cat",
+                          "fox",
+                          "duck",
+                          "shibe",
+                          "catfact",
+                          "dogfact",
+                          "spacenews",
+                          "f1",
+                          "citybikes",
+                          "flights",
+                          "septa",
+                          "jellyfin",
+                          "plex",
+                          "adguard",
+                          "pihole",
+                          "homeassistant",
+                          "macapad",
+                          "seerr",
+                          "qbittorrent",
+                          "transmission",
+                          "agenda",
+                          "epicgames",
+                          "navidrome",
+                          "embed",
+                          "archerhours",
+                          "phantom_traffic",
+                          "phantom_active",
+                          "phantom_people",
+                          "phantom_orders",
+                          "phantom_projects",
+                          "phantom_funnel",
+                          "phantom_ledger",
+                          "phantom_money"
+                        ],
+                        "description": "A widget; list_widgets describes them all."
+                      },
+                      "right": {
+                        "type": "string",
+                        "enum": [
+                          "clock",
+                          "analog",
+                          "date",
+                          "datetime",
+                          "calendar",
+                          "weather",
+                          "forecast",
+                          "sun",
+                          "moon",
+                          "worldclock",
+                          "nowplaying",
+                          "alarms",
+                          "timer",
+                          "quote",
+                          "dnd",
+                          "please_disturb",
+                          "away_until",
+                          "vibe",
+                          "github",
+                          "chess",
+                          "lichess",
+                          "stocks",
+                          "anilist",
+                          "wakatime",
+                          "monkeytype",
+                          "dog",
+                          "cat",
+                          "fox",
+                          "duck",
+                          "shibe",
+                          "catfact",
+                          "dogfact",
+                          "spacenews",
+                          "f1",
+                          "citybikes",
+                          "flights",
+                          "septa",
+                          "jellyfin",
+                          "plex",
+                          "adguard",
+                          "pihole",
+                          "homeassistant",
+                          "macapad",
+                          "seerr",
+                          "qbittorrent",
+                          "transmission",
+                          "agenda",
+                          "epicgames",
+                          "navidrome",
+                          "embed",
+                          "archerhours",
+                          "phantom_traffic",
+                          "phantom_active",
+                          "phantom_people",
+                          "phantom_orders",
+                          "phantom_projects",
+                          "phantom_funnel",
+                          "phantom_ledger",
+                          "phantom_money"
+                        ],
+                        "description": "A widget; list_widgets describes them all."
+                      },
+                      "wide": {
+                        "type": "string",
+                        "enum": [
+                          "clock",
+                          "analog",
+                          "date",
+                          "datetime",
+                          "calendar",
+                          "weather",
+                          "forecast",
+                          "sun",
+                          "moon",
+                          "worldclock",
+                          "nowplaying",
+                          "alarms",
+                          "timer",
+                          "quote",
+                          "dnd",
+                          "please_disturb",
+                          "away_until",
+                          "vibe",
+                          "github",
+                          "chess",
+                          "lichess",
+                          "stocks",
+                          "anilist",
+                          "wakatime",
+                          "monkeytype",
+                          "dog",
+                          "cat",
+                          "fox",
+                          "duck",
+                          "shibe",
+                          "catfact",
+                          "dogfact",
+                          "spacenews",
+                          "f1",
+                          "citybikes",
+                          "flights",
+                          "septa",
+                          "jellyfin",
+                          "plex",
+                          "adguard",
+                          "pihole",
+                          "homeassistant",
+                          "macapad",
+                          "seerr",
+                          "qbittorrent",
+                          "transmission",
+                          "agenda",
+                          "epicgames",
+                          "navidrome",
+                          "embed",
+                          "archerhours",
+                          "phantom_traffic",
+                          "phantom_active",
+                          "phantom_people",
+                          "phantom_orders",
+                          "phantom_projects",
+                          "phantom_funnel",
+                          "phantom_ledger",
+                          "phantom_money"
+                        ],
+                        "description": "A widget; list_widgets describes them all."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Where it goes, 1 at the top. Defaults to the bottom."
+                  }
+                },
+                "required": [
+                  "page",
+                  "row"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/remove_row": {
+      "post": {
+        "operationId": "remove_row",
+        "summary": "Remove a row",
+        "description": "Take a row of cards off a page. A page keeps at least one row.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "page": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ],
+                    "description": "A page: its number (1 is the first page after Standby) or its name."
+                  },
+                  "row": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Which row, 1 at the top."
+                  }
+                },
+                "required": [
+                  "page",
+                  "row"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/add_set_time": {
+      "post": {
+        "operationId": "add_set_time",
+        "summary": "Add a set time",
+        "description": "Make a screen turn to a page at a time: every day, on some days, or just once on a date. With stay_minutes it goes back to what it was showing afterwards (unless someone touched it); without, it stays until touched. E.g. \"16:15 on tue → Phantom for 60 minutes\".\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "at": {
+                    "type": "string",
+                    "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$",
+                    "description": "A 24-hour time on the screen's own clock, like \"16:15\"."
+                  },
+                  "show": {
+                    "type": [
+                      "string",
+                      "integer"
+                    ],
+                    "description": "\"standby\", \"pad\", or a page by number or name."
+                  },
+                  "days": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "mon",
+                        "tue",
+                        "wed",
+                        "thu",
+                        "fri",
+                        "sat",
+                        "sun"
+                      ]
+                    },
+                    "description": "The days it repeats on. Empty or left out means every day."
+                  },
+                  "date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "Just once, on this date (\"2026-10-22\"), instead of repeating. null makes it repeat again."
+                  },
+                  "stay_minutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 720,
+                    "description": "How long it stays; 0 or left out = until touched."
+                  }
+                },
+                "required": [
+                  "at",
+                  "show"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/update_set_time": {
+      "post": {
+        "operationId": "update_set_time",
+        "summary": "Update a set time",
+        "description": "Change a set time (numbered as get_screen lists them). Leave out what shouldn't change.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "set_time": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Which set time."
+                  },
+                  "at": {
+                    "type": "string",
+                    "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$",
+                    "description": "A 24-hour time on the screen's own clock, like \"16:15\"."
+                  },
+                  "show": {
+                    "type": [
+                      "string",
+                      "integer"
+                    ],
+                    "description": "\"standby\", \"pad\", or a page by number or name."
+                  },
+                  "days": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "mon",
+                        "tue",
+                        "wed",
+                        "thu",
+                        "fri",
+                        "sat",
+                        "sun"
+                      ]
+                    },
+                    "description": "The days it repeats on. Empty or left out means every day."
+                  },
+                  "date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "Just once, on this date (\"2026-10-22\"), instead of repeating. null makes it repeat again."
+                  },
+                  "stay_minutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 720,
+                    "description": "How long it stays; 0 = until touched."
+                  }
+                },
+                "required": [
+                  "set_time"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/remove_set_time": {
+      "post": {
+        "operationId": "remove_set_time",
+        "summary": "Remove a set time",
+        "description": "Delete a set time (numbered as get_screen lists them).\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "set_time": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Which set time."
+                  }
+                },
+                "required": [
+                  "set_time"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/set_idle_return": {
+      "post": {
+        "operationId": "set_idle_return",
+        "summary": "Set the idle return",
+        "description": "After someone turns a screen's page and leaves it, go back to a page once it's been untouched this long. 0 minutes turns it off.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "after_minutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1440,
+                    "description": "Minutes untouched; 0 = off."
+                  },
+                  "to": {
+                    "type": [
+                      "string",
+                      "integer"
+                    ],
+                    "description": "\"standby\" (the default), \"pad\", or a page by number or name."
+                  }
+                },
+                "required": [
+                  "after_minutes"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/set_location": {
+      "post": {
+        "operationId": "set_location",
+        "summary": "Set a screen's location",
+        "description": "Where a screen is, for its weather, sunrise and night mode. Give a place to search for (\"Philadelphia\"), or exact latitude and longitude with a name.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "place": {
+                    "type": "string",
+                    "description": "A city or place to look up."
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "What to call it, with latitude and longitude."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/update_screen": {
+      "post": {
+        "operationId": "update_screen",
+        "summary": "Update a screen",
+        "description": "Rename a screen, or change what Standby shows and whether it turns red at night.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "description": "A new name for the screen."
+                  },
+                  "show_temperature": {
+                    "type": "boolean",
+                    "description": "Standby shows the temperature."
+                  },
+                  "show_next_alarm": {
+                    "type": "boolean",
+                    "description": "Standby shows the next alarm."
+                  },
+                  "night_mode": {
+                    "type": "boolean",
+                    "description": "Turn red between sunset and sunrise."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/set_away": {
+      "post": {
+        "operationId": "set_away",
+        "summary": "Set away",
+        "description": "Show the away screen on a screen until a time, with a note of where you are; or clear it. Also sets the vibe the vibe widget shows.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "screen": {
+                    "type": "string",
+                    "description": "The screen's name or id. Can be left out when the token (or the account) has just one screen."
+                  },
+                  "until": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "When you're back, as an ISO time (\"2026-10-22T17:30:00-04:00\"). null clears away."
+                  },
+                  "for_minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10080,
+                    "description": "Or: away for this many minutes from now."
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "Where you are, shown on the away screen."
+                  },
+                  "vibe": {
+                    "type": "string",
+                    "enum": [
+                      "joyful",
+                      "sad",
+                      "stressed",
+                      "calm",
+                      "busy",
+                      "mysterious"
+                    ],
+                    "description": "How you're feeling."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/create_screen": {
+      "post": {
+        "operationId": "create_screen",
+        "summary": "Create a screen",
+        "description": "Add a screen (a display the desk runs on) with a copy of another screen's pages and location. Needs a token that can reach every screen.\n\nNeeds the `screens` scope.",
+        "tags": [
+          "screens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "description": "What the screen is called."
+                  },
+                  "copy_from": {
+                    "type": "string",
+                    "description": "The screen to copy pages and location from. Defaults to the first."
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/add_alarm": {
+      "post": {
+        "operationId": "add_alarm",
+        "summary": "Add an alarm",
+        "description": "An alarm that rings full screen with a chime. Rings on every screen unless screens says which.\n\nNeeds the `alarms` scope.",
+        "tags": [
+          "alarms"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "time": {
+                    "type": "string",
+                    "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$",
+                    "description": "A 24-hour time on the screen's own clock, like \"16:15\"."
+                  },
+                  "label": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "days": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "mon",
+                        "tue",
+                        "wed",
+                        "thu",
+                        "fri",
+                        "sat",
+                        "sun"
+                      ]
+                    },
+                    "description": "The days it repeats on. Empty or left out means every day."
+                  },
+                  "screens": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Screen names it rings on; left out = every screen (or this token's screens)."
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Defaults to on."
+                  }
+                },
+                "required": [
+                  "time"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/update_alarm": {
+      "post": {
+        "operationId": "update_alarm",
+        "summary": "Update an alarm",
+        "description": "Change an alarm (numbered as list_alarms lists them): its time, label, days, screens, or turn it on or off.\n\nNeeds the `alarms` scope.",
+        "tags": [
+          "alarms"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "alarm": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Which alarm."
+                  },
+                  "time": {
+                    "type": "string",
+                    "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$",
+                    "description": "A 24-hour time on the screen's own clock, like \"16:15\"."
+                  },
+                  "label": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "days": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "mon",
+                        "tue",
+                        "wed",
+                        "thu",
+                        "fri",
+                        "sat",
+                        "sun"
+                      ]
+                    },
+                    "description": "The days it repeats on. Empty or left out means every day."
+                  },
+                  "screens": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Screen names it rings on; [] = every screen."
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "alarm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/remove_alarm": {
+      "post": {
+        "operationId": "remove_alarm",
+        "summary": "Remove an alarm",
+        "description": "Delete an alarm (numbered as list_alarms lists them).\n\nNeeds the `alarms` scope.",
+        "tags": [
+          "alarms"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "alarm": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Which alarm."
+                  }
+                },
+                "required": [
+                  "alarm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/add_calendar": {
+      "post": {
+        "operationId": "add_calendar",
+        "summary": "Add a calendar",
+        "description": "Add an iCal feed (an .ics or webcal:// link) for the agenda and calendar widgets.\n\nNeeds the `calendars` scope.",
+        "tags": [
+          "calendars"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "The feed's address; webcal:// works."
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/update_calendar": {
+      "post": {
+        "operationId": "update_calendar",
+        "summary": "Update a calendar",
+        "description": "Rename a calendar feed, change its url, or switch it on or off. Also turns Epic's free games in the agenda on or off.\n\nNeeds the `calendars` scope.",
+        "tags": [
+          "calendars"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "calendar": {
+                    "type": "string",
+                    "description": "The calendar's name or id."
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "show_epic_games_in_agenda": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/remove_calendar": {
+      "post": {
+        "operationId": "remove_calendar",
+        "summary": "Remove a calendar",
+        "description": "Delete a calendar feed.\n\nNeeds the `calendars` scope.",
+        "tags": [
+          "calendars"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "calendar": {
+                    "type": "string",
+                    "description": "The calendar's name or id."
+                  }
+                },
+                "required": [
+                  "calendar"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/set_world_clocks": {
+      "post": {
+        "operationId": "set_world_clocks",
+        "summary": "Set world clocks",
+        "description": "Replace the world clock widget's cities: up to 6, each a label and an IANA time zone.\n\nNeeds the `time` scope.",
+        "tags": [
+          "time"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clocks": {
+                    "type": "array",
+                    "maxItems": 6,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "maxLength": 32,
+                          "description": "What it's called, like \"tokyo\"."
+                        },
+                        "tz": {
+                          "type": "string",
+                          "description": "An IANA zone, like \"Asia/Tokyo\"."
+                        }
+                      },
+                      "required": [
+                        "tz"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "clocks"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/set_units": {
+      "post": {
+        "operationId": "set_units",
+        "summary": "Set units",
+        "description": "Fahrenheit or celsius, for every temperature on every screen.\n\nNeeds the `time` scope.",
+        "tags": [
+          "time"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "units": {
+                    "type": "string",
+                    "enum": [
+                      "fahrenheit",
+                      "celsius"
+                    ]
+                  }
+                },
+                "required": [
+                  "units"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/set_account": {
+      "post": {
+        "operationId": "set_account",
+        "summary": "Set an account",
+        "description": "Fill in a service widgets sign in to, e.g. {service: \"github\", fields: {username: \"…\", token: \"…\"}}. Only the fields given change; \"\" clears one. list_accounts shows each service's fields. Keys, tokens and passwords can be written but never read back.\n\nNeeds the `accounts` scope.",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "service": {
+                    "type": "string",
+                    "description": "A service from list_accounts, like \"github\" or \"phantom\"."
+                  },
+                  "fields": {
+                    "type": "object",
+                    "description": "Field names to new values.",
+                    "additionalProperties": {
+                      "type": [
+                        "string",
+                        "array"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "service",
+                  "fields"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done. `result` is what the matching MCP tool returns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {}
+                  },
+                  "required": [
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something about the request needs fixing; `error` says what.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, or one that's been revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token doesn't have this scope, or the screen is outside the ones it's limited to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "desk": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "A desk token (desk_…) from settings → MCP."
+      }
+    }
+  }
+}

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>archer's desk</title>
+    <meta name="description" content="An ambient dashboard for a spare screen: big clock, widgets, scheduled pages, and an MCP server so an assistant can run it." />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="bar">
+      <a class="name" href="./">archer&rsquo;s desk</a>
+      <a href="./" aria-current="page">Overview</a>
+      <a href="mcp.html">MCP</a>
+      <a href="openapi.json">OpenAPI</a>
+      <a href="https://github.com/AD-Archer/archersdesk">GitHub</a>
+    </nav>
+
+    <main class="wrap">
+      <header class="hero">
+        <h1>A desk for your <span>spare screen</span>.</h1>
+        <p>
+          archer&rsquo;s desk turns an Echo Show, a tablet or an old monitor into an iOS StandBy-style dashboard: a huge
+          clock, your widgets, pages that show up when you need them, and an MCP server so Claude or ChatGPT can set it
+          all up for you.
+        </p>
+        <div class="cta">
+          <a class="btn blue" href="#run-it">Run it</a>
+          <a class="btn" href="mcp.html">Connect an assistant</a>
+        </div>
+      </header>
+
+      <figure class="shot">
+        <img src="images/page-today.png" alt="A page with a green clock reading 1:00 pm on the left and Philadelphia weather, 65 degrees and clear, on the right" width="1600" height="1000" />
+        <figcaption>A page: two cards side by side, swiped up and down through more rows.</figcaption>
+      </figure>
+
+      <section>
+        <h2>What&rsquo;s on it</h2>
+        <div class="features">
+          <div class="feature"><b>Standby first</b><span>A clock that fills the screen, with the date, temperature and next alarm.</span></div>
+          <div class="feature"><b>Pages of cards</b><span>As many named pages as you want; each row is two squares or one wide card.</span></div>
+          <div class="feature"><b>Set times</b><span>Turn to a page at 10:30 every weekday, Tuesdays at 4:15, or once today, then go back.</span></div>
+          <div class="feature"><b>Left alone</b><span>After you wander off, the screen goes back to Standby (or any page) on its own.</span></div>
+          <div class="feature"><b>60-odd widgets</b><span>Weather, calendars, now playing, GitHub, Plex, Home Assistant, Phantom, news, world clocks…</span></div>
+          <div class="feature"><b>Several screens</b><span>Each with its own pages and location; alarms ring on the ones you pick.</span></div>
+          <div class="feature"><b>Night mode</b><span>Turns red after sunset so it doesn&rsquo;t light the room.</span></div>
+          <div class="feature"><b>An MCP server</b><span>Hand it to an assistant with a scoped token and let it rearrange things.</span></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Screens</h2>
+        <div class="shots">
+          <figure class="shot">
+            <img src="images/standby.png" alt="Standby: a giant two-tone green 1:01 with the date, 65 degrees and a 7:30 am alarm along the top" width="1600" height="1000" loading="lazy" />
+            <figcaption>Standby, the page every screen starts on.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="images/page-world.png" alt="A world clock page showing London, Tokyo and Los Angeles in orange" width="1600" height="1000" loading="lazy" />
+            <figcaption>A wide card: world clocks across the whole row.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="images/page-reading.png" alt="A reading page with space news headlines on the left and a quote on the right" width="1600" height="1000" loading="lazy" />
+            <figcaption>Feeds that need no account: space news, quotes, facts.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section>
+        <h2>Setting it up</h2>
+        <p class="lede">Everything is tap-first in Settings and saves as you go.</p>
+        <div class="shots">
+          <figure class="shot">
+            <img src="images/settings-pages.png" alt="Settings, Layout: page chips Today, World and Reading with a plus button, the page's name, and its rows of cards" width="1600" height="1000" loading="lazy" />
+            <figcaption>Pages as chips (+ adds one), each with a name and its rows.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="images/settings-set-times.png" alt="Settings, set times: 10:30 AM Today weekdays; 4:15 PM World Tuesdays for 1 hour; 4:45 PM Reading today for 45 minutes; and the idle return set to 15 minutes back to Standby" width="1600" height="1000" loading="lazy" />
+            <figcaption>Set times and the idle return.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="split">
+        <div>
+          <h2>Let an assistant run it</h2>
+          <p>
+            Every account gets an MCP server. Make a token in Settings → MCP, choose what it may do (read, screens,
+            alarms, calendars, time, accounts) and which screens it reaches, and paste one line into Claude Code, or the
+            address and token into any other client.
+          </p>
+          <pre>claude mcp add --transport http archers-desk \
+  https://your-desk/api/mcp \
+  --header "Authorization: Bearer desk_…"</pre>
+          <p>Then just ask: <i>&ldquo;make a Phantom page and show it Tuesdays at 4:15 for an hour.&rdquo;</i></p>
+          <a class="btn" href="mcp.html">MCP guide and every tool</a>
+        </div>
+        <figure class="shot">
+          <img src="images/settings-mcp.png" alt="Settings, MCP: a new-token form with scope chips and screen chips, and two tokens, Office tablet limited to one screen and Claude with every scope" width="1600" height="1000" loading="lazy" />
+        </figure>
+      </section>
+
+      <section id="run-it" class="read">
+        <h2>Run it</h2>
+        <p>It&rsquo;s a Next.js app with SQLite. Locally:</p>
+        <pre>git clone https://github.com/AD-Archer/archersdesk
+cd archersdesk
+pnpm install
+pnpm dev        # http://localhost:3000</pre>
+        <p>
+          In production it&rsquo;s a Docker image (<code>docker compose up</code>); the
+          <a href="https://github.com/AD-Archer/archersdesk#readme">README</a> lists the environment variables. Open it
+          on the screen, sign up, pick a screen name, and tap anywhere for settings.
+        </p>
+        <p>
+          For Claude.ai or ChatGPT to reach your desk&rsquo;s MCP server it needs a public https address (a reverse proxy or
+          a tunnel). Claude Code, Claude Desktop and Cursor work on your home network as is.
+        </p>
+      </section>
+    </main>
+
+    <footer class="wrap">archer&rsquo;s desk · <a href="https://github.com/AD-Archer/archersdesk">source</a></footer>
+  </body>
+</html>

@@ -1192,3 +1192,35 @@ input:focus-visible + .tick {
   padding: 0 14px;
   font-size: 15px;
 }
+
+/* ── mcp: a new token and the lines to paste it with ─────────────────── */
+
+.mcp-block {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.mcp-block .row-label {
+  flex: 1 0 100%;
+  color: var(--label-2);
+}
+
+.mcp-code {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--label);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mcp-block .btn {
+  flex: 0 0 auto;
+  gap: 6px;
+}

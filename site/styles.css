@@ -1,0 +1,367 @@
+/* archer's desk docs: the app's own look (iOS StandBy, straight on black)
+   at reading width. Tokens follow app/globals.css. */
+
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --fill: #1c1c1e;
+  --fill-2: #2c2c2e;
+  --label: #fff;
+  --label-2: rgba(235, 235, 245, 0.6);
+  --label-3: rgba(235, 235, 245, 0.3);
+  --sep: rgba(84, 84, 88, 0.65);
+  --blue: #0a84ff;
+  --green: #30d158;
+  --orange: #ff9f0a;
+  --red: #ff453a;
+  --purple: #bf5af2;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--label);
+  font: 17px/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--blue);
+}
+
+code,
+pre {
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+
+pre {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--fill);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* top bar */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 24px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 0.5px solid var(--sep);
+}
+
+.bar .name {
+  margin-right: auto;
+  font-weight: 700;
+  color: var(--label);
+  text-decoration: none;
+}
+
+.bar a:not(.name) {
+  color: var(--label-2);
+  text-decoration: none;
+}
+
+.bar a[aria-current="page"] {
+  color: var(--label);
+}
+
+.wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.read {
+  max-width: 760px;
+}
+
+/* hero */
+.hero {
+  padding: 72px 0 40px;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.hero h1 span {
+  color: var(--green);
+}
+
+.hero p {
+  max-width: 640px;
+  margin: 18px 0 0;
+  font-size: 22px;
+  color: var(--label-2);
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.btn.blue {
+  background: var(--blue);
+}
+
+/* screenshots */
+.shot {
+  margin: 0;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  border: 0.5px solid var(--sep);
+}
+
+.shot figcaption {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--label-2);
+}
+
+.shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 28px 24px;
+}
+
+/* sections */
+section {
+  padding: 56px 0 0;
+}
+
+h2 {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h3 {
+  margin: 28px 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.lede {
+  margin: -6px 0 24px;
+  color: var(--label-2);
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.feature {
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: var(--fill);
+}
+
+.feature b {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.feature span {
+  color: var(--label-2);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 32px;
+  align-items: center;
+}
+
+@media (max-width: 800px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+table {
+  width: 100%;
+  margin: 0 0 16px;
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--fill);
+}
+
+td,
+th {
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--label-2);
+  font-weight: 600;
+}
+
+tr + tr td {
+  border-top: 0.5px solid var(--sep);
+}
+
+td:first-child {
+  white-space: nowrap;
+}
+
+dt {
+  margin-top: 14px;
+  font-weight: 600;
+}
+
+dd {
+  margin: 2px 0 0;
+  color: var(--label-2);
+}
+
+/* the tool reference (mcp.html, filled from openapi.json) */
+.toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 24px;
+}
+
+.toc a {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.tool {
+  margin: 0 0 14px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: var(--fill);
+  scroll-margin-top: 72px;
+}
+
+.tool h4 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.tool h4 code {
+  font-size: 17px;
+}
+
+.tag {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.tool p {
+  margin: 0 0 10px;
+  color: var(--label-2);
+}
+
+.tool table {
+  margin: 0;
+  background: var(--fill-2);
+}
+
+.type {
+  display: block;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--label-2);
+}
+
+.req {
+  display: block;
+  font-size: 13px;
+  color: var(--orange);
+}
+
+footer {
+  margin-top: 80px;
+  padding: 28px 0 48px;
+  border-top: 0.5px solid var(--sep);
+  color: var(--label-3);
+  font-size: 13px;
+}
+
+/* phones: the bar wraps under the name, tables let their first column wrap,
+   and the side margins come in to 16px */
+@media (max-width: 600px) {
+  .bar {
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    padding: 12px 16px;
+  }
+
+  .bar .name {
+    flex: 1 0 100%;
+  }
+
+  .wrap {
+    padding: 0 16px;
+  }
+
+  td:first-child {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  td,
+  th {
+    padding: 10px 12px;
+  }
+}

@@ -63,6 +63,34 @@ Settings, the remote and the editors use iOS-style dark lists. Tokens are in
 its own stylesheet in `app/styles/`. The rules are in `DESIGN.md`.
 
 
+## MCP
+
+Every account is an MCP server at `/api/mcp` (Streamable HTTP). Make a token in
+**settings → MCP**: pick its scopes (`read`, `screens`, `alarms`, `calendars`,
+`time`, `accounts`) and, if you want, which screens it can touch. It's shown
+once, with the line to paste:
+
+```sh
+claude mcp add --transport http archers-desk http://localhost:3000/api/mcp \
+  --header "Authorization: Bearer desk_…"
+```
+
+An assistant can then make, name and move pages, place cards, add set times
+and the idle return, and set location, away, alarms, calendars, world clocks,
+units and accounts. Keys and passwords can be written but never read back.
+Each desk documents itself at `/docs`; the same tools are plain REST at
+`POST /api/v1/<tool>`, described by `/openapi.json`.
+
+The tools live in `lib/mcp/tools.ts`; the MCP route, the REST route,
+`/openapi.json` and `/docs` all read that list. Tokens are stored as sha-256
+hashes (`lib/mcp/tokens.ts`).
+
+### docs site
+
+`site/` is the GitHub Pages site (`.github/workflows/pages.yml` publishes it on
+push to `main`). Its tool reference reads `site/openapi.json`; after changing
+tools, run the desk and `pnpm docs:openapi` to refresh it.
+
 ## adding a widget
 
 1. add the name to `WIDGETS` + `WIDGET_INFO` in `lib/types.ts` (label, blurb,

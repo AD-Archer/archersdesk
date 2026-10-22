@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MCP · archer's desk</title>
+    <meta name="description" content="Connect Claude, ChatGPT or Cursor to archer's desk over MCP, and every tool it gets." />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="bar">
+      <a class="name" href="./">archer&rsquo;s desk</a>
+      <a href="./">Overview</a>
+      <a href="mcp.html" aria-current="page">MCP</a>
+      <a href="openapi.json">OpenAPI</a>
+      <a href="https://github.com/AD-Archer/archersdesk">GitHub</a>
+    </nav>
+
+    <main class="wrap read">
+      <header class="hero">
+        <h1>MCP</h1>
+        <p>
+          Every desk is an MCP server. An assistant with a token can make and rename pages, place cards, schedule when a
+          screen turns to a page, set alarms, calendars, world clocks and location, and fill in accounts. Screens pick up
+          changes within a few seconds.
+        </p>
+      </header>
+
+      <section id="connect">
+        <h2>Connect</h2>
+        <ol>
+          <li>On your desk, open <b>Settings → MCP</b>.</li>
+          <li>Name a token, pick what it can do and, if you like, which screens it may touch. <b>Make a token</b>: it&rsquo;s shown once, with the lines to paste.</li>
+          <li>Give your assistant the server address <code>https://your-desk/api/mcp</code> and the token.</li>
+        </ol>
+        <h3>Claude Code</h3>
+        <pre>claude mcp add --transport http archers-desk https://your-desk/api/mcp \
+  --header "Authorization: Bearer desk_…"</pre>
+        <h3>Claude Desktop, Cursor and other config-file clients</h3>
+        <pre>{
+  "mcpServers": {
+    "archers-desk": {
+      "type": "http",
+      "url": "https://your-desk/api/mcp",
+      "headers": { "Authorization": "Bearer desk_…" }
+    }
+  }
+}</pre>
+        <h3>Claude.ai and ChatGPT</h3>
+        <p>
+          Add a custom connector with the server address and the token as a bearer <code>Authorization</code> header. These
+          reach your desk from the internet, so it needs a public https address.
+        </p>
+        <p>
+          The server speaks Streamable HTTP without sessions or a stream: each request is answered on its own. Every
+          account shares the one address; the token decides whose desk it is.
+        </p>
+      </section>
+
+      <section id="scopes">
+        <h2>Scopes and screens</h2>
+        <p>A token only sees the tools its scopes allow.</p>
+        <table>
+          <tr><td><code>read</code></td><td>See screens, pages, alarms, calendars and which accounts are set up. Never secrets.</td></tr>
+          <tr><td><code>screens</code></td><td>Pages, cards, set times, location, away and each screen&rsquo;s own options.</td></tr>
+          <tr><td><code>alarms</code></td><td>Add, change and remove alarms.</td></tr>
+          <tr><td><code>calendars</code></td><td>Add, change and remove calendar feeds.</td></tr>
+          <tr><td><code>time</code></td><td>World clocks and units.</td></tr>
+          <tr><td><code>accounts</code></td><td>Usernames, addresses and keys widgets sign in with. Keys can be written, never read back.</td></tr>
+        </table>
+        <p>
+          A token can be kept to some screens. It then sees and changes only those; sees alarms that ring on them and
+          changes only the ones that ring on nothing else; and can&rsquo;t make new screens. Calendars, world clocks, units
+          and accounts belong to the whole account and follow the scopes alone. Revoke a token in Settings → MCP and it
+          stops on its next request.
+        </p>
+      </section>
+
+      <section id="words">
+        <h2>How a desk is shaped</h2>
+        <dl>
+          <dt>Screen</dt>
+          <dd>A display the desk runs on. Each has its own pages and location.</dd>
+          <dt>Page</dt>
+          <dd>Screens swipe through Standby, then their pages, then the Pad (if a Mac pad is set up). Pages are numbered from 1 and can be named; tools take either.</dd>
+          <dt>Row and card</dt>
+          <dd>A page is rows, swiped up and down. A row is two squares, <code>{"left", "right"}</code>, or one wide card, <code>{"wide"}</code>. <code>list_widgets</code> names every card.</dd>
+          <dt>Set time</dt>
+          <dd>A screen turning to a page at a time: every day, some days, or once on a date. With <code>stay_minutes</code> it goes back afterwards, unless someone touched it.</dd>
+          <dt>Idle return</dt>
+          <dd>After someone turns the page and leaves, the screen goes back to a page once it&rsquo;s been untouched for a while.</dd>
+        </dl>
+        <h3>Example: a working day</h3>
+        <pre>create_page   {"name": "Programs", "rows": [{"left": "phantom_active", "right": "phantom_people"}, {"wide": "phantom_money"}]}
+add_set_time  {"at": "10:30", "show": "Programs", "days": ["mon","tue","wed","thu","fri"]}
+add_set_time  {"at": "16:15", "show": "Programs", "days": ["tue"], "stay_minutes": 60}
+add_set_time  {"at": "16:45", "show": "Programs", "date": "2026-10-22", "stay_minutes": 45}
+set_idle_return {"after_minutes": 15, "to": "standby"}</pre>
+      </section>
+
+      <section id="tools">
+        <h2>Tools</h2>
+        <p class="lede">Read from <a href="openapi.json">openapi.json</a>, the same list the server uses.</p>
+        <div class="toc" id="toc"></div>
+        <div id="tool-list"><p>Loading the tools…</p></div>
+      </section>
+
+      <section id="rest">
+        <h2>REST and OpenAPI</h2>
+        <p>
+          Every tool is also <code>POST /api/v1/&lt;tool&gt;</code> with the arguments as the json body and the same
+          token. It answers <code>{"result"}</code>, or <code>{"error"}</code> with a 400 (fix the request), 401 (no
+          token) or 403 (outside its scopes or screens).
+        </p>
+        <pre>curl -X POST https://your-desk/api/v1/add_set_time \
+  -H "Authorization: Bearer desk_…" -H "content-type: application/json" \
+  -d '{"screen": "main", "at": "16:15", "show": "Phantom", "days": ["tue"], "stay_minutes": 60}'</pre>
+        <p>
+          The OpenAPI 3.1 description is <a href="openapi.json">here</a>, and every desk serves its own at
+          <code>/openapi.json</code> with its address filled in. Each desk also has this guide at <code>/docs</code>.
+        </p>
+      </section>
+    </main>
+
+    <footer class="wrap">archer&rsquo;s desk · <a href="https://github.com/AD-Archer/archersdesk">source</a></footer>
+
+    <script>
+      // the tool reference, written from openapi.json so it matches the server
+      const SCOPES = ["read", "screens", "alarms", "calendars", "time", "accounts"];
+      const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      function typeOf(p) {
+        if (!p) return "any";
+        if (p.enum) return p.enum.length > 8 ? "widget name" : p.enum.map((e) => `"${e}"`).join(" | ");
+        if (p.type === "array") return p.items?.enum ? `(${typeOf(p.items)})[]` : `${typeOf(p.items)}[]`;
+        if (p.type === "object" && p.properties) return `{ ${Object.keys(p.properties).join(", ")} }`;
+        return Array.isArray(p.type) ? p.type.join(" | ") : p.type ?? "any";
+      }
+      fetch("openapi.json")
+        .then((r) => r.json())
+        .then((spec) => {
+          const ops = Object.values(spec.paths).map((p) => p.post);
+          document.getElementById("toc").innerHTML = ops
+            .map((o) => `<a href="#${o.operationId}"><code>${o.operationId}</code></a>`)
+            .join("");
+          document.getElementById("tool-list").innerHTML = SCOPES.map((scope) => {
+            const mine = ops.filter((o) => o.tags.includes(scope));
+            if (!mine.length) return "";
+            return `<h3>${esc(scope)}</h3>` + mine.map((o) => {
+              const schema = o.requestBody.content["application/json"].schema;
+              const req = new Set(schema.required ?? []);
+              const rows = Object.entries(schema.properties ?? {})
+                .map(([k, p]) => `<tr><td><code>${esc(k)}</code>${req.has(k) ? '<span class="req">required</span>' : ""}</td><td><span class="type">${esc(typeOf(p))}</span>${esc(p.description)}</td></tr>`)
+                .join("");
+              const desc = o.description.split("\n\n")[0];
+              return `<article class="tool" id="${esc(o.operationId)}"><h4><code>${esc(o.operationId)}</code><span class="tag">${esc(scope)}</span></h4><p>${esc(desc)}</p>${rows ? `<table>${rows}</table>` : ""}</article>`;
+            }).join("");
+          }).join("");
+          if (location.hash) document.querySelector(location.hash)?.scrollIntoView();
+        })
+        .catch(() => {
+          document.getElementById("tool-list").innerHTML = '<p>Couldn\'t load <a href="openapi.json">openapi.json</a>.</p>';
+        });
+    </script>
+  </body>
+</html>

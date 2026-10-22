@@ -10,17 +10,18 @@ import { useWeather } from "./widgets/Weather";
 import { pausedTonight } from "./night";
 import { useNow } from "./hooks";
 import { MacapadSection, type MacapadFocus } from "./MacapadSettings";
+import { McpSection } from "./McpSettings";
 
 /* iPhone Settings, dark. On a phone the sheet is a drill-in list (one
    section per screen); on a wide screen (the Echo) it is iPad Settings:
    a sidebar of sections with the chosen one scrolling on the right.
    Styles: app/styles/settings.css. */
 
-export type Tab = "layout" | "macapad" | "alarms" | "calendar" | "location" | "night" | "devices" | "accounts";
+export type Tab = "layout" | "macapad" | "alarms" | "calendar" | "location" | "night" | "devices" | "accounts" | "mcp";
 
 const NAV: Tab[][] = [
   ["layout", "alarms", "calendar", "location", "night"],
-  ["accounts", "macapad", "devices"],
+  ["accounts", "macapad", "devices", "mcp"],
 ];
 
 const TAB_INFO: Record<Tab, { label: string; icon: string; color: string }> = {
@@ -32,6 +33,7 @@ const TAB_INFO: Record<Tab, { label: string; icon: string; color: string }> = {
   accounts: { label: "Accounts", icon: "account_circle", color: "var(--gray)" },
   macapad: { label: "Macapad", icon: "keyboard_command_key", color: "var(--indigo)" },
   devices: { label: "Screens", icon: "tv", color: "var(--teal)" },
+  mcp: { label: "MCP", icon: "smart_toy", color: "var(--purple)" },
 };
 
 /* each widget's tint, the same one it wears on the board (board.css) */
@@ -392,6 +394,7 @@ export default function SettingsSheet({
               )}
               {tab === "macapad" && <MacapadSection settings={settings} onChange={onChange} focus={macapadFocus} screen={padScreen ?? deviceId} />}
               {tab === "alarms" && <AlarmsSection settings={settings} onChange={onChange} />}
+              {tab === "mcp" && <McpSection settings={settings} />}
               {tab === "calendar" && <CalendarSection settings={settings} onChange={onChange} />}
               {tab === "location" && <LocationSection settings={settings} onChange={onChange} />}
               {tab === "night" && <NightSection settings={settings} onChange={onChange} />}

@@ -1,0 +1,189 @@
+/* ── /docs: the MCP guide ─────────────────────────────────────────────
+   The settings sheet's language at reading width: black, iOS grouped
+   tables, the system sans for words and one tint (blue) for links. */
+
+.doc {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 56px 20px 96px;
+  color: var(--label);
+  font-size: 17px;
+  line-height: 1.55;
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+.doc-kicker {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.doc h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.doc-lead {
+  margin: 14px 0 0;
+  color: var(--label-2);
+}
+
+.doc-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 28px 0 8px;
+}
+
+.doc-nav a {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 17px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.doc section {
+  margin-top: 48px;
+}
+
+.doc h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.doc h3 {
+  margin: 24px 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.doc p,
+.doc ol,
+.doc dl {
+  margin: 0 0 12px;
+}
+
+.doc ol {
+  padding-left: 22px;
+}
+
+.doc li + li {
+  margin-top: 6px;
+}
+
+.doc a {
+  color: var(--blue);
+}
+
+.doc code,
+.doc pre {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+}
+
+.doc pre {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--fill-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc table {
+  width: 100%;
+  margin: 0 0 12px;
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--fill-2);
+}
+
+.doc td {
+  padding: 10px 14px;
+  vertical-align: top;
+}
+
+.doc tr + tr td {
+  border-top: 0.5px solid var(--sep);
+}
+
+.doc td:first-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.doc dt {
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.doc dd {
+  margin: 2px 0 0;
+  color: var(--label-2);
+}
+
+.doc-scope {
+  margin-top: 32px;
+}
+
+.doc h2.doc-scope-head {
+  font-size: 17px;
+  color: var(--label-2);
+}
+
+.doc-tool {
+  margin-top: 20px;
+  scroll-margin-top: 20px;
+}
+
+.doc-tool h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+
+.doc-tool h3 a {
+  color: var(--label);
+  text-decoration: none;
+}
+
+.doc-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.doc-tag.red {
+  color: var(--red);
+}
+
+.doc-req {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--orange);
+}
+
+.doc-type {
+  display: block;
+  margin-bottom: 2px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--label-2);
+}
