@@ -197,6 +197,38 @@
   color: var(--label);
 }
 
+/* ── phantom's budget and event ──────────────────────────────────────
+   Budget: a meter of how much of the event is funded, then (wide) each
+   sub-budget's plan against its cap, red where it's over or has no cap and
+   faint where nothing's planned yet. Event: people by approved hours, in the
+   funnel's rows. */
+
+.phantom-meter {
+  display: block;
+  align-self: stretch;
+  justify-self: stretch;
+  height: 12px;
+  margin: calc(var(--ps) * 0.03) calc(var(--ps) * 0.03) 0;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.phantom-meter span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--dither) 0 0 / 8px 8px, var(--tint);
+}
+
+.phantom-funnel-fill.over {
+  background: var(--dither) 0 0 / 8px 8px, var(--red);
+}
+
+.phantom-funnel li.muted {
+  opacity: 0.5;
+}
+
 /* wide: the hero on the left, the series or the steps on the right */
 .panel.wide[data-widget^="phantom_"] .w-body {
   display: grid;

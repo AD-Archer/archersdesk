@@ -703,7 +703,9 @@
                             "phantom_projects",
                             "phantom_funnel",
                             "phantom_ledger",
-                            "phantom_money"
+                            "phantom_money",
+                            "phantom_budget",
+                            "phantom_event"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         },
@@ -768,7 +770,9 @@
                             "phantom_projects",
                             "phantom_funnel",
                             "phantom_ledger",
-                            "phantom_money"
+                            "phantom_money",
+                            "phantom_budget",
+                            "phantom_event"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         },
@@ -833,7 +837,9 @@
                             "phantom_projects",
                             "phantom_funnel",
                             "phantom_ledger",
-                            "phantom_money"
+                            "phantom_money",
+                            "phantom_budget",
+                            "phantom_event"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         }
@@ -1026,7 +1032,9 @@
                             "phantom_projects",
                             "phantom_funnel",
                             "phantom_ledger",
-                            "phantom_money"
+                            "phantom_money",
+                            "phantom_budget",
+                            "phantom_event"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         },
@@ -1091,7 +1099,9 @@
                             "phantom_projects",
                             "phantom_funnel",
                             "phantom_ledger",
-                            "phantom_money"
+                            "phantom_money",
+                            "phantom_budget",
+                            "phantom_event"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         },
@@ -1156,7 +1166,9 @@
                             "phantom_projects",
                             "phantom_funnel",
                             "phantom_ledger",
-                            "phantom_money"
+                            "phantom_money",
+                            "phantom_budget",
+                            "phantom_event"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         }
@@ -1465,7 +1477,9 @@
                       "phantom_projects",
                       "phantom_funnel",
                       "phantom_ledger",
-                      "phantom_money"
+                      "phantom_money",
+                      "phantom_budget",
+                      "phantom_event"
                     ],
                     "description": "A widget; list_widgets describes them all."
                   }
@@ -1646,7 +1660,9 @@
                           "phantom_projects",
                           "phantom_funnel",
                           "phantom_ledger",
-                          "phantom_money"
+                          "phantom_money",
+                          "phantom_budget",
+                          "phantom_event"
                         ],
                         "description": "A widget; list_widgets describes them all."
                       },
@@ -1711,7 +1727,9 @@
                           "phantom_projects",
                           "phantom_funnel",
                           "phantom_ledger",
-                          "phantom_money"
+                          "phantom_money",
+                          "phantom_budget",
+                          "phantom_event"
                         ],
                         "description": "A widget; list_widgets describes them all."
                       },
@@ -1776,7 +1794,9 @@
                           "phantom_projects",
                           "phantom_funnel",
                           "phantom_ledger",
-                          "phantom_money"
+                          "phantom_money",
+                          "phantom_budget",
+                          "phantom_event"
                         ],
                         "description": "A widget; list_widgets describes them all."
                       }

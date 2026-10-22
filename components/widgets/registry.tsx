@@ -27,6 +27,8 @@ import {
   PhantomFunnelWidget,
   PhantomLedgerWidget,
   PhantomMoneyWidget,
+  PhantomBudgetWidget,
+  PhantomEventWidget,
   PhantomOrdersWidget,
   PhantomPeopleWidget,
   PhantomProjectsWidget,
@@ -131,6 +133,8 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   phantom_funnel: PhantomFunnelWidget,
   phantom_ledger: PhantomLedgerWidget,
   phantom_money: PhantomMoneyWidget,
+  phantom_budget: PhantomBudgetWidget,
+  phantom_event: PhantomEventWidget,
 };
 
 export function MainRow({

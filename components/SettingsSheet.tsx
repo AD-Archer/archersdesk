@@ -51,6 +51,7 @@ const TINTS: Record<string, WidgetName[]> = {
     "spacenews", "jellyfin",
     "phantom_traffic", "phantom_active", "phantom_people", "phantom_orders",
     "phantom_projects", "phantom_funnel", "phantom_ledger", "phantom_money",
+    "phantom_budget", "phantom_event",
   ],
   blue: ["anilist", "wakatime", "flights", "septa", "macapad", "qbittorrent", "lichess"],
   mint: ["epicgames", "dog", "cat"],
@@ -222,13 +223,15 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
   },
   {
     name: "phantom",
-    blurb: "visitors, people, orders, funnel",
+    blurb: "visitors, people, money, budget, event",
     rows: [
       { type: "split", left: "phantom_traffic", right: "phantom_active" },
       { type: "split", left: "phantom_people", right: "phantom_orders" },
       { type: "dual", widget: "phantom_funnel" },
       { type: "split", left: "phantom_projects", right: "phantom_ledger" },
       { type: "dual", widget: "phantom_money" },
+      { type: "dual", widget: "phantom_budget" },
+      { type: "dual", widget: "phantom_event" },
     ],
   },
   {

@@ -61,6 +61,8 @@ export const WIDGETS = [
   "phantom_funnel",
   "phantom_ledger",
   "phantom_money",
+  "phantom_budget",
+  "phantom_event",
 ] as const;
 
 export type WidgetName = (typeof WIDGETS)[number];
@@ -141,6 +143,8 @@ export const WIDGET_INFO: Record<
   phantom_funnel: { label: "phantom funnel", blurb: "sign-up to first order", category: "archer", icon: "equalizer" },
   phantom_ledger: { label: "phantom ledger", blurb: "fragments awarded and spent", category: "archer", icon: "savings" },
   phantom_money: { label: "phantom money", blurb: "hcb against the fragments owed", category: "archer", icon: "payments" },
+  phantom_budget: { label: "phantom budget", blurb: "how much of the event is funded", category: "archer", icon: "attach_money" },
+  phantom_event: { label: "phantom event", blurb: "who has the hours for an invite", category: "archer", icon: "event" },
 };
 
 export interface Alarm {

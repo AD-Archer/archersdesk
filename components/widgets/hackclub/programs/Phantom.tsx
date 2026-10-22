@@ -1,8 +1,8 @@
 "use client";
 
 // Archer-only: phantom's program figures, from its /api/stats. One fetch feeds
-// all seven widgets (the server caches it for a minute); each shows one part.
-// Phantom sends counts only, so nothing here names a person.
+// every phantom widget (the server caches it for a minute); each shows one
+// part. Phantom sends counts only, so nothing here names a person.
 
 import { WIDGET_INFO, type WidgetName } from "@/lib/types";
 import { BigStat, Empty, MiniList, Shell, StatRow, integrationGate, useIntegration } from "../../kit";
@@ -26,6 +26,40 @@ interface PhantomStats {
   projects: { all: number; draft: number; review: number; approved: number; rejected: number };
   funnel: Array<{ key: string; label: string; n: number }>;
   ledger: { outstanding: number; awarded: number; spent: number; fragmentSeconds: number; days: number[] };
+  /** The event's budget sheet against hcb, in cents (lib/server/budget.ts
+   *  over there); null when the sheet isn't set or can't be read, and missing
+   *  from a phantom older than its budgeting. */
+  budget?: {
+    attendees: number;
+    people: number;
+    days: number;
+    sheetTotal: number;
+    categories: Array<{ name: string; planned: number; cap: number; status: "over" | "uncapped" | "empty" | "within" }>;
+    money: {
+      balance: number | null;
+      raised: number | null;
+      orders: number; // owed on open orders
+      held: number; // what every fragment held could cost
+      needed: number; // what the event needs
+      shop: number; // orders + held: paid before the event
+      available: number | null; // hcb less the shop
+      toRaise: number | null;
+      funded: number | null; // 0 to 1
+    };
+  } | null;
+  /** How far the program is towards filling the event (lib/server/
+   *  event-progress.ts over there); missing from an older phantom. */
+  event?: {
+    qualifyHours: number;
+    shipped: number;
+    approvedPeople: number;
+    approvedHours: number;
+    reviewingHours: number;
+    qualified: number;
+    almost: number;
+    invites: number;
+    buckets: Array<{ label: string; n: number }>;
+  };
   /** Phantom's hcb org, in cents (added by the desk's proxy); null when hcb
    *  can't be read. */
   hcb: { balance: number; incoming: number; raised: number } | null;
@@ -249,9 +283,13 @@ export function PhantomMoneyWidget(props: WidgetProps) {
   return (
     <PhantomFrame {...props} widget="phantom_money" label="Phantom money">
       {(d) => {
-        if (!d.hcb) return <Empty>Phantom&rsquo;s HCB can&rsquo;t be read right now</Empty>;
-        const held = d.hcb.balance + d.hcb.incoming;
-        const owed = owedFor(d.ledger.outstanding);
+        // phantom's own coverage when it sends it (it counts open orders too);
+        // otherwise the desk's read of hcb against the fragments held
+        const pm = d.budget?.money;
+        const held = pm?.balance ?? (d.hcb ? d.hcb.balance + d.hcb.incoming : null);
+        if (held === null) return <Empty>Phantom&rsquo;s HCB can&rsquo;t be read right now</Empty>;
+        const owed = pm ? pm.orders + pm.held : owedFor(d.ledger.outstanding);
+        const raised = pm?.raised ?? d.hcb?.raised ?? null;
         const spare = held - owed;
         const hours = d.ledger.awarded / 3600;
         return (
@@ -260,12 +298,20 @@ export function PhantomMoneyWidget(props: WidgetProps) {
               className={spare < 0 ? "short" : undefined}
               value={usd(Math.abs(spare))}
               unit={spare < 0 ? "short" : "spare"}
-              caption={spare < 0 ? "HCB can't cover every fragment held" : "once every fragment held is cashed in"}
+              caption={
+                pm
+                  ? spare < 0
+                    ? "HCB can't cover what the shop owes"
+                    : "after what the shop owes"
+                  : spare < 0
+                    ? "HCB can't cover every fragment held"
+                    : "once every fragment held is cashed in"
+              }
             />
             <StatRow
               items={[
                 { label: "On HCB", value: usd(held) },
-                { label: "Fragments owed", value: usd(owed) },
+                { label: pm ? "Shop owes" : "Fragments owed", value: usd(owed) },
                 { label: "Covered", value: owed > 0 ? `${(held / owed).toFixed(1)}×` : "All" },
               ]}
             />
@@ -275,7 +321,7 @@ export function PhantomMoneyWidget(props: WidgetProps) {
                 <MiniList
                   rows={[
                     { key: "earned", left: `Earned at ${rate(HOUR.income)}/h`, right: <b>{usd(hours * HOUR.income)}</b> },
-                    { key: "raised", left: "Raised on HCB", right: <b>{usd(d.hcb.raised)}</b> },
+                    ...(raised !== null ? [{ key: "raised", left: "Raised on HCB", right: <b>{usd(raised)}</b> }] : []),
                     { key: "running", left: `Kept to run it, ${rate(RUNNING)}/h`, right: <b>{usd(hours * RUNNING)}</b> },
                   ]}
                 />
@@ -317,5 +363,110 @@ function HourSplit() {
         ))}
       </div>
     </figure>
+  );
+}
+
+/** The event's budget: how much of what the event needs HCB can pay for once
+ *  the shop is paid, and (wide) each sub-budget's plan against its cap, from
+ *  the budget sheet phantom reads. */
+export function PhantomBudgetWidget(props: WidgetProps) {
+  return (
+    <PhantomFrame {...props} widget="phantom_budget" label="Phantom budget">
+      {(d) => {
+        const b = d.budget;
+        if (b === undefined) return <Empty>This Phantom doesn&rsquo;t send its budget yet</Empty>;
+        if (b === null) return <Empty>Phantom can&rsquo;t read its budget sheet</Empty>;
+        const m = b.money;
+        const caps = [...b.categories].sort((x, y) => Math.max(y.cap, y.planned) - Math.max(x.cap, x.planned));
+        return (
+          <>
+            {m.funded === null ? (
+              <BigStat value={usd(m.needed)} unit="needed" caption="HCB can't be read right now" />
+            ) : (
+              <BigStat
+                className={m.available !== null && m.available < 0 ? "short" : undefined}
+                value={`${Math.round(m.funded * 100)}%`}
+                unit="funded"
+                caption={m.toRaise ? `${usd(m.toRaise)} still to raise` : "Everything the event needs is there"}
+              />
+            )}
+            {m.funded !== null && (
+              <span className="phantom-meter" role="img" aria-label={`${Math.round(m.funded * 100)}% of the event funded`}>
+                <span style={{ width: `${m.funded * 100}%` }} />
+              </span>
+            )}
+            <StatRow
+              items={[
+                { label: "Needed", value: usd(m.needed) },
+                { label: "After the shop", value: m.available === null ? "?" : usd(m.available) },
+                { label: `For ${b.days} days`, value: `${n(b.people)} people` },
+              ]}
+            />
+            {props.wide && (
+              <ol className="phantom-funnel">
+                {caps.slice(0, 6).map((c) => {
+                  const of = Math.max(c.cap, 1);
+                  return (
+                    <li key={c.name} className={c.status === "empty" ? "muted" : undefined}>
+                      <span className="phantom-funnel-label">{c.name}</span>
+                      <span className="phantom-funnel-track" aria-hidden>
+                        <span
+                          className={`phantom-funnel-fill${c.status === "over" || c.status === "uncapped" ? " over" : ""}`}
+                          style={{ width: `${Math.min(1, c.planned / of) * 100}%` }}
+                        />
+                      </span>
+                      <b>{c.status === "uncapped" ? `${usd(c.planned)}, no cap` : `${usd(c.planned)} / ${usd(c.cap)}`}</b>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </>
+        );
+      }}
+    </PhantomFrame>
+  );
+}
+
+/** How close the program is to filling the event: who has the hours an
+ *  invite takes, who's nearly there, and (wide) everyone by approved hours. */
+export function PhantomEventWidget(props: WidgetProps) {
+  return (
+    <PhantomFrame {...props} widget="phantom_event" label="Phantom event">
+      {(d) => {
+        const e = d.event;
+        if (!e) return <Empty>This Phantom doesn&rsquo;t send event progress yet</Empty>;
+        const most = Math.max(1, ...e.buckets.map((x) => x.n));
+        return (
+          <>
+            <BigStat
+              value={n(e.qualified)}
+              unit="qualified"
+              caption={`at ${e.qualifyHours}h approved, ${n(e.almost)} more once reviewed`}
+            />
+            <StatRow
+              items={[
+                { label: "Shipped", value: n(e.shipped) },
+                { label: "Hours approved", value: n(Math.round(e.approvedHours)) },
+                { label: "Invites bought", value: n(e.invites) },
+              ]}
+            />
+            {props.wide && (
+              <ol className="phantom-funnel">
+                {e.buckets.map((x) => (
+                  <li key={x.label}>
+                    <span className="phantom-funnel-label">{x.label}</span>
+                    <span className="phantom-funnel-track" aria-hidden>
+                      <span className="phantom-funnel-fill" style={{ width: `${(x.n / most) * 100}%` }} />
+                    </span>
+                    <b>{n(x.n)}</b>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </>
+        );
+      }}
+    </PhantomFrame>
   );
 }
