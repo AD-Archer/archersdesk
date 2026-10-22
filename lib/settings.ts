@@ -12,11 +12,12 @@ import {
   MACAPAD_SLOTS,
   MAX_ROWS,
   VIBES,
-  WIDGET_PAGE_COUNT,
+  MAX_WIDGET_PAGES,
   WIDGETS,
   type Alarm,
   type CalendarFeed,
   type Device,
+  type DeviceLayout,
   type EmbedFeed,
   type LayoutRow,
   type Location,
@@ -27,6 +28,8 @@ import {
   type MacapadScreenPad,
   type MacapadStep,
   type NightMode,
+  type PageJump,
+  type PageTarget,
   type Presence,
   type Settings,
   type Vibe,
@@ -60,6 +63,9 @@ const DEFAULT_LAYOUT: Device["layout"] = {
       { type: "split", left: "github", right: "chess" },
     ],
   ],
+  names: ["", ""],
+  idle: { minutes: 0, to: "standby" },
+  schedule: [],
 };
 
 const DEFAULT_PRESENCE: Presence = { awayUntil: null, awayLocation: "", vibe: "joyful" };
@@ -112,7 +118,12 @@ export const DEFAULT_SETTINGS: Settings = {
       id: "default",
       name: "main",
       location: { ...DEFAULT_LOCATION },
-      layout: { rows: [...DEFAULT_LAYOUT.rows], pages: DEFAULT_LAYOUT.pages.map((p) => [...p]) },
+      layout: {
+        ...DEFAULT_LAYOUT,
+        rows: [...DEFAULT_LAYOUT.rows],
+        pages: DEFAULT_LAYOUT.pages.map((p) => [...p]),
+        names: [...DEFAULT_LAYOUT.names],
+      },
       standby: { showTemp: true, showAlarm: true },
       night: { enabled: true, pausedAt: null },
       presence: { ...DEFAULT_PRESENCE },
@@ -490,16 +501,61 @@ function sanitizeRows(layout: Record<string, unknown>): LayoutRow[] {
 function sanitizePages(layout: Record<string, unknown>): LayoutRow[][] {
   const out: LayoutRow[][] = [];
   if (Array.isArray(layout.pages)) {
-    for (const p of layout.pages.slice(0, WIDGET_PAGE_COUNT)) {
+    for (const p of layout.pages.slice(0, MAX_WIDGET_PAGES)) {
       const rows = sanitizeRowsValue(p);
       out.push(rows.length ? rows : [{ type: "split", left: "clock", right: "calendar" }]);
     }
   }
-  const legacy = sanitizeRows(layout);
-  while (out.length < WIDGET_PAGE_COUNT) {
-    out.push(out.length === 0 ? legacy : [...DEFAULT_LAYOUT.pages[out.length]]);
+  // a layout from before pages (just rows) becomes page 1 of the old two
+  if (!out.length) out.push(sanitizeRows(layout), [...DEFAULT_LAYOUT.pages[1]]);
+  return out;
+}
+
+/** "standby", "pad" or a page number that exists; anything else is StandBy. */
+function sanitizeTarget(v: unknown, pageCount: number): PageTarget {
+  const t = String(v ?? "");
+  if (t === "standby" || t === "pad") return t;
+  const n = Number(t);
+  return Number.isInteger(n) && n >= 1 && n <= pageCount ? (`${n}` as PageTarget) : "standby";
+}
+
+function sanitizeIdle(v: unknown, pageCount: number): DeviceLayout["idle"] {
+  const idle = isRecord(v) ? v : {};
+  return { minutes: Math.round(num(idle.minutes, 0, 0, 24 * 60)), to: sanitizeTarget(idle.to, pageCount) };
+}
+
+function sanitizeSchedule(v: unknown, pageCount: number): PageJump[] {
+  if (!Array.isArray(v)) return [];
+  const out: PageJump[] = [];
+  for (const j of v.slice(0, 20)) {
+    if (!isRecord(j)) continue;
+    const at = String(j.at ?? "");
+    if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(at)) continue;
+    const days = Array.isArray(j.days)
+      ? j.days.map((d) => String(d).toLowerCase().slice(0, 3)).filter((d) => DAY_NAMES.includes(d))
+      : [];
+    const date = typeof j.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(j.date) ? j.date : null;
+    out.push({
+      at: at.padStart(5, "0"),
+      days: date ? [] : days,
+      date,
+      minutes: Math.round(num(j.minutes, 0, 0, 12 * 60)),
+      to: sanitizeTarget(j.to, pageCount),
+    });
   }
-  return out.slice(0, WIDGET_PAGE_COUNT);
+  return out;
+}
+
+function sanitizeLayout(layout: Record<string, unknown>): DeviceLayout {
+  const pages = sanitizePages(layout);
+  const names = Array.isArray(layout.names) ? layout.names : [];
+  return {
+    rows: sanitizeRows(layout),
+    pages,
+    names: pages.map((_, i) => str(names[i], "", 30)),
+    idle: sanitizeIdle(layout.idle, pages.length),
+    schedule: sanitizeSchedule(layout.schedule, pages.length),
+  };
 }
 
 function sanitizePresetsValue(v: unknown): LayoutRow[][] {
@@ -538,7 +594,7 @@ function sanitizeDevice(raw: unknown, fallbackId: string, fallbackName: string):
       latitude: num(loc.latitude, DEFAULT_LOCATION.latitude, -90, 90),
       longitude: num(loc.longitude, DEFAULT_LOCATION.longitude, -180, 180),
     },
-    layout: { rows: sanitizeRows(layout), pages: sanitizePages(layout) },
+    layout: sanitizeLayout(layout),
     standby: { showTemp: standby.showTemp !== false, showAlarm: standby.showAlarm !== false },
     night: sanitizeNight(s.night),
     presence: sanitizePresence(s.presence),

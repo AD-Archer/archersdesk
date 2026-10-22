@@ -337,6 +337,23 @@
   font-size: 23px;
 }
 
+.row-action.red {
+  color: var(--red);
+}
+
+/* a new page: a round + at the end of the page chips, like a browser's new tab */
+.chips .chip.page-add {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  padding: 0;
+  color: var(--blue);
+}
+
+.chips .chip.page-add .mi {
+  font-size: 22px;
+}
+
 .row-action:disabled {
   color: var(--label-3);
   cursor: default;

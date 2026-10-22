@@ -301,7 +301,23 @@ export type LayoutRow =
   | { type: "dual"; widget: WidgetName };
 
 export const MAX_ROWS = 12;
-export const WIDGET_PAGE_COUNT = 2;
+export const MAX_WIDGET_PAGES = 10;
+
+/** Where the desk can be sent on its own: StandBy, a widget page by number
+ *  (1-based, "2" is the second), or the pad page. */
+export type PageTarget = "standby" | "pad" | `${number}`;
+
+/** A timed jump: at `at` ("12:00", the screen's own clock) the desk turns to
+ *  `to`, on `date` once ("2026-10-22") or else on `days` (empty = every day,
+ *  keys like alarms'). After `minutes` (0 = until someone touches it) it goes
+ *  back to the page it was on. */
+export interface PageJump {
+  at: string;
+  days: string[];
+  date: string | null;
+  minutes: number;
+  to: PageTarget;
+}
 
 /** Live, server-synced status for one device. Pushed by the remote. */
 export interface Presence {
@@ -310,16 +326,23 @@ export interface Presence {
   vibe: Vibe;
 }
 
+/** A screen's pages, and where it turns on its own. */
+export interface DeviceLayout {
+  rows: LayoutRow[]; // legacy page-1 shape
+  pages: LayoutRow[][]; // 1..MAX_WIDGET_PAGES widget pages
+  names: string[]; // each page's name, by index ("" = "Page 2")
+  /** after `minutes` untouched (0 = never), back to `to` */
+  idle: { minutes: number; to: PageTarget };
+  schedule: PageJump[];
+}
+
 /** A named logical display/profile. A browser chooses which device it *is*
  *  (see localStorage `archersdesk.deviceId`); several browsers may share one. */
 export interface Device {
   id: string;
   name: string;
   location: Location;
-  layout: {
-    rows: LayoutRow[]; // legacy page-1 shape
-    pages: LayoutRow[][];
-  };
+  layout: DeviceLayout;
   standby: {
     showTemp: boolean;
     showAlarm: boolean;
@@ -383,7 +406,7 @@ export interface ViewSettings {
   deviceId: string;
   deviceName: string;
   location: Location;
-  layout: { rows: LayoutRow[]; pages: LayoutRow[][] };
+  layout: DeviceLayout;
   standby: { showTemp: boolean; showAlarm: boolean };
   presence: Presence;
   units: Settings["units"];

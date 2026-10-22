@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import type { Alarm, Device, GeocodeResult, LayoutRow, ViewSettings, WidgetName } from "@/lib/types";
-import { MAX_ROWS, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS, WIDGET_PAGE_COUNT } from "@/lib/types";
+import type { Alarm, Device, GeocodeResult, LayoutRow, PageJump, PageTarget, ViewSettings, WidgetName } from "@/lib/types";
+import { MAX_ROWS, MAX_WIDGET_PAGES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS } from "@/lib/types";
 import { dayChips, fmt12 } from "./alarmUtil";
+import { copyLayout, dropPage, jumpPast, localDate, pageName, targetLabel } from "./pageJumps";
 import { useIntegrationAction } from "./widgets/kit";
 import { useWeather } from "./widgets/Weather";
 import { pausedTonight } from "./night";
@@ -425,12 +426,11 @@ function LayoutSection({
   const [picking, setPicking] = useState<{ row: number; slot: "left" | "right" | "widget" } | null>(
     null
   );
-  const [pageIndex, setPageIndex] = useState(() =>
-    Math.min(Math.max(initialPage ?? 0, 0), WIDGET_PAGE_COUNT - 1)
-  );
   const topRef = useRef<HTMLDivElement | null>(null);
-  const pages = Array.from({ length: WIDGET_PAGE_COUNT }, (_, i) => settings.layout.pages?.[i] ?? settings.layout.rows);
+  const pages = settings.layout.pages?.length ? settings.layout.pages : [settings.layout.rows];
+  const [pageIndex, setPageIndex] = useState(() => Math.min(Math.max(initialPage ?? 0, 0), pages.length - 1));
   const rows = pages[pageIndex] ?? pages[0] ?? settings.layout.rows;
+  const names = settings.layout.names ?? [];
 
   // the widget picker starts at the top
   useEffect(() => {
@@ -440,6 +440,28 @@ function LayoutSection({
   function setRows(next: LayoutRow[]) {
     const nextPages = pages.map((p, i) => (i === pageIndex ? next : p));
     onChange({ ...settings, layout: { ...settings.layout, rows: nextPages[0], pages: nextPages } });
+  }
+
+  function addPage() {
+    const nextPages = [...pages, [{ type: "split", left: "clock", right: "calendar" } as LayoutRow]];
+    const nextNames = pages.map((_, i) => names[i] ?? "").concat("");
+    onChange({ ...settings, layout: { ...settings.layout, pages: nextPages, names: nextNames } });
+    setPageIndex(nextPages.length - 1);
+  }
+
+  function renamePage(name: string) {
+    const nextNames = pages.map((_, i) => (i === pageIndex ? name : (names[i] ?? "")));
+    onChange({ ...settings, layout: { ...settings.layout, names: nextNames } });
+  }
+
+  // jumps pointing at the page go to StandBy, ones past it follow it down
+  function removePage() {
+    const nextPages = pages.filter((_, i) => i !== pageIndex);
+    onChange({
+      ...settings,
+      layout: { ...settings.layout, ...dropPage(settings.layout, pageIndex + 1), rows: nextPages[0], pages: nextPages },
+    });
+    setPageIndex(Math.max(0, pageIndex - 1));
   }
 
   function applyPreset(nextRows: LayoutRow[]) {
@@ -496,7 +518,7 @@ function LayoutSection({
       <div ref={topRef}>
         <button className="sub-back" onClick={() => setPicking(null)}>
           <Chev dir="left" />
-          Page {pageIndex + 1}
+          {pageName(names, pageIndex + 1)}
         </button>
         <h3 className="pick-title">
           Row {picking.row + 1}, {where}
@@ -543,17 +565,40 @@ function LayoutSection({
 
   return (
     <div ref={topRef}>
-      <Seg
-        className="seg-full"
-        label="Page"
-        value={pageIndex}
-        options={pages.map((_, i) => ({ value: i, label: `Page ${i + 1}` }))}
-        onChange={setPageIndex}
-      />
+      <div className="chips page-chips" role="group" aria-label="Page">
+        {pages.map((_, i) => (
+          <button
+            key={i}
+            className={`chip${i === pageIndex ? " on" : ""}`}
+            aria-pressed={i === pageIndex}
+            onClick={() => setPageIndex(i)}
+          >
+            {pageName(names, i + 1)}
+          </button>
+        ))}
+        {pages.length < MAX_WIDGET_PAGES && (
+          <button className="chip page-add" onClick={addPage} aria-label="Add a page">
+            <MI name="add" />
+          </button>
+        )}
+      </div>
       <p className="group-foot set-lead">
-        Standby comes first. Swipe sideways to reach pages 1 and 2, then up or down through each
+        Standby comes first, then these pages in order. Swipe sideways between them, and up or down through a
         page&rsquo;s rows.
       </p>
+
+      <div className="group set-gap">
+        <label className="group-row in-row">
+          <span className="row-label">Name</span>
+          <input
+            className="in"
+            value={names[pageIndex] ?? ""}
+            placeholder={`Page ${pageIndex + 1}`}
+            maxLength={30}
+            onChange={(e) => renamePage(e.target.value)}
+          />
+        </label>
+      </div>
 
       {rows.map((r, i) => (
         <div key={i} className="lrow">
@@ -606,17 +651,22 @@ function LayoutSection({
           </div>
         </div>
       ))}
-      {rows.length < MAX_ROWS && (
-        <div className="group set-gap">
-          <button
-            className="group-row row-action"
-            onClick={() => setRows([...rows, { type: "split", left: "clock", right: "calendar" }])}
-          >
-            <MI name="add" />
-            Add a row
+      <div className="group set-gap">
+        <button
+          className="group-row row-action"
+          onClick={() => setRows([...rows, { type: "split", left: "clock", right: "calendar" }])}
+          disabled={rows.length >= MAX_ROWS}
+        >
+          <MI name="add" />
+          Add a row
+        </button>
+        {pages.length > 1 && (
+          <button className="group-row row-action red" onClick={removePage}>
+            <MI name="delete" />
+            Remove {pageName(names, pageIndex + 1)}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <h3 className="group-head">Start from a ready-made layout</h3>
       <div className="preset-grid">
@@ -650,7 +700,217 @@ function LayoutSection({
         })}
       </div>
       <p className="group-foot">Save keeps a copy of this page&rsquo;s rows so you can bring them back later.</p>
+
+      <PageJumps settings={settings} onChange={onChange} />
     </div>
+  );
+}
+
+const IDLE_MINUTES = [
+  { value: 0, label: "Never" },
+  { value: 1, label: "1 min" },
+  { value: 5, label: "5 min" },
+  { value: 15, label: "15 min" },
+  { value: 30, label: "30 min" },
+  { value: 60, label: "1 hour" },
+];
+
+const STAY_MINUTES = [
+  { value: 0, label: "Until touched" },
+  { value: 15, label: "15 min" },
+  { value: 30, label: "30 min" },
+  { value: 45, label: "45 min" },
+  { value: 60, label: "1 hour" },
+  { value: 120, label: "2 hours" },
+];
+
+/** "Every day", "Tuesdays"-ish day text, or the one date: "Today", "Thu, Oct 23" */
+function jumpWhen(j: PageJump, now: Date): string {
+  if (!j.date) return cap(dayChips(j.days));
+  if (j.date === localDate(now)) return "Today";
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  if (j.date === localDate(tomorrow)) return "Tomorrow";
+  return new Date(`${j.date}T00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+/** The screen turning pages on its own: back to a page once it's been left
+ *  alone, and to a page at set times (the phantom sync on tuesdays, a one-off
+ *  meeting today), for as long as it's wanted. */
+function PageJumps({ settings, onChange }: SectionProps) {
+  const now = useNow(30_000);
+  const [open, setOpen] = useState<number | null>(null);
+  const { layout } = settings;
+  const names = layout.names ?? [];
+  const padOn = Boolean(settings.integrations.macapad?.url && settings.integrations.macapad?.token);
+  const targets: PageTarget[] = [
+    "standby",
+    ...layout.pages.map((_, i) => `${i + 1}` as PageTarget),
+    ...(padOn ? (["pad"] as PageTarget[]) : []),
+  ];
+
+  function patch(next: Partial<typeof layout>) {
+    onChange({ ...settings, layout: { ...layout, ...next } });
+  }
+
+  function patchJump(i: number, next: Partial<PageJump>) {
+    patch({ schedule: layout.schedule.map((j, k) => (k === i ? { ...j, ...next } : j)) });
+  }
+
+  function addJump() {
+    const next: PageJump = { at: "12:00", days: [], date: null, minutes: 0, to: layout.pages.length > 1 ? "2" : "1" };
+    patch({ schedule: [...layout.schedule, next] });
+    setOpen(layout.schedule.length);
+  }
+
+  const chipRow = <T extends string | number>(
+    label: string,
+    value: T,
+    options: { value: T; label: string }[],
+    onPick: (v: T) => void
+  ) => (
+    <div className="group-row chips-row">
+      <span className="chips-label">
+        {label}
+        <span className="row-value">{options.find((o) => o.value === value)?.label}</span>
+      </span>
+      <div className="chips">
+        {options.map((o) => (
+          <button
+            key={String(o.value)}
+            className={`chip${value === o.value ? " on" : ""}`}
+            aria-pressed={value === o.value}
+            onClick={() => onPick(o.value)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // the pad stays listed while a jump points at it, so a pad that's switched
+  // off doesn't silently rewrite the jump
+  const targetOptions = (value: PageTarget) =>
+    (targets.includes(value) ? targets : [...targets, value]).map((to) => ({ value: to, label: targetLabel(to, names) }));
+
+  return (
+    <>
+      <h3 className="group-head">At set times</h3>
+      <div className="alarm-list">
+        {layout.schedule.map((j, i) => {
+          const t = fmt12(j.at);
+          const isOpen = open === i;
+          const past = jumpPast(j, now);
+          return (
+            <div key={i} className={`group alarm${isOpen ? " open" : ""}${past ? " off" : ""}`}>
+              <div className="alarm-row">
+                <button className="alarm-main" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : i)}>
+                  <span className="alarm-time">
+                    {t.time}
+                    <small>{t.ampm.toUpperCase()}</small>
+                  </span>
+                  <span className="alarm-sub">
+                    {targetLabel(j.to, names)}, {past ? "done" : jumpWhen(j, now).toLowerCase()}
+                    {j.minutes > 0 && `, for ${STAY_MINUTES.find((m) => m.value === j.minutes)?.label ?? `${j.minutes} min`}`}
+                  </span>
+                </button>
+              </div>
+              {isOpen && (
+                <div className="alarm-edit">
+                  <label className="group-row in-row">
+                    <span className="row-label">Time</span>
+                    <input
+                      className="in in-time"
+                      type="time"
+                      value={j.at}
+                      onChange={(e) => e.target.value && patchJump(i, { at: e.target.value })}
+                    />
+                  </label>
+                  {chipRow("Show", j.to, targetOptions(j.to), (to) => patchJump(i, { to }))}
+                  {chipRow(
+                    "Happens",
+                    j.date ? "once" : "repeat",
+                    [
+                      { value: "repeat", label: "Repeats" },
+                      { value: "once", label: "Just once" },
+                    ],
+                    (v) => patchJump(i, v === "once" ? { date: localDate(now), days: [] } : { date: null })
+                  )}
+                  {j.date ? (
+                    <label className="group-row in-row">
+                      <span className="row-label">Date</span>
+                      <input
+                        className="in in-time"
+                        type="date"
+                        value={j.date}
+                        onChange={(e) => e.target.value && patchJump(i, { date: e.target.value })}
+                      />
+                    </label>
+                  ) : (
+                    <div className="group-row chips-row">
+                      <span className="chips-label">
+                        On
+                        <span className="row-value">{cap(dayChips(j.days))}</span>
+                      </span>
+                      <div className="chips days">
+                        {DAY_ORDER.map((d) => (
+                          <button
+                            key={d}
+                            className={`chip${j.days.includes(d) ? " on" : ""}`}
+                            aria-pressed={j.days.includes(d)}
+                            onClick={() =>
+                              patchJump(i, { days: j.days.includes(d) ? j.days.filter((x) => x !== d) : [...j.days, d] })
+                            }
+                          >
+                            {cap(d)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {chipRow("Stay", j.minutes, STAY_MINUTES, (minutes) => patchJump(i, { minutes }))}
+                  <div className="group-row alarm-foot">
+                    <button
+                      className="text-btn red"
+                      onClick={() => {
+                        patch({ schedule: layout.schedule.filter((_, k) => k !== i) });
+                        setOpen(null);
+                      }}
+                    >
+                      Delete
+                    </button>
+                    <button className="btn btn-sm blue" onClick={() => setOpen(null)}>
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="group set-gap">
+        <button className="group-row row-action" onClick={addJump}>
+          <MI name="add" />
+          Add a time
+        </button>
+      </div>
+      <p className="group-foot">
+        On this screen&rsquo;s own clock. When its time is up it goes back to the page it was on, unless someone has
+        touched it since.
+      </p>
+
+      <h3 className="group-head">When it&rsquo;s left alone</h3>
+      <div className="group">
+        {chipRow("Go back after", layout.idle.minutes, IDLE_MINUTES, (minutes) =>
+          patch({ idle: { ...layout.idle, minutes } })
+        )}
+        {layout.idle.minutes > 0 &&
+          chipRow("Go back to", layout.idle.to, targetOptions(layout.idle.to), (to) => patch({ idle: { ...layout.idle, to } }))}
+      </div>
+      <p className="group-foot">Only once someone has turned the page themselves.</p>
+    </>
   );
 }
 
@@ -1311,7 +1571,7 @@ function DevicesSection({
       id: crypto.randomUUID(),
       name: n,
       location: { ...base.location },
-      layout: { rows: [...base.layout.rows], pages: base.layout.pages.map((p) => [...p]) },
+      layout: copyLayout(base.layout),
       standby: { ...base.standby },
       night: { enabled: base?.night?.enabled ?? true, pausedAt: null },
       presence: { awayUntil: null, awayLocation: "", vibe: "joyful" },

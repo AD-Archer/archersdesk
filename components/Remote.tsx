@@ -5,6 +5,7 @@ import type { Alarm, Device, Presence, Settings, Vibe } from "@/lib/types";
 import { VIBES } from "@/lib/types";
 import { alarmsForDevice, clock12, fmt12, nextAlarm } from "./alarmUtil";
 import { pushPresence } from "./presence";
+import { copyLayout } from "./pageJumps";
 import { useNow } from "./hooks";
 import { PageHead, RemotePad, RIcon, Sheet, type RIconName } from "./MacapadRemote";
 
@@ -597,7 +598,7 @@ function DevicesPage({
           id: crypto.randomUUID(),
           name: n,
           location: { ...base.location },
-          layout: { rows: [...base.layout.rows], pages: base.layout.pages.map((p) => [...p]) },
+          layout: copyLayout(base.layout),
           standby: { ...base.standby },
           night: { enabled: base?.night?.enabled ?? true, pausedAt: null },
           presence: { awayUntil: null, awayLocation: "", vibe: "joyful" },

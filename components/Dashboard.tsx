@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { MACAPAD_REMOTE, WIDGET_PAGE_COUNT } from "@/lib/types";
+import { MACAPAD_REMOTE } from "@/lib/types";
 import type { Alarm, Device, LayoutRow, Presence, Settings, ViewSettings } from "@/lib/types";
 import { fromView, toView } from "@/lib/view";
 import { MainRow, WidgetPanel } from "./widgets/registry";
@@ -16,6 +16,7 @@ import Remote from "./Remote";
 import { alarmMatches } from "./alarmUtil";
 import { alarmsForDevice } from "./alarmUtil";
 import { pushPresence } from "./presence";
+import { copyLayout, jumpMatches, targetPage } from "./pageJumps";
 import { unlockAudio } from "./audio";
 import { useNow, usePoll, useWakeLock, useWheelStep } from "./hooks";
 import { useWeather } from "./widgets/Weather";
@@ -23,8 +24,7 @@ import { nightState } from "./night";
 
 // 0 = standby, 1..n = widget pages, then the macapad page once macapad is
 // set up (settings → accounts). StandBy and the pad page are fixed; only the
-// widget pages in between are laid out.
-const LAST_WIDGET_PAGE = WIDGET_PAGE_COUNT;
+// widget pages in between are laid out, as many as the screen has.
 const DEVICE_KEY = "archersdesk.deviceId";
 const LAST_DEVICE_KEY = "archersdesk.lastDeviceId";
 type PaneSide = "left" | "right";
@@ -38,10 +38,7 @@ type FullscreenDocument = Document & {
 };
 
 function widgetPages(view: ViewSettings): LayoutRow[][] {
-  return Array.from(
-    { length: WIDGET_PAGE_COUNT },
-    (_, i) => view.layout.pages?.[i] ?? view.layout.rows
-  );
+  return view.layout.pages?.length ? view.layout.pages : [view.layout.rows];
 }
 
 function activeDeviceOf(settings: Settings, deviceId: string | null): Device {
@@ -101,7 +98,17 @@ export default function Dashboard({
   const deviceIdRef = useRef<string | null>(deviceId);
   const viewRef = useRef<ViewSettings | null>(null);
   const pageRef = useRef(page);
-  const pageCountRef = useRef(1 + WIDGET_PAGE_COUNT);
+  const pageCountRef = useRef(1 + initialPages.length);
+  const widgetCountRef = useRef(initialPages.length);
+  // the page jumps: when someone last touched the desk, whether the page
+  // showing is one they turned to (an idle return only undoes a person's
+  // turn, never a timed jump), and which timed jumps have happened
+  const lastTouch = useRef(0);
+  const byHand = useRef(false);
+  const jumped = useRef<Set<string>>(new Set());
+  // a timed jump with a length: the page to go back to, and when
+  const jumpBack = useRef<{ page: number; at: number; since: number } | null>(null);
+  const settingsOpenRef = useRef(false);
   const leftRowsRef = useRef(leftRows);
   const rightRowsRef = useRef(rightRows);
   const activeDualRowsRef = useRef(activeDualRows);
@@ -131,12 +138,14 @@ export default function Dashboard({
   // the pad page only exists once macapad is set up — the saved copy, so a
   // half-typed address doesn't make it flicker in and out
   const padOn = Boolean(savedView.integrations.macapad?.url && savedView.integrations.macapad?.token);
-  const pageCount = 1 + WIDGET_PAGE_COUNT + (padOn ? 1 : 0);
-  pageCountRef.current = pageCount;
-
   const pages = widgetPages(view);
-  const onWidgetPage = page > 0 && page <= LAST_WIDGET_PAGE;
-  const activeWidgetPage = Math.min(WIDGET_PAGE_COUNT - 1, Math.max(0, page - 1));
+  const pageCount = 1 + pages.length + (padOn ? 1 : 0);
+  pageCountRef.current = pageCount;
+  widgetCountRef.current = pages.length;
+  settingsOpenRef.current = settingsOpen;
+
+  const onWidgetPage = page > 0 && page <= pages.length;
+  const activeWidgetPage = Math.min(pages.length - 1, Math.max(0, page - 1));
   const activeRows = onWidgetPage ? (pages[activeWidgetPage] ?? []) : [];
 
   const onDisplay = ready && deviceId !== null && deviceId !== "remote";
@@ -409,7 +418,7 @@ export default function Dashboard({
       id,
       name,
       location: { ...base.location },
-      layout: { rows: [...base.layout.rows], pages: base.layout.pages.map((p) => [...p]) },
+      layout: copyLayout(base.layout),
       standby: { ...base.standby },
       night: { enabled: base?.night?.enabled ?? true, pausedAt: null },
       presence: { awayUntil: null, awayLocation: "", vibe: "joyful" },
@@ -490,8 +499,66 @@ export default function Dashboard({
   // from StandBy is the pad page
   function turnPage(dir: 1 | -1) {
     const n = pageCountRef.current;
+    byHand.current = true;
     setPage((p) => (p + dir + n) % n);
   }
+
+  // any touch, key or wheel on the desk counts as someone being there
+  useEffect(() => {
+    const touched = () => {
+      lastTouch.current = Date.now();
+    };
+    touched();
+    const events = ["pointerdown", "keydown", "wheel"] as const;
+    for (const e of events) window.addEventListener(e, touched, { capture: true, passive: true });
+    return () => {
+      for (const e of events) window.removeEventListener(e, touched, { capture: true });
+    };
+  }, []);
+
+  // page jumps: tick every few seconds. A timed jump turns the desk at its
+  // minute (once, like an alarm); left alone long enough after someone turned
+  // a page, it goes back to the idle page. Neither moves a screen that's
+  // ringing, away, being set up, or acting as the remote.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const self = deviceIdRef.current;
+      const view = viewRef.current;
+      if (!self || self === "remote" || !view) return;
+      if (ringingRef.current || settingsOpenRef.current) return;
+      const away = view.presence.awayUntil && new Date(view.presence.awayUntil).getTime() > Date.now();
+      if (away) return;
+      const widgets = widgetCountRef.current;
+      const padNow = pageCountRef.current > widgets + 1;
+      const go = (to: number | null) => {
+        byHand.current = false;
+        if (to !== null && to !== pageRef.current) setPage(to);
+      };
+      const now = new Date();
+      for (const j of view.layout.schedule) {
+        if (!jumpMatches(j, now)) continue;
+        const key = `${now.toDateString()}|${j.at}|${j.to}`;
+        if (jumped.current.has(key)) continue;
+        jumped.current.add(key);
+        const from = pageRef.current;
+        go(targetPage(j.to, widgets, padNow));
+        jumpBack.current = j.minutes > 0 ? { page: from, at: now.getTime() + j.minutes * 60_000, since: now.getTime() } : null;
+        return;
+      }
+      // its time's up: back where it was, unless someone has taken over since
+      const back = jumpBack.current;
+      if (back && now.getTime() >= back.at) {
+        jumpBack.current = null;
+        if (lastTouch.current < back.since) go(Math.min(back.page, pageCountRef.current - 1));
+        return;
+      }
+      const { idle } = view.layout;
+      if (idle.minutes > 0 && byHand.current && Date.now() - lastTouch.current >= idle.minutes * 60_000) {
+        go(targetPage(idle.to, widgets, padNow));
+      }
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   // arrow keys on desktop: ←→ pages, ↑↓ rows
   useEffect(() => {
@@ -499,7 +566,7 @@ export default function Dashboard({
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
       if (e.key === "ArrowRight") turnPage(1);
       if (e.key === "ArrowLeft") turnPage(-1);
-      const onRows = pageRef.current > 0 && pageRef.current <= LAST_WIDGET_PAGE;
+      const onRows = pageRef.current > 0 && pageRef.current <= widgetCountRef.current;
       if (e.key === "ArrowDown" && onRows) moveBothRows(pageRef.current - 1, 1);
       if (e.key === "ArrowUp" && onRows) moveBothRows(pageRef.current - 1, -1);
     };
