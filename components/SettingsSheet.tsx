@@ -38,15 +38,17 @@ const TINTS: Record<string, WidgetName[]> = {
   green: ["clock", "please_disturb", "github", "stocks", "citybikes", "adguard", "chess"],
   orange: [
     "analog", "worldclock", "alarms", "timer", "archerhours", "plex", "fox", "shibe",
-    "phantom_traffic", "phantom_active", "phantom_people", "phantom_orders",
-    "phantom_projects", "phantom_funnel", "phantom_ledger",
   ],
   red: ["date", "datetime", "calendar", "agenda", "f1", "pihole", "transmission", "embed"],
   cyan: ["weather", "forecast", "homeassistant"],
   yellow: ["sun", "quote", "away_until", "monkeytype", "catfact", "dogfact", "duck"],
   indigo: ["moon", "dnd", "seerr"],
   pink: ["nowplaying", "navidrome", "vibe"],
-  purple: ["spacenews", "jellyfin"],
+  purple: [
+    "spacenews", "jellyfin",
+    "phantom_traffic", "phantom_active", "phantom_people", "phantom_orders",
+    "phantom_projects", "phantom_funnel", "phantom_ledger", "phantom_money",
+  ],
   blue: ["anilist", "wakatime", "flights", "septa", "macapad", "qbittorrent", "lichess"],
   mint: ["epicgames", "dog", "cat"],
 };
@@ -223,6 +225,7 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
       { type: "split", left: "phantom_people", right: "phantom_orders" },
       { type: "dual", widget: "phantom_funnel" },
       { type: "split", left: "phantom_projects", right: "phantom_ledger" },
+      { type: "dual", widget: "phantom_money" },
     ],
   },
   {
@@ -1610,9 +1613,9 @@ function AccountsSection({ settings, onChange }: SectionProps) {
           </p>
         </AccountGroup>
 
-        <AccountGroup title="Phantom" blurb="Visitors, people, orders, projects and the ledger" {...w("phantom_traffic")} done={!!ig.phantom?.url}>
+        <AccountGroup title="Phantom" blurb="Visitors, people, orders, projects and the ledger" {...w("phantom_traffic")} done={!!ig.phantom?.token}>
           <AccountField
-            label="Phantom address"
+            label="Phantom address (optional)"
             value={ig.phantom?.url}
             placeholder="https://phantom.hackclub.com"
             onValue={(v) => patch({ phantom: { ...ig.phantom, url: v } })}
@@ -1622,6 +1625,12 @@ function AccountsSection({ settings, onChange }: SectionProps) {
             value={ig.phantom?.token}
             secret
             onValue={(v) => patch({ phantom: { ...ig.phantom, token: v } })}
+          />
+          <AccountField
+            label="HCB organization (optional)"
+            value={ig.phantom?.hcb}
+            placeholder="https://hcb.hackclub.com/phantom"
+            onValue={(v) => patch({ phantom: { ...ig.phantom, hcb: v } })}
           />
         </AccountGroup>
 

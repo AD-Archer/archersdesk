@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "mps-jiggle",
+        "createdAt": "2026-10-22T15:43:19.435Z",
+        "reason": "Claude triage: iOS-style edit-mode wiggle (rotate ±1.6deg, ease-in-out alternate), not bounce/elastic easing; pre-existing intentional design"
+      }
+    ]
+  }
+}

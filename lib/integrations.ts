@@ -1439,14 +1439,30 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
   phantom: {
     ttl: 60 * 1000, // phantom keeps plausible's answers for a minute too
     async fetch(settings) {
-      const { url, token } = settings.integrations.phantom;
-      if (!url || !token) return need("set your phantom address + stats token in settings → accounts");
-      const base = url.replace(/\/api\/stats$/, "");
-      const res = await grab(`${base}/api/stats`, { Authorization: `Bearer ${token}`, Accept: "application/json" });
+      const { url, token, hcb } = settings.integrations.phantom;
+      if (!token) return need("set your phantom stats token in settings → accounts");
+      // no address means hack club's own phantom
+      const base = (url || "https://phantom.hackclub.com").replace(/\/api\/stats$/, "");
+      // its hcb org (public, no key): a slug or the org's page, phantom's own by default
+      const org = encodeURIComponent((hcb || "phantom").replace(/\/+$/, "").split("/").pop() || "phantom");
+      const [res, bank] = await Promise.all([
+        grab(`${base}/api/stats`, { Authorization: `Bearer ${token}`, Accept: "application/json" }),
+        grab(`https://hcb.hackclub.com/api/v3/organizations/${org}`, { Accept: "application/json" }).catch(() => null),
+      ]);
       // phantom answers 404 to a wrong token and to STATS_TOKEN being unset alike
       if (res.status === 404) return need("phantom didn't accept that stats token");
       if (!res.ok) return need(`phantom: error ${res.status}`);
-      return { configured: true, data: await res.json() };
+      // the money widget says so when hcb can't be read; the rest don't need it
+      const balances = bank?.ok ? (await bank.json())?.balances : null;
+      return {
+        configured: true,
+        data: {
+          ...(await res.json()),
+          hcb: balances
+            ? { balance: balances.balance_cents ?? 0, incoming: balances.incoming_balance_cents ?? 0, raised: balances.total_raised ?? 0 }
+            : null,
+        },
+      };
     },
   },
 };

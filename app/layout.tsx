@@ -21,6 +21,14 @@ const round = localFont({
   display: "swap",
 });
 
+// Geist Pixel Square — phantom's face, for its widgets' figures (hackclub.css)
+const pixel = localFont({
+  src: [{ path: "./fonts/geist-pixel-square.woff2", weight: "400", style: "normal" }],
+  variable: "--font-pixel",
+  display: "swap",
+  preload: false,
+});
+
 // Material Symbols subset — add names in tools/make-icon-font.mjs, then `pnpm icon-font`
 const icons = localFont({
   src: [{ path: "./fonts/material-symbols.woff2", weight: "400", style: "normal" }],
@@ -45,7 +53,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${round.variable} ${icons.variable}`}>
+    <html lang="en" className={`${round.variable} ${icons.variable} ${pixel.variable}`}>
       <body>
         {children}
         {/* night mode: brightness → red, used by html.night (globals.css) */}

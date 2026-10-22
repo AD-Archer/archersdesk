@@ -174,22 +174,13 @@
   border-radius: calc(var(--t, 96px) * 0.225);
 }
 
-/* a picture or logo never stretches with its key: it stays a square the
-   size of the key's shorter side, in the middle */
-.mpad .mtile.pic img {
-  width: var(--t, 96px);
-  height: var(--t, 96px);
-}
-
-.mpad .mtile.plate img {
-  width: calc(var(--t, 96px) * 0.62);
-  height: calc(var(--t, 96px) * 0.62);
-}
-
-/* an app icon sits inside the key's own rectangular plate, centered at
-   ~76% of the shorter side, instead of being a bare square that makes the
-   key read as square */
-.mpad .mtile.app {
+/* nothing image-y stretches with its key: an app icon, a picture or a
+   logo's light plate is a rounded square ~76% of the shorter side, in the
+   middle of the key's own dark plate, so every key reads the same however
+   wide it gets */
+.mpad .mtile.app,
+.mpad .mtile.pic,
+.mpad .mtile.plate {
   background: var(--fill-2);
 }
 
@@ -200,13 +191,37 @@
   object-fit: contain;
 }
 
+.mpad .mtile.pic img {
+  width: calc(var(--t, 96px) * 0.76);
+  height: calc(var(--t, 96px) * 0.76);
+  border-radius: calc(var(--t, 96px) * 0.76 * 0.225);
+  object-fit: cover;
+}
+
+.mpad .mtile.plate::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: calc(var(--t, 96px) * 0.76);
+  height: calc(var(--t, 96px) * 0.76);
+  border-radius: calc(var(--t, 96px) * 0.76 * 0.225);
+  background: #e5e5ea;
+}
+
+.mpad .mtile.plate img {
+  position: relative;
+  width: calc(var(--t, 96px) * 0.47);
+  height: calc(var(--t, 96px) * 0.47);
+  object-fit: contain;
+}
+
 /* never blow a small picture up past 1.5× its own size: it sits crisp in
    the middle of the key instead (--nat: its width, set once it loads) */
 .mpad .mtile.pic img,
 .mpad .mtile.plate img {
   max-width: calc(var(--nat, 10000px) * 1.5);
   max-height: calc(var(--nat, 10000px) * 1.5);
-  object-fit: contain;
 }
 
 .mpad-key {

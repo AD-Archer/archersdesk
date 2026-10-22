@@ -140,7 +140,7 @@ export const DEFAULT_SETTINGS: Settings = {
     transmission: { url: "", username: "", password: "" },
     navidrome: { url: "", username: "", password: "" },
     macapad: { url: "", token: "" },
-    phantom: { url: "", token: "" },
+    phantom: { url: "", token: "", hcb: "" },
   },
   embeds: [],
   macapad: {
@@ -635,6 +635,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
     phantom: {
       url: sanitizeUrl(str(phantom.url, "", 200)),
       token: secret(phantom.token, "", 200),
+      hcb: str(phantom.hcb, "", 200),
     },
   };
 }

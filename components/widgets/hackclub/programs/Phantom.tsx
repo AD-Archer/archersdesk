@@ -7,6 +7,7 @@
 import { WIDGET_INFO, type WidgetName } from "@/lib/types";
 import { BigStat, Empty, MiniList, Shell, StatRow, integrationGate, useIntegration } from "../../kit";
 import type { WidgetProps } from "../../registry";
+import { DitherBars } from "../DitherBars";
 
 /** The shape of phantom's /api/stats (lib/server/stats.ts over there). */
 interface PhantomStats {
@@ -25,9 +26,26 @@ interface PhantomStats {
   projects: { all: number; draft: number; review: number; approved: number; rejected: number };
   funnel: Array<{ key: string; label: string; n: number }>;
   ledger: { outstanding: number; awarded: number; spent: number; fragmentSeconds: number; days: number[] };
+  /** Phantom's hcb org, in cents (added by the desk's proxy); null when hcb
+   *  can't be read. */
+  hcb: { balance: number; incoming: number; raised: number } | null;
 }
 
+/** An hour of approved work, in cents: what it brings in, and where that
+ *  goes. The $5 back and $1 shipping are phantom's shop budget
+ *  (lib/shop/budget.ts); what's left runs the program. The ledger counts
+ *  seconds, so money is seconds / 3600 × a rate, whatever a fragment is. */
+const HOUR = { income: 850, back: 500, shipping: 100 };
+const RUNNING = HOUR.income - HOUR.back - HOUR.shipping;
+const owedFor = (seconds: number) => Math.round((seconds / 3600) * (HOUR.back + HOUR.shipping));
+
 const n = (v: number) => v.toLocaleString("en-US");
+
+/** Cents as whole dollars, the way a glance wants them: $6,198 */
+const usd = (cents: number) => `${cents < 0 ? "-" : ""}$${Math.round(Math.abs(cents) / 100).toLocaleString("en-US")}`;
+
+/** Cents as a rate, cents shown only when there are some: $5, $2.50 */
+const rate = (cents: number) => `$${cents % 100 ? (cents / 100).toFixed(2) : cents / 100}`;
 
 /** seconds as a person says them: 4m 16s */
 function duration(seconds: number) {
@@ -49,35 +67,13 @@ function PhantomFrame({
   children: (d: PhantomStats) => React.ReactNode;
 }) {
   const source = integrationSettings ?? settings;
-  const linked = Boolean(source.integrations.phantom?.url && source.integrations.phantom?.token);
+  const linked = Boolean(source.integrations.phantom?.token);
   const payload = useIntegration<PhantomStats>("phantom", source, 60 * 1000, undefined, linked);
   const gate = integrationGate(payload, "asking phantom…");
   return (
     <Shell icon={WIDGET_INFO[widget].icon} label={label}>
-      {!linked ? <Empty>Add your Phantom address and stats token in settings</Empty> : (gate ?? children(payload!.data!))}
+      {!linked ? <Empty>Add your Phantom stats token in settings</Empty> : (gate ?? children(payload!.data!))}
     </Shell>
-  );
-}
-
-/** One bar a day, oldest left, today right and full strength; the rest
- *  recede so the eye lands on today. Zero days keep a sliver, so a gap reads
- *  as "none" rather than "missing". */
-function DayBars({ days, label }: { days: number[]; label: string }) {
-  if (days.length === 0) return null;
-  const max = Math.max(1, ...days);
-  const total = days.reduce((a, b) => a + b, 0);
-  return (
-    <figure className="phantom-bars" role="img" aria-label={`${label}: ${n(total)} over ${days.length} days, ${n(days[days.length - 1])} today`}>
-      <div className="phantom-bars-plot">
-        {days.map((v, i) => (
-          <span key={i} className={`phantom-bar${i === days.length - 1 ? " today" : ""}`} style={{ height: `${Math.max(3, (v / max) * 100)}%` }} />
-        ))}
-      </div>
-      <figcaption className="phantom-bars-x">
-        <span>{days.length} days ago</span>
-        <span>Today</span>
-      </figcaption>
-    </figure>
   );
 }
 
@@ -97,7 +93,7 @@ export function PhantomTrafficWidget(props: WidgetProps) {
                 { label: "Left after one page", value: `${Math.round(d.traffic.bounceRate)}%` },
               ]}
             />
-            {props.wide && <DayBars days={d.traffic.days.map((day) => day.n)} label="People a day" />}
+            {props.wide && <DitherBars days={d.traffic.days.map((day) => day.n)} label="People a day" />}
           </>
         )
       }
@@ -117,7 +113,7 @@ export function PhantomActiveWidget(props: WidgetProps) {
               { label: "This month", value: n(d.active.month) },
             ]}
           />
-          <DayBars days={d.active.days} label="Active a day" />
+          <DitherBars days={d.active.days} label="Active a day" />
         </>
       )}
     </PhantomFrame>
@@ -130,7 +126,7 @@ export function PhantomPeopleWidget(props: WidgetProps) {
       {(d) => (
         <>
           <BigStat value={n(d.people.total)} unit="people" caption={`${n(d.people.week)} joined this week`} />
-          <DayBars days={d.people.days} label="Sign-ups a day" />
+          <DitherBars days={d.people.days} label="Sign-ups a day" />
         </>
       )}
     </PhantomFrame>
@@ -226,17 +222,100 @@ export function PhantomLedgerWidget(props: WidgetProps) {
         const f = (seconds: number) => n(Math.trunc(seconds / d.ledger.fragmentSeconds));
         return (
           <>
-            <BigStat value={f(d.ledger.outstanding)} unit="fragments" caption="held by participants" />
+            <BigStat
+              value={f(d.ledger.outstanding)}
+              unit="fragments"
+              caption={`held by participants, ${usd(owedFor(d.ledger.outstanding))} to cash in`}
+            />
             <StatRow
               items={[
                 { label: "Awarded", value: f(d.ledger.awarded) },
                 { label: "Spent", value: f(d.ledger.spent) },
               ]}
             />
-            {props.wide && <DayBars days={d.ledger.days} label="Ledger entries a day" />}
+            {props.wide && <DitherBars days={d.ledger.days} label="Ledger entries a day" />}
           </>
         );
       }}
     </PhantomFrame>
+  );
+}
+
+/** Can phantom pay for every fragment it has handed out? What's on hcb
+ *  against what the fragments people hold would cost if they were all spent
+ *  tonight, at $5 an hour plus $1 shipping. Wide, it adds where each hour's
+ *  $8.50 goes and whether the money raised has kept up with the work. */
+export function PhantomMoneyWidget(props: WidgetProps) {
+  return (
+    <PhantomFrame {...props} widget="phantom_money" label="Phantom money">
+      {(d) => {
+        if (!d.hcb) return <Empty>Phantom&rsquo;s HCB can&rsquo;t be read right now</Empty>;
+        const held = d.hcb.balance + d.hcb.incoming;
+        const owed = owedFor(d.ledger.outstanding);
+        const spare = held - owed;
+        const hours = d.ledger.awarded / 3600;
+        return (
+          <>
+            <BigStat
+              className={spare < 0 ? "short" : undefined}
+              value={usd(Math.abs(spare))}
+              unit={spare < 0 ? "short" : "spare"}
+              caption={spare < 0 ? "HCB can't cover every fragment held" : "once every fragment held is cashed in"}
+            />
+            <StatRow
+              items={[
+                { label: "On HCB", value: usd(held) },
+                { label: "Fragments owed", value: usd(owed) },
+                { label: "Covered", value: owed > 0 ? `${(held / owed).toFixed(1)}×` : "All" },
+              ]}
+            />
+            {props.wide && (
+              <div className="phantom-money-side">
+                <HourSplit />
+                <MiniList
+                  rows={[
+                    { key: "earned", left: `Earned at ${rate(HOUR.income)}/h`, right: <b>{usd(hours * HOUR.income)}</b> },
+                    { key: "raised", left: "Raised on HCB", right: <b>{usd(d.hcb.raised)}</b> },
+                    { key: "running", left: `Kept to run it, ${rate(RUNNING)}/h`, right: <b>{usd(hours * RUNNING)}</b> },
+                  ]}
+                />
+              </div>
+            )}
+          </>
+        );
+      }}
+    </PhantomFrame>
+  );
+}
+
+/** Each hour's $8.50 as one bar cut in three, widths to scale: what goes
+ *  back to the person, what ships it, what runs the program. */
+function HourSplit() {
+  const parts = [
+    { key: "back", cents: HOUR.back, label: "back" },
+    { key: "ship", cents: HOUR.shipping, label: "shipping" },
+    { key: "run", cents: RUNNING, label: "running it" },
+  ];
+  return (
+    <figure
+      className="phantom-split"
+      role="img"
+      aria-label={`Each hour brings in ${rate(HOUR.income)}: ${parts.map((p) => `${rate(p.cents)} ${p.label}`).join(", ")}`}
+    >
+      <figcaption>Every hour brings in {rate(HOUR.income)}</figcaption>
+      <div className="phantom-split-bar">
+        {parts.map((p) => (
+          <span key={p.key} className={p.key} style={{ flexGrow: p.cents }} />
+        ))}
+      </div>
+      <div className="phantom-split-key">
+        {parts.map((p) => (
+          <span key={p.key}>
+            <i className={p.key} />
+            <b>{rate(p.cents)}</b> {p.label}
+          </span>
+        ))}
+      </div>
+    </figure>
   );
 }

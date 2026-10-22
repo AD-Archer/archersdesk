@@ -60,6 +60,7 @@ export const WIDGETS = [
   "phantom_projects",
   "phantom_funnel",
   "phantom_ledger",
+  "phantom_money",
 ] as const;
 
 export type WidgetName = (typeof WIDGETS)[number];
@@ -139,6 +140,7 @@ export const WIDGET_INFO: Record<
   phantom_projects: { label: "phantom projects", blurb: "drafts, in review, approved", category: "archer", icon: "folder" },
   phantom_funnel: { label: "phantom funnel", blurb: "sign-up to first order", category: "archer", icon: "equalizer" },
   phantom_ledger: { label: "phantom ledger", blurb: "fragments awarded and spent", category: "archer", icon: "savings" },
+  phantom_money: { label: "phantom money", blurb: "hcb against the fragments owed", category: "archer", icon: "payments" },
 };
 
 export interface Alarm {
@@ -362,7 +364,7 @@ export interface Settings {
     transmission: { url: string; username: string; password: string };
     navidrome: { url: string; username: string; password: string };
     macapad: { url: string; token: string };
-    phantom: { url: string; token: string }; // phantom's /api/stats + its STATS_TOKEN
+    phantom: { url: string; token: string; hcb: string }; // phantom's /api/stats + its STATS_TOKEN, and its hcb org
   };
   embeds: EmbedFeed[]; // top-level, not an "integration" — no server fetch, the widget reads it directly
   macapad: MacapadPads; // owned by /api/macapad; full settings writes never change it
