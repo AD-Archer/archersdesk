@@ -53,6 +53,13 @@ export const WIDGETS = [
   "navidrome",
   "embed",
   "archerhours",
+  "phantom_traffic",
+  "phantom_active",
+  "phantom_people",
+  "phantom_orders",
+  "phantom_projects",
+  "phantom_funnel",
+  "phantom_ledger",
 ] as const;
 
 export type WidgetName = (typeof WIDGETS)[number];
@@ -125,6 +132,13 @@ export const WIDGET_INFO: Record<
   navidrome: { label: "navidrome", blurb: "search your library, play anything", category: "accounts", icon: "music_note" },
   embed: { label: "embed", blurb: "youtube, spotify, anything with a url", category: "tools", icon: "live_tv" },
   archerhours: { label: "archer hours", blurb: "weighted grants + hours shipped", category: "archer", icon: "rocket_launch" },
+  phantom_traffic: { label: "phantom visitors", blurb: "people on the site, last 7 days", category: "archer", icon: "visibility" },
+  phantom_active: { label: "phantom daily active", blurb: "coding today, by hackatime", category: "archer", icon: "bolt" },
+  phantom_people: { label: "phantom people", blurb: "everyone signed up", category: "archer", icon: "group" },
+  phantom_orders: { label: "phantom orders", blurb: "shop orders to send", category: "archer", icon: "shopping_cart" },
+  phantom_projects: { label: "phantom projects", blurb: "drafts, in review, approved", category: "archer", icon: "folder" },
+  phantom_funnel: { label: "phantom funnel", blurb: "sign-up to first order", category: "archer", icon: "equalizer" },
+  phantom_ledger: { label: "phantom ledger", blurb: "fragments awarded and spent", category: "archer", icon: "savings" },
 };
 
 export interface Alarm {
@@ -348,6 +362,7 @@ export interface Settings {
     transmission: { url: string; username: string; password: string };
     navidrome: { url: string; username: string; password: string };
     macapad: { url: string; token: string };
+    phantom: { url: string; token: string }; // phantom's /api/stats + its STATS_TOKEN
   };
   embeds: EmbedFeed[]; // top-level, not an "integration" — no server fetch, the widget reads it directly
   macapad: MacapadPads; // owned by /api/macapad; full settings writes never change it

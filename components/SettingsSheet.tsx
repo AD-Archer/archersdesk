@@ -36,7 +36,11 @@ const TAB_INFO: Record<Tab, { label: string; icon: string; color: string }> = {
 /* each widget's tint, the same one it wears on the board (board.css) */
 const TINTS: Record<string, WidgetName[]> = {
   green: ["clock", "please_disturb", "github", "stocks", "citybikes", "adguard", "chess"],
-  orange: ["analog", "worldclock", "alarms", "timer", "archerhours", "plex", "fox", "shibe"],
+  orange: [
+    "analog", "worldclock", "alarms", "timer", "archerhours", "plex", "fox", "shibe",
+    "phantom_traffic", "phantom_active", "phantom_people", "phantom_orders",
+    "phantom_projects", "phantom_funnel", "phantom_ledger",
+  ],
   red: ["date", "datetime", "calendar", "agenda", "f1", "pihole", "transmission", "embed"],
   cyan: ["weather", "forecast", "homeassistant"],
   yellow: ["sun", "quote", "away_until", "monkeytype", "catfact", "dogfact", "duck"],
@@ -209,6 +213,16 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
       { type: "split", left: "adguard", right: "homeassistant" },
       { type: "dual", widget: "agenda" },
       { type: "split", left: "pihole", right: "epicgames" },
+    ],
+  },
+  {
+    name: "phantom",
+    blurb: "visitors, people, orders, funnel",
+    rows: [
+      { type: "split", left: "phantom_traffic", right: "phantom_active" },
+      { type: "split", left: "phantom_people", right: "phantom_orders" },
+      { type: "dual", widget: "phantom_funnel" },
+      { type: "split", left: "phantom_projects", right: "phantom_ledger" },
     ],
   },
   {
@@ -1594,6 +1608,21 @@ function AccountsSection({ settings, onChange }: SectionProps) {
             Each screen shows up under its own name in Macapad&rsquo;s settings on the Mac, where you can
             give it a schedule, like work hours for the office screen.
           </p>
+        </AccountGroup>
+
+        <AccountGroup title="Phantom" blurb="Visitors, people, orders, projects and the ledger" {...w("phantom_traffic")} done={!!ig.phantom?.url}>
+          <AccountField
+            label="Phantom address"
+            value={ig.phantom?.url}
+            placeholder="https://phantom.hackclub.com"
+            onValue={(v) => patch({ phantom: { ...ig.phantom, url: v } })}
+          />
+          <AccountField
+            label="Stats token (STATS_TOKEN in Phantom)"
+            value={ig.phantom?.token}
+            secret
+            onValue={(v) => patch({ phantom: { ...ig.phantom, token: v } })}
+          />
         </AccountGroup>
 
         <AccountGroup title="Seerr" blurb="Jellyseerr or Overseerr requests" {...w("seerr")} done={!!ig.seerr?.url}>

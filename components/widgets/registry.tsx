@@ -21,7 +21,16 @@ import { EpicGamesWidget } from "./Epic";
 import { NavidromeWidget } from "./Navidrome";
 import { EmbedWidget } from "./Embed";
 import { MonkeytypeWidget } from "./Monkeytype";
-import { ArcherHoursWidget } from "./ArcherHours";
+import { ArcherHoursWidget } from "./hackclub/ArcherHours";
+import {
+  PhantomActiveWidget,
+  PhantomFunnelWidget,
+  PhantomLedgerWidget,
+  PhantomOrdersWidget,
+  PhantomPeopleWidget,
+  PhantomProjectsWidget,
+  PhantomTrafficWidget,
+} from "./hackclub/programs/Phantom";
 import {
   AwayUntilWidget,
   DoNotDisturbWidget,
@@ -113,6 +122,13 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   navidrome: NavidromeWidget,
   embed: EmbedWidget,
   archerhours: ArcherHoursWidget,
+  phantom_traffic: PhantomTrafficWidget,
+  phantom_active: PhantomActiveWidget,
+  phantom_people: PhantomPeopleWidget,
+  phantom_orders: PhantomOrdersWidget,
+  phantom_projects: PhantomProjectsWidget,
+  phantom_funnel: PhantomFunnelWidget,
+  phantom_ledger: PhantomLedgerWidget,
 };
 
 export function MainRow({

@@ -5,10 +5,10 @@
 
 import { useEffect, useState } from "react";
 import { WIDGET_INFO } from "@/lib/types";
-import EditablePopup from "../EditablePopup";
-import { ClickSettingsGlyph } from "./Integrations";
-import { BigStat, MiniList, Shell, integrationGate, useIntegration } from "./kit";
-import type { WidgetProps } from "./registry";
+import EditablePopup from "../../EditablePopup";
+import { ClickSettingsGlyph } from "../Integrations";
+import { BigStat, MiniList, Shell, integrationGate, useIntegration } from "../kit";
+import type { WidgetProps } from "../registry";
 
 interface ArcherHoursData {
   name: string;

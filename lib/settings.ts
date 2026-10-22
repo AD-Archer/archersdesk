@@ -140,6 +140,7 @@ export const DEFAULT_SETTINGS: Settings = {
     transmission: { url: "", username: "", password: "" },
     navidrome: { url: "", username: "", password: "" },
     macapad: { url: "", token: "" },
+    phantom: { url: "", token: "" },
   },
   embeds: [],
   macapad: {
@@ -564,6 +565,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
   const transmission = isRecord(s.transmission) ? s.transmission : {};
   const navidrome = isRecord(s.navidrome) ? s.navidrome : {};
   const macapad = isRecord(s.macapad) ? s.macapad : {};
+  const phantom = isRecord(s.phantom) ? s.phantom : {};
   const symbols = Array.isArray(stocks.symbols)
     ? stocks.symbols
         .map((x) => String(x).toUpperCase().replace(/[^A-Z0-9.^=-]/g, "").slice(0, 12))
@@ -629,6 +631,10 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
     macapad: {
       url: sanitizeUrl(str(macapad.url, "", 200)),
       token: secret(macapad.token, "", 200),
+    },
+    phantom: {
+      url: sanitizeUrl(str(phantom.url, "", 200)),
+      token: secret(phantom.token, "", 200),
     },
   };
 }
@@ -764,6 +770,10 @@ export function preserveSavedSecrets(current: Settings, incoming: Settings): Set
       macapad: {
         ...next.macapad,
         token: keepWhenStale(next.macapad.token, cur.macapad.token, stale),
+      },
+      phantom: {
+        ...next.phantom,
+        token: keepWhenStale(next.phantom.token, cur.phantom.token, stale),
       },
     },
   };

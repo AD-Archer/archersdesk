@@ -1,0 +1,129 @@
+/* ── hack club: widgets for Hack Club programs and tools ──────────────
+   Kept apart from widgets.css so the Hack Club pieces live together:
+   components/widgets/hackclub/ holds their components. Same language as
+   widgets.css: straight on black, one tint, sizes from --ps. */
+
+/* ── phantom: program figures from phantom's /api/stats ────────────────
+   One tint (orange, the archer family). Bars are one per day with today at
+   full strength and the rest receding; the funnel is each step against
+   everyone who signed up, label left, count right, the share as a bar. */
+
+.phantom-bars {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  margin: calc(var(--ps) * 0.04) calc(var(--ps) * 0.03) 0;
+  min-width: 0;
+}
+
+.phantom-bars-plot {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: calc(var(--ps) * 0.16);
+}
+
+.phantom-bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  border-radius: 2px 2px 1px 1px;
+  background: var(--tint);
+  opacity: 0.45;
+}
+
+.phantom-bar.today {
+  opacity: 1;
+}
+
+.phantom-bars-x {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-3);
+}
+
+.phantom-funnel {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 calc(var(--ps) * 0.03);
+  list-style: none;
+  min-height: 0;
+}
+
+.phantom-funnel li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: calc(var(--ps) * 0.014) 0;
+  font-size: max(14px, calc(var(--ps) * 0.038));
+  line-height: 1.2;
+}
+
+.phantom-funnel li + li {
+  border-top: 0.5px solid var(--sep);
+}
+
+.phantom-funnel-label {
+  overflow: hidden;
+  color: var(--label-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phantom-funnel-label::first-letter {
+  text-transform: uppercase;
+}
+
+.phantom-funnel-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.phantom-funnel-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--tint);
+}
+
+.phantom-funnel b {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* wide: the hero on the left, the series or the steps on the right */
+.panel.wide[data-widget^="phantom_"] .w-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  align-content: center;
+  align-items: center;
+  justify-items: center;
+  column-gap: calc(var(--ps) * 0.12);
+  padding-left: calc(var(--ps) * 0.04);
+  padding-right: calc(var(--ps) * 0.04);
+}
+
+.panel.wide[data-widget^="phantom_"] .w-body > * {
+  grid-column: 1;
+  max-width: 100%;
+}
+
+.panel.wide[data-widget^="phantom_"] .w-body > .phantom-bars,
+.panel.wide[data-widget^="phantom_"] .w-body > .klist,
+.panel.wide[data-widget^="phantom_"] .w-body > .phantom-funnel {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  justify-self: stretch;
+  margin-top: 0;
+}
+
+.panel.wide[data-widget^="phantom_"] .w-body > :only-child {
+  grid-column: 1 / -1;
+}

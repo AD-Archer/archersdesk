@@ -1433,6 +1433,22 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
       return need(`unknown navidrome action "${name}"`);
     },
   },
+
+  // phantom's program figures: one read of its /api/stats feeds every phantom
+  // widget. counts only — phantom keeps names and ids out of that endpoint.
+  phantom: {
+    ttl: 60 * 1000, // phantom keeps plausible's answers for a minute too
+    async fetch(settings) {
+      const { url, token } = settings.integrations.phantom;
+      if (!url || !token) return need("set your phantom address + stats token in settings → accounts");
+      const base = url.replace(/\/api\/stats$/, "");
+      const res = await grab(`${base}/api/stats`, { Authorization: `Bearer ${token}`, Accept: "application/json" });
+      // phantom answers 404 to a wrong token and to STATS_TOKEN being unset alike
+      if (res.status === 404) return need("phantom didn't accept that stats token");
+      if (!res.ok) return need(`phantom: error ${res.status}`);
+      return { configured: true, data: await res.json() };
+    },
+  },
 };
 
 // ── keyless public feeds ─────────────────────────────────────────────

@@ -6,6 +6,7 @@ import "./globals.css";
 import "./styles/ui.css";
 import "./styles/board.css";
 import "./styles/widgets.css";
+import "./styles/hackclub.css";
 import "./styles/hero.css";
 import "./styles/macapad.css";
 import "./styles/settings.css";
