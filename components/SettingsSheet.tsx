@@ -5,7 +5,9 @@ import type { Alarm, Device, GeocodeResult, LayoutRow, PageJump, PageTarget, Vie
 import { MAX_ROWS, MAX_WIDGET_PAGES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS } from "@/lib/types";
 import { dayChips, fmt12 } from "./alarmUtil";
 import { copyLayout, dropPage, jumpPast, localDate, pageName, targetLabel } from "./pageJumps";
-import { useIntegrationAction } from "./widgets/kit";
+import { useIntegration, useIntegrationAction } from "./widgets/kit";
+import { ProgramMark } from "./widgets/hackclub/stern/frame";
+import { runLine, type DeskProgram, type SternDesk } from "@/lib/stern";
 import { useWeather } from "./widgets/Weather";
 import { pausedTonight } from "./night";
 import { useNow } from "./hooks";
@@ -49,11 +51,13 @@ const TINTS: Record<string, WidgetName[]> = {
   pink: ["nowplaying", "navidrome", "vibe"],
   purple: [
     "spacenews", "jellyfin",
-    "phantom_traffic", "phantom_active", "phantom_people", "phantom_orders",
-    "phantom_projects", "phantom_funnel", "phantom_ledger", "phantom_money",
-    "phantom_budget", "phantom_event",
+    "phantom_traffic", "phantom_active", "phantom_hours", "phantom_people",
+    "phantom_orders", "phantom_projects", "phantom_funnel", "phantom_ledger",
+    "phantom_money", "phantom_budget", "phantom_event",
   ],
   blue: ["anilist", "wakatime", "flights", "septa", "macapad", "qbittorrent", "lichess"],
+  // across programs; a program page's cards wear that program's own colour
+  hackclub: WIDGETS.filter((w) => w.startsWith("stern_")),
   mint: ["epicgames", "dog", "cat"],
 };
 const TINT_OF = new Map<string, string>(
@@ -134,6 +138,38 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       <span />
     </span>
   );
+}
+
+/** A page for one hack club program: what the "program" layout lays out,
+ *  and what picking a program offers to fill an empty page with. */
+const PROGRAM_PAGE: LayoutRow[] = [
+  { type: "dual", widget: "stern_program" },
+  { type: "split", left: "stern_program_wps", right: "stern_money" },
+  { type: "split", left: "stern_people", right: "stern_active" },
+  { type: "dual", widget: "stern_funnel" },
+  { type: "split", left: "stern_review", right: "stern_hours" },
+  { type: "dual", widget: "stern_money" },
+  { type: "split", left: "stern_orders", right: "stern_program" },
+];
+
+/** The page a program gets: everything for one on stern; for one only
+ *  unified knows, its card, wps and money (stern's cards would be empty),
+ *  and phantom's own widgets for phantom. */
+function programTemplate(p: DeskProgram): LayoutRow[] {
+  if (p.slug) return PROGRAM_PAGE;
+  return [
+    { type: "dual", widget: "stern_program" },
+    { type: "split", left: "stern_program_wps", right: "stern_money" },
+    ...(p.name.toLowerCase() === "phantom"
+      ? ([
+          { type: "split", left: "phantom_active", right: "phantom_people" },
+          { type: "dual", widget: "phantom_funnel" },
+          { type: "split", left: "phantom_orders", right: "phantom_ledger" },
+        ] as LayoutRow[])
+      : []),
+    { type: "dual", widget: "stern_program_wps" },
+    { type: "dual", widget: "stern_money" },
+  ];
 }
 
 const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
@@ -223,9 +259,10 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
   },
   {
     name: "phantom",
-    blurb: "visitors, people, money, budget, event",
+    blurb: "visitors, coding, people, money, budget, event",
     rows: [
       { type: "split", left: "phantom_traffic", right: "phantom_active" },
+      { type: "dual", widget: "phantom_hours" },
       { type: "split", left: "phantom_people", right: "phantom_orders" },
       { type: "dual", widget: "phantom_funnel" },
       { type: "split", left: "phantom_projects", right: "phantom_ledger" },
@@ -233,6 +270,23 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
       { type: "dual", widget: "phantom_budget" },
       { type: "dual", widget: "phantom_event" },
     ],
+  },
+  {
+    name: "hack club",
+    blurb: "your wps, programs, fines, net worth",
+    rows: [
+      { type: "split", left: "stern_wps", right: "stern_top" },
+      { type: "dual", widget: "stern_timeline" },
+      { type: "split", left: "stern_networth", right: "stern_fines" },
+      { type: "dual", widget: "stern_margin" },
+      { type: "dual", widget: "stern_top" },
+      { type: "dual", widget: "stern_fines" },
+    ],
+  },
+  {
+    name: "program",
+    blurb: "one program, in its colours",
+    rows: PROGRAM_PAGE,
   },
   {
     name: "homelab",
@@ -435,13 +489,19 @@ function LayoutSection({
   const topRef = useRef<HTMLDivElement | null>(null);
   const pages = settings.layout.pages?.length ? settings.layout.pages : [settings.layout.rows];
   const [pageIndex, setPageIndex] = useState(() => Math.min(Math.max(initialPage ?? 0, 0), pages.length - 1));
+  const [pickingProgram, setPickingProgram] = useState(false);
   const rows = pages[pageIndex] ?? pages[0] ?? settings.layout.rows;
   const names = settings.layout.names ?? [];
+  const programs = settings.layout.programs ?? [];
+  const sternLinked = Boolean(settings.integrations.stern?.token);
+  const stern = useIntegration<SternDesk>("stern", settings, 5 * 60 * 1000, undefined, sternLinked);
+  const known = stern?.data?.programs ?? [];
+  const pageProgram = known.find((p) => p.key === programs[pageIndex]) ?? null;
 
   // the widget picker starts at the top
   useEffect(() => {
-    if (picking) topRef.current?.closest(".sec")?.scrollTo({ top: 0 });
-  }, [picking]);
+    if (picking || pickingProgram) topRef.current?.closest(".sec")?.scrollTo({ top: 0 });
+  }, [picking, pickingProgram]);
 
   function setRows(next: LayoutRow[]) {
     const nextPages = pages.map((p, i) => (i === pageIndex ? next : p));
@@ -451,8 +511,25 @@ function LayoutSection({
   function addPage() {
     const nextPages = [...pages, [{ type: "split", left: "clock", right: "calendar" } as LayoutRow]];
     const nextNames = pages.map((_, i) => names[i] ?? "").concat("");
-    onChange({ ...settings, layout: { ...settings.layout, pages: nextPages, names: nextNames } });
+    const nextPrograms = pages.map((_, i) => programs[i] ?? "").concat("");
+    onChange({ ...settings, layout: { ...settings.layout, pages: nextPages, names: nextNames, programs: nextPrograms } });
     setPageIndex(nextPages.length - 1);
+  }
+
+  // a page takes the program's name when it has none, and a page that's still
+  // the one-row starter becomes a program page; anything laid out stays
+  function chooseProgram(p: DeskProgram | null) {
+    const nextPrograms = pages.map((_, i) => (i === pageIndex ? (p?.key ?? "") : (programs[i] ?? "")));
+    const nextNames = pages.map((_, i) =>
+      i === pageIndex && p && !(names[i] ?? "").trim() ? p.name.slice(0, 30) : (names[i] ?? "")
+    );
+    const starter = rows.length === 1 && rows[0].type === "split" && rows[0].left === "clock" && rows[0].right === "calendar";
+    const nextPages = p && starter ? pages.map((r, i) => (i === pageIndex ? programTemplate(p).map((x) => ({ ...x })) : r)) : pages;
+    onChange({
+      ...settings,
+      layout: { ...settings.layout, rows: nextPages[0], pages: nextPages, names: nextNames, programs: nextPrograms },
+    });
+    setPickingProgram(false);
   }
 
   function renamePage(name: string) {
@@ -514,6 +591,68 @@ function LayoutSection({
     if (r.type === "dual") patchRow(picking.row, { ...r, widget: w });
     else patchRow(picking.row, { ...r, [picking.slot]: w } as LayoutRow);
     setPicking(null);
+  }
+
+  if (pickingProgram) {
+    const mine = known.filter((p) => p.mine);
+    const rest = known.filter((p) => !p.mine && !p.hidden);
+    const card = (p: DeskProgram) => (
+      <button
+        key={p.key}
+        className={`wcard${pageProgram?.key === p.key ? " on" : ""}`}
+        aria-pressed={pageProgram?.key === p.key}
+        onClick={() => chooseProgram(p)}
+      >
+        <span className="tile big program-tile" aria-hidden>
+          <ProgramMark p={p} size="big" />
+        </span>
+        <span className="wcard-text">
+          <b>{p.name}</b>
+          <small>{p.slug ? runLine(p) : `${runLine(p)}, Unified only`}</small>
+        </span>
+        {pageProgram?.key === p.key && <MI name="check" className="wcard-check" />}
+      </button>
+    );
+    return (
+      <div ref={topRef}>
+        <button className="sub-back" onClick={() => setPickingProgram(false)}>
+          <Chev dir="left" />
+          {pageName(names, pageIndex + 1)}
+        </button>
+        <h3 className="pick-title">Program</h3>
+        <p className="pick-sub">
+          The program cards on this page show it, in its own colours. Cards about all your programs ignore it.
+        </p>
+        {!sternLinked ? (
+          <p className="group-foot">Add your Stern platform key in Accounts first.</p>
+        ) : !stern?.data ? (
+          <p className="group-foot">{stern?.reason ?? "Asking Stern for your programs…"}</p>
+        ) : (
+          <>
+            {mine.length > 0 && (
+              <section className="wgroup">
+                <h4 className="group-head">Yours</h4>
+                <div className="wgrid">{mine.map(card)}</div>
+              </section>
+            )}
+            {rest.length > 0 && (
+              <section className="wgroup">
+                <h4 className="group-head">Everything else on Stern</h4>
+                <div className="wgrid">{rest.map(card)}</div>
+              </section>
+            )}
+          </>
+        )}
+        {programs[pageIndex] && (
+          <div className="group set-gap">
+            <button className="group-row row-action red" onClick={() => chooseProgram(null)}>
+              <MI name="close" />
+              No program on this page
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 
   if (picking) {
@@ -604,6 +743,28 @@ function LayoutSection({
             onChange={(e) => renamePage(e.target.value)}
           />
         </label>
+        <button
+          className="group-row tile-row slot"
+          onClick={() => setPickingProgram(true)}
+          aria-label={`Program: ${pageProgram?.name ?? "none"}. Change`}
+        >
+          {pageProgram ? (
+            <span className="tile program-tile" aria-hidden>
+              <ProgramMark p={pageProgram} />
+            </span>
+          ) : (
+            <Tile icon="dashboard" color="var(--hackclub)" />
+          )}
+          <span className="row-label">Program</span>
+          <span className="row-value">{pageProgram?.name ?? (programs[pageIndex] ? "…" : "None")}</span>
+          <Chev />
+        </button>
+        {pageProgram && (
+          <button className="group-row row-action" onClick={() => applyPreset(programTemplate(pageProgram))}>
+            <MI name="dashboard" />
+            Lay out as a {pageProgram.name} page
+          </button>
+        )}
       </div>
 
       {rows.map((r, i) => (
@@ -1897,6 +2058,32 @@ function AccountsSection({ settings, onChange }: SectionProps) {
             value={ig.phantom?.hcb}
             placeholder="https://hcb.hackclub.com/phantom"
             onValue={(v) => patch({ phantom: { ...ig.phantom, hcb: v } })}
+          />
+        </AccountGroup>
+
+        <AccountGroup
+          title="Stern"
+          blurb="Your Hack Club programs: WPs, fines, dates, money, net worth"
+          {...w("stern_wps")}
+          done={!!ig.stern?.token}
+        >
+          <AccountField
+            label="Stern address (optional)"
+            value={ig.stern?.url}
+            placeholder="https://stern.hackclub.com"
+            onValue={(v) => patch({ stern: { ...ig.stern, url: v } })}
+          />
+          <AccountField
+            label="Platform key (Admin → API keys in Stern)"
+            value={ig.stern?.token}
+            secret
+            onValue={(v) => patch({ stern: { ...ig.stern, token: v } })}
+          />
+          <AccountField
+            label="Your HCB user, for net worth (usr_…, from Stern's HCB net worth page)"
+            value={ig.stern?.hcbUser}
+            placeholder="usr_…"
+            onValue={(v) => patch({ stern: { ...ig.stern, hcbUser: v } })}
           />
         </AccountGroup>
 

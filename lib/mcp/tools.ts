@@ -161,7 +161,12 @@ function screenOut(d: Device, s: Settings) {
     name: d.name,
     location: { place: d.location.name, region: d.location.region, latitude: d.location.latitude, longitude: d.location.longitude },
     order: ["Standby", ...d.layout.pages.map((_, i) => pageName(names, i + 1)), ...(padOn ? ["Pad"] : [])],
-    pages: d.layout.pages.map((rows, i) => ({ page: i + 1, name: pageName(names, i + 1), rows: rows.map(rowOut) })),
+    pages: d.layout.pages.map((rows, i) => ({
+      page: i + 1,
+      name: pageName(names, i + 1),
+      ...(d.layout.programs?.[i] ? { program: d.layout.programs[i] } : {}),
+      rows: rows.map(rowOut),
+    })),
     set_times: d.layout.schedule.map((j, i) => ({
       set_time: i + 1,
       at: j.at,
@@ -254,6 +259,24 @@ function remapTargets(layout: DeviceLayout, map: (n: number) => number) {
 function namesFull(layout: DeviceLayout) {
   return layout.pages.map((_, i) => layout.names[i] ?? "");
 }
+
+function programsFull(layout: DeviceLayout) {
+  return layout.pages.map((_, i) => layout.programs?.[i] ?? "");
+}
+
+/** A page's program: a stern slug, "unified:rec…", or "" for none. */
+function program(v: unknown): string {
+  const k = String(v ?? "").trim();
+  if (k === "" || /^(unified:rec[A-Za-z0-9]{14}|[a-z0-9][a-z0-9_-]{0,63})$/.test(k)) return k;
+  return fail(`"${k}" isn't a program: use its stern slug (like "phantom"), "unified:rec…", or "" for none`);
+}
+
+const programProp = {
+  type: "string",
+  maxLength: 80,
+  description:
+    'The Hack Club program this page shows, for the stern_ program widgets: its Stern slug, or "unified:<airtable id>" for one only Unified knows. "" for none.',
+};
 
 function jumpIndex(d: Device, v: unknown): number {
   const n = Number(v);
@@ -427,6 +450,7 @@ export const TOOLS: ToolDef[] = [
         name: { type: "string", maxLength: 30, description: 'What the page is called, like "Phantom".' },
         rows: { type: "array", items: rowProp, maxItems: MAX_ROWS, description: "Its rows, top to bottom. Defaults to one row: clock and calendar." },
         position: { type: "integer", minimum: 1, description: "Where it goes among the pages. Defaults to the end." },
+        program: programProp,
       },
       []
     ),
@@ -438,9 +462,12 @@ export const TOOLS: ToolDef[] = [
         const rows = Array.isArray(a.rows) && a.rows.length ? a.rows.map(rowIn) : [{ type: "split", left: "clock", right: "calendar" } as LayoutRow];
         const at = Math.min(Math.max(Number(a.position ?? L.pages.length + 1), 1), L.pages.length + 1);
         const names = namesFull(L);
+        const programs = programsFull(L);
         L.pages.splice(at - 1, 0, rows);
         names.splice(at - 1, 0, String(a.name ?? "").slice(0, 30));
+        programs.splice(at - 1, 0, program(a.program));
         L.names = names;
+        L.programs = programs;
         remapTargets(L, (n) => (n >= at ? n + 1 : n));
       }),
   },
@@ -448,7 +475,7 @@ export const TOOLS: ToolDef[] = [
     name: "update_page",
     title: "Update a page",
     description:
-      "Rename a page, replace all its rows, or move it. Leave out what shouldn't change. To change a single card use set_card.",
+      "Rename a page, give it a Hack Club program, replace all its rows, or move it. Leave out what shouldn't change. To change a single card use set_card.",
     scope: "screens",
     input: object(
       {
@@ -457,6 +484,7 @@ export const TOOLS: ToolDef[] = [
         name: { type: "string", maxLength: 30, description: 'A new name; "" goes back to "Page N".' },
         rows: { type: "array", items: rowProp, minItems: 1, maxItems: MAX_ROWS, description: "Every row, top to bottom, replacing the ones there." },
         position: { type: "integer", minimum: 1, description: "Move the page here among the pages." },
+        program: programProp,
       },
       ["page"]
     ),
@@ -466,7 +494,10 @@ export const TOOLS: ToolDef[] = [
         const L = d.layout;
         const i = findPage(d, a.page);
         const names = namesFull(L);
+        const programs = programsFull(L);
         if (a.name !== undefined) names[i] = String(a.name).slice(0, 30);
+        if (a.program !== undefined) programs[i] = program(a.program);
+        L.programs = programs;
         if (a.rows !== undefined) {
           if (!Array.isArray(a.rows) || !a.rows.length) fail("rows needs at least one row");
           L.pages[i] = (a.rows as unknown[]).map(rowIn);
@@ -479,6 +510,8 @@ export const TOOLS: ToolDef[] = [
             L.pages.splice(to, 0, page);
             const [name] = L.names.splice(i, 1);
             L.names.splice(to, 0, name);
+            const [prog] = L.programs.splice(i, 1);
+            L.programs.splice(to, 0, prog);
             const from = i + 1;
             const dest = to + 1;
             remapTargets(L, (n) =>
@@ -500,7 +533,7 @@ export const TOOLS: ToolDef[] = [
       writeScreen(ctx, a.screen, (d) => {
         if (d.layout.pages.length <= 1) fail("that's the screen's only page");
         const i = findPage(d, a.page);
-        const kept = dropPage({ ...d.layout, names: namesFull(d.layout) }, i + 1);
+        const kept = dropPage({ ...d.layout, names: namesFull(d.layout), programs: programsFull(d.layout) }, i + 1);
         d.layout.pages.splice(i, 1);
         Object.assign(d.layout, kept);
       }),

@@ -15,6 +15,8 @@ import type {
   Settings,
 } from "./types";
 import { expandEvents, parseIcs } from "./ical";
+import { tintPrograms, unifiedKey } from "./stern";
+import type { DeskProgram, HcbBalances, NetWorth, SternDesk, SternListRow, SternMe, SternProgramStats } from "./stern";
 import { allPadButtons, macapadClientHeaders } from "./macapad";
 import { navidromeAlbumSongs, navidromePlaylistSongs, navidromePlaylists, navidromeRecentAlbums, navidromeSearch } from "./navidrome";
 
@@ -31,6 +33,10 @@ type IntCtx = Settings & { location: Location; screen: string | null };
 const g = globalThis as typeof globalThis & {
   __deskIntegrations?: Map<string, { at: number; body: IntegrationPayload }>;
   __deskIntegrationInflight?: Map<string, Promise<IntegrationPayload>>;
+  __deskLinger?: Map<string, unknown>;
+  __deskSternReads?: Map<string, unknown>;
+  __deskSternInflight?: Map<string, unknown>;
+  __deskSternQuiet?: Map<string, unknown>;
 };
 const cache = (g.__deskIntegrations ??= new Map());
 const inflight = (g.__deskIntegrationInflight ??= new Map());
@@ -45,8 +51,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-function grab(url: string, headers: Record<string, string> = {}, init: RequestInit = {}) {
-  return fetch(url, { ...init, headers: { ...UA, ...headers }, signal: AbortSignal.timeout(9000) });
+function grab(url: string, headers: Record<string, string> = {}, init: RequestInit = {}, timeout = 9000) {
+  return fetch(url, { ...init, headers: { ...UA, ...headers }, signal: AbortSignal.timeout(timeout) });
 }
 
 // event type → short verb for the activity list
@@ -1465,7 +1471,286 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
       };
     },
   },
+
+  // hack club programs, from stern's platform api (a stern_admin_ key minted
+  // on stern's /admin/api-keys). One read feeds every stern widget: the
+  // program list, you across unified (/me), stern's figures for each program
+  // a page shows, those programs' hcb orgs, and your hcb net worth. Stern
+  // sends counts only, so nothing here names a builder.
+  //
+  // Stern allows its key owner 120 requests a minute, counted across every
+  // dashboard they run, so each read below keeps its own cache that doesn't
+  // care how the pages are laid out (sternRead): editing a page costs at most
+  // one request, and the list with every shown program's figures is one
+  // request every two minutes. Once stern says slow down, nothing asks it
+  // anything until its Retry-After is up; the cards keep their last figures.
+  stern: {
+    ttl: 60 * 1000, // the reads below decide when stern is actually asked
+    async fetch(settings) {
+      const { url, token, hcbUser } = settings.integrations.stern;
+      if (!token) return need("add your stern platform key in settings → accounts");
+      const base = sternBase(url);
+      const slugs = [...pagePrograms(settings)].filter((k) => !k.startsWith("unified:")).sort();
+      const listPath = `/api/platform/v1/programs?days=30${slugs.length ? `&stats=${slugs.map(encodeURIComponent).join(",")}` : ""}`;
+      const list = await sternRead<{ programs?: SternListRow[]; stats?: Record<string, SternProgramStats | null> }>(
+        base,
+        token,
+        listPath,
+        2 * 60 * 1000
+      );
+      if (list.status === 401) return need("stern didn't accept that platform key");
+      if (!list.body) {
+        if (list.status === 429) return need(`stern asked the desk to slow down; trying again ${list.retry}`);
+        return need(list.status ? `stern: error ${list.status}` : "stern can't be reached right now");
+      }
+      const rows = list.body.programs ?? [];
+
+      // /me reads unified (thousands of airtable rows on a cold cache), and
+      // net worth scans every org on hcb: both may take longer than a poll
+      // should wait, so they answer from the last read while a fresh one runs
+      const me = await lingering(`stern-me|${base}|${token}`, 10 * 60 * 1000, async () => {
+        const res = await sternRead<SternMe>(base, token, "/api/platform/v1/me?days=30", 0, 30_000);
+        if (res.status === 429) throw new Error("stern asked the desk to slow down");
+        if (res.status === 404) return { body: null, reason: "this stern doesn't send /me yet" };
+        if (!res.body) return { body: null, reason: `stern couldn't read unified (error ${res.status ?? "unreachable"})` };
+        const body = res.body;
+        if (body.author) return { body, reason: null };
+        return {
+          body,
+          reason:
+            body.reason === "no_author"
+              ? "unified has no ysws author with your stern email"
+              : "unified can't be read right now",
+        };
+      });
+
+      const programs = mergePrograms(rows, me.value?.body ?? null);
+      const byKey = new Map(programs.map((p) => [p.key, p]));
+      const shown = [...pagePrograms(settings)].map((k) => byKey.get(k)).filter((p): p is DeskProgram => !!p);
+
+      // a stern older than ?stats= sends the list alone: then each program's
+      // figures are a read of their own, cached as long
+      const batched = list.body.stats;
+      const [stats, hcb, worth] = await Promise.all([
+        Promise.all(
+          shown.map(
+            async (p) =>
+              [
+                p.key,
+                !p.slug
+                  ? null
+                  : batched
+                    ? (batched[p.slug] ?? null)
+                    : (await sternRead<SternProgramStats>(base, token, `/api/platform/v1/programs/${encodeURIComponent(p.slug)}?days=30`, 2 * 60 * 1000)).body,
+              ] as const
+          )
+        ),
+        Promise.all(shown.map(async (p) => [p.key, await hcbOrg(p.unified?.hcbUrl ?? null)] as const)),
+        hcbUser
+          ? lingering(`stern-worth|${base}|${hcbUser}`, 15 * 60 * 1000, async () => {
+              // stern's public api, limited by address rather than by key
+              const res = await sternRead<NetWorth>(base, "", `/api/public/hcb-networth?u=${encodeURIComponent(hcbUser)}`, 0, 60_000);
+              if (!res.body) throw new Error(res.status === 429 ? "stern asked the desk to slow down" : `error ${res.status ?? "unreachable"}`);
+              return res.body;
+            })
+          : null,
+      ]);
+
+      const data: SternDesk = {
+        generatedAt: new Date().toISOString(),
+        programs,
+        me: me.value?.body ?? null,
+        meReason: me.value ? me.value.reason : me.error ? `unified: ${me.error}` : "reading unified…",
+        stats: Object.fromEntries(stats),
+        hcb: Object.fromEntries(hcb),
+        netWorth: worth?.value ?? null,
+        netWorthReason: !hcbUser
+          ? "add your hcb user in settings → accounts"
+          : worth?.value
+            ? null
+            : worth?.error
+              ? `hcb net worth: ${worth.error}`
+              : "counting your hcb orgs…",
+      };
+      return { configured: true, data };
+    },
+  },
 };
+
+// ── stern helpers ────────────────────────────────────────────────────
+
+/** stern's address with nothing after the host: no address means hack club's. */
+function sternBase(url: string) {
+  return (url || "https://stern.hackclub.com").replace(/\/api(\/.*)?$/, "").replace(/\/+$/, "");
+}
+
+/** Every program a page shows, on any screen: the only ones worth stern's
+ *  per-program figures. */
+function pagePrograms(settings: Settings): Set<string> {
+  return new Set(settings.devices.flatMap((d) => d.layout.programs ?? []).filter(Boolean));
+}
+
+/** Unified's programs (yours, most wps to you first) joined to stern's rows,
+ *  then the rest of stern's. Unified's dates win: they're hq's. */
+function mergePrograms(rows: SternListRow[], me: SternMe | null): DeskProgram[] {
+  const bySlug = new Map(rows.map((r) => [r.slug, r]));
+  const used = new Set<string>();
+  const mine = [...(me?.programs ?? [])]
+    .sort((a, b) => b.mine - a.mine)
+    .map((u): DeskProgram => {
+      const s = u.sternSlug ? (bySlug.get(u.sternSlug) ?? null) : null;
+      if (s) used.add(s.slug);
+      return {
+        key: s ? s.slug : unifiedKey(u.id),
+        name: u.name,
+        slug: s?.slug ?? null,
+        color: "",
+        logoUrl: s?.brand?.logoUrl ?? u.iconUrl,
+        startsAt: u.startDate ?? s?.startsAt ?? null,
+        endsAt: u.endDate ?? s?.endsAt ?? null,
+        hidden: s?.hidden ?? u.unlisted,
+        mine: true,
+        stern: s,
+        unified: u,
+      };
+    });
+  const rest = rows
+    .filter((r) => !used.has(r.slug))
+    .map(
+      (s): DeskProgram => ({
+        key: s.slug,
+        name: s.name,
+        slug: s.slug,
+        color: "",
+        logoUrl: s.brand?.logoUrl ?? null,
+        startsAt: s.startsAt,
+        endsAt: s.endsAt,
+        hidden: s.hidden,
+        mine: false,
+        stern: s,
+        unified: null,
+      })
+    );
+  const all = [...mine, ...rest];
+  const tints = tintPrograms(all.map((p) => ({ key: p.key, name: p.name, brand: p.stern?.brand?.color ?? null })));
+  return all.map((p) => ({ ...p, color: tints.get(p.key)! }));
+}
+
+const sternCache = (g.__deskSternReads ??= new Map());
+const sternInflight = (g.__deskSternInflight ??= new Map());
+const sternQuiet = (g.__deskSternQuiet ??= new Map());
+
+interface SternRead<T> {
+  body: T | null;
+  /** the last answer's status; null when stern couldn't be reached */
+  status: number | null;
+  /** when stern is asked again after a 429: "in 40s" */
+  retry: string;
+}
+
+/** A GET against stern, kept `ttl` (0: every call asks, for reads cached
+ *  elsewhere). A failed read hands back the last good body with the failing
+ *  status, so a card keeps its figures through a blip. A 429 quiets every
+ *  read for that key (or, keyless, for stern's public api) until its
+ *  Retry-After is up. */
+async function sternRead<T>(
+  base: string,
+  token: string,
+  path: string,
+  ttl: number,
+  timeout = 9000
+): Promise<SternRead<T>> {
+  const key = `${base}|${token}|${path}`;
+  const who = `${base}|${token || "public"}`;
+  const last = sternCache.get(key) as { at: number; body: T | null; status: number | null } | undefined;
+  const quietUntil = (sternQuiet.get(who) as number | undefined) ?? 0;
+  const retry = () => `in ${Math.max(1, Math.ceil(((sternQuiet.get(who) as number) - Date.now()) / 1000))}s`;
+  if (last && ttl > 0 && Date.now() - last.at < ttl) return { body: last.body, status: last.status, retry: "" };
+  if (Date.now() < quietUntil) return { body: last?.body ?? null, status: 429, retry: retry() };
+
+  const pending = sternInflight.get(key) as Promise<SternRead<T>> | undefined;
+  if (pending) return pending;
+  const req = (async (): Promise<SternRead<T>> => {
+    let res: Response;
+    try {
+      res = await grab(`${base}${path}`, token ? { Authorization: `Bearer ${token}`, Accept: "application/json" } : { Accept: "application/json" }, {}, timeout);
+    } catch {
+      return { body: last?.body ?? null, status: null, retry: "" };
+    }
+    if (res.status === 429) {
+      const after = Number(res.headers.get("retry-after"));
+      sternQuiet.set(who, Date.now() + (Number.isFinite(after) && after > 0 ? after : 60) * 1000);
+      return { body: last?.body ?? null, status: 429, retry: retry() };
+    }
+    if (!res.ok) {
+      // a refusal stands for the ttl too, so a wrong key isn't asked again every poll
+      sternCache.set(key, { at: Date.now(), body: null, status: res.status });
+      return { body: null, status: res.status, retry: "" };
+    }
+    const body = (await res.json()) as T;
+    sternCache.set(key, { at: Date.now(), body, status: res.status });
+    return { body, status: res.status, retry: "" };
+  })().finally(() => sternInflight.delete(key));
+  sternInflight.set(key, req);
+  return req;
+}
+
+/** A program's hcb org from its page link (public, no key), in cents. */
+async function hcbOrg(link: string | null): Promise<HcbBalances | null> {
+  const org = link?.replace(/\/+$/, "").split("/").pop();
+  if (!org) return null;
+  const read = await lingering(`hcb-org|${org}`, 5 * 60 * 1000, async () => {
+    const res = await grab(`https://hcb.hackclub.com/api/v3/organizations/${encodeURIComponent(org)}`, {
+      Accept: "application/json",
+    });
+    if (!res.ok) throw new Error(`error ${res.status}`);
+    const b = (await res.json())?.balances ?? {};
+    return { balance: b.balance_cents ?? 0, incoming: b.incoming_balance_cents ?? 0, raised: b.total_raised ?? 0 };
+  });
+  return read.value;
+}
+
+const lingerCache = (g.__deskLinger ??= new Map());
+
+/** A slow read that answers from its last result while a fresh one runs
+ *  behind it. A first read waits a few seconds, then lets the poll go on
+ *  without it; the next poll picks it up. */
+async function lingering<T>(
+  key: string,
+  ttl: number,
+  read: () => Promise<T>
+): Promise<{ value: T | null; error: string | null }> {
+  if (lingerCache.size > 200) lingerCache.clear();
+  let entry = lingerCache.get(key) as LingerEntry<T> | undefined;
+  if (!entry) {
+    entry = { at: 0, value: null, error: null, pending: null };
+    lingerCache.set(key, entry);
+  }
+  const e = entry;
+  if (!e.pending && Date.now() - e.at > ttl) {
+    e.pending = read()
+      .then((value) => {
+        e.value = value;
+        e.error = null;
+      })
+      .catch((err: unknown) => {
+        e.error = err instanceof Error ? (err.name === "TimeoutError" ? "timed out" : err.message) : "unreachable";
+      })
+      .finally(() => {
+        e.at = Date.now();
+        e.pending = null;
+      });
+  }
+  if (e.value === null && e.pending) await Promise.race([e.pending, new Promise((r) => setTimeout(r, 6000))]);
+  return { value: e.value, error: e.value === null ? e.error : null };
+}
+
+interface LingerEntry<T> {
+  at: number;
+  value: T | null;
+  error: string | null;
+  pending: Promise<void> | null;
+}
 
 // ── keyless public feeds ─────────────────────────────────────────────
 // Same contract as INTEGRATIONS but no credentials — random critters,
@@ -1810,9 +2095,11 @@ function cacheKey(userId: number, service: ProxyService, settings: Settings, loc
       ? { calendars: settings.calendars, epic: settings.showEpicInAgenda }
       : service === "macapad"
         ? { ...settings.integrations.macapad, screen }
-        : service in INTEGRATIONS
-          ? settings.integrations[service as IntegrationService]
-          : location;
+        : service === "stern"
+          ? { ...settings.integrations.stern, shown: [...pagePrograms(settings)].sort() }
+          : service in INTEGRATIONS
+            ? settings.integrations[service as IntegrationService]
+            : location;
   return `${userId}|${service}|${JSON.stringify(creds)}`;
 }
 

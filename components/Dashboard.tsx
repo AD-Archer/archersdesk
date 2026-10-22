@@ -704,6 +704,7 @@ export default function Dashboard({
         widget={layout[side]}
         settings={view}
         integrationSettings={savedView}
+        program={view.layout.programs?.[pageIndex] || undefined}
         slot={side}
         style={paneStyle(pageIndex, side)}
       />
@@ -728,7 +729,12 @@ export default function Dashboard({
     return (
       <div className="vrow">
         {activeDual ? (
-          <MainRow row={pageRows[activeDualRow!]!} settings={view} integrationSettings={savedView} />
+          <MainRow
+            row={pageRows[activeDualRow!]!}
+            settings={view}
+            integrationSettings={savedView}
+            program={view.layout.programs?.[pageIndex] || undefined}
+          />
         ) : (
           <div className="main-view">
             {renderSplitPane(pageIndex, "left")}

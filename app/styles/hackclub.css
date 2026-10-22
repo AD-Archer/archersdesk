@@ -259,3 +259,458 @@
 .panel.wide[data-widget^="phantom_"] .w-body > :only-child {
   grid-column: 1 / -1;
 }
+
+/* ── stern: every hack club program, and the page's own ──────────────
+   Cards about you across programs wear hack club red. A program card wears
+   its program's colour instead: ProgramFrame wraps it in .stern-skin, which
+   sets --tint and is otherwise invisible to layout (display: contents), and
+   shows the program's logo and name as the card's heading. Colours come
+   lifted for black from lib/stern.ts (programTint). Plain solid marks:
+   phantom keeps the dither as its own. */
+
+.panel[data-widget^="stern_"] {
+  --tint: var(--hackclub);
+}
+
+.stern-skin {
+  display: contents;
+}
+
+.panel[data-widget^="stern_"] .kstat.short .kstat-value {
+  color: var(--red);
+}
+
+.panel[data-widget^="stern_"] .kstat.warn .kstat-value {
+  color: var(--orange);
+}
+
+/* a program's mark: its logo on a rounded square, or a dot of its colour */
+.stern-mark,
+.stern-dot {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.stern-mark {
+  object-fit: cover;
+  background: var(--fill-2);
+}
+
+.stern-dot {
+  width: 12px;
+  height: 12px;
+  margin: 0 5px;
+  border-radius: 50%;
+  background: var(--c, var(--tint));
+}
+
+.stern-mark.big {
+  width: calc(var(--ps) * 0.17);
+  height: calc(var(--ps) * 0.17);
+  border-radius: 22.5%;
+}
+
+.stern-dot.big {
+  width: calc(var(--ps) * 0.1);
+  height: calc(var(--ps) * 0.1);
+  margin: calc(var(--ps) * 0.035);
+}
+
+.stern-skin .w-label.show {
+  gap: 8px;
+}
+
+/* ── a column a day ── */
+
+.stern-days {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  margin: calc(var(--ps) * 0.045) calc(var(--ps) * 0.03) 0;
+  min-width: 0;
+}
+
+.stern-days-plot {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: calc(var(--ps) * 0.15);
+}
+
+.stern-days-plot span {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 3px 3px 1px 1px;
+  background: var(--tint);
+  opacity: 0.42;
+}
+
+.stern-days-plot span.today {
+  opacity: 1;
+}
+
+.stern-days-x {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-3);
+  white-space: nowrap;
+}
+
+/* ── ranked rows: label, bar, figure ── */
+
+.stern-rank {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 calc(var(--ps) * 0.03);
+  list-style: none;
+  min-height: 0;
+}
+
+.stern-rank li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: calc(var(--ps) * 0.016) 0;
+  font-size: max(14px, calc(var(--ps) * 0.038));
+  line-height: 1.2;
+}
+
+.stern-rank li + li {
+  border-top: 0.5px solid var(--sep);
+}
+
+.stern-rank li.muted {
+  opacity: 0.5;
+}
+
+.stern-rank-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--label-2);
+}
+
+.stern-rank-label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stern-rank-label .stern-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.stern-rank-label .stern-dot {
+  width: 10px;
+  height: 10px;
+  margin: 0 4px;
+}
+
+.stern-rank-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.stern-rank-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--c, var(--tint));
+}
+
+.stern-rank-fill.over {
+  background: var(--red);
+}
+
+.stern-rank b {
+  font-family: var(--round);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* the dates list: no bar for what hasn't started */
+.stern-runs li {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.7fr) auto;
+}
+
+/* ── a run or a budget, as one long bar ── */
+
+.stern-meter-wrap {
+  align-self: stretch;
+  margin: calc(var(--ps) * 0.04) calc(var(--ps) * 0.03) 0;
+}
+
+.stern-meter {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.stern-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--tint);
+}
+
+.stern-meter.over > span {
+  background: var(--red);
+}
+
+.stern-meter-marks {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: max(12px, calc(var(--ps) * 0.032));
+  font-weight: 500;
+  color: var(--label-3);
+  white-space: nowrap;
+}
+
+/* ── the program card: which program this page is ── */
+
+.stern-id {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--ps) * 0.02);
+  min-width: 0;
+  max-width: 100%;
+  text-align: center;
+}
+
+.stern-id-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--round);
+  font-size: calc(var(--ps) * 0.12);
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--tint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stern-id-run {
+  font-size: calc(var(--ps) * 0.048);
+  font-weight: 600;
+  color: var(--label);
+}
+
+.stern-id-run.ended,
+.stern-id-run.undated {
+  color: var(--label-2);
+}
+
+/* the program card names the program itself, so its heading steps back */
+.panel[data-widget="stern_program"] .w-label.show {
+  color: var(--label-3);
+}
+
+/* ── the time line: every program on one axis, today down the middle ── */
+
+.stern-gantt {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ps) * 0.03);
+  padding: 0 calc(var(--ps) * 0.04);
+  min-width: 0;
+}
+
+.stern-gantt-head {
+  font-size: max(15px, calc(var(--ps) * 0.044));
+  color: var(--label-2);
+}
+
+.stern-gantt-head b {
+  font-family: var(--round);
+  font-size: 1.5em;
+  font-weight: 900;
+  color: var(--tint);
+}
+
+.stern-gantt-grid {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ps) * 0.018);
+  padding-top: 22px;
+}
+
+.stern-gantt-month {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding-left: 5px;
+  border-left: 0.5px solid var(--sep);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--label-3);
+}
+
+.stern-gantt-today {
+  position: absolute;
+  top: 16px;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--label);
+  z-index: 1;
+}
+
+.stern-gantt-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: max(26px, calc(var(--ps) * 0.07));
+}
+
+.stern-gantt-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c) 30%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--c);
+}
+
+.stern-gantt-row.live .stern-gantt-bar {
+  background: var(--c);
+}
+
+.stern-gantt-row.ended {
+  opacity: 0.45;
+}
+
+/* the name rides the bar, spilling past its end when the bar is short */
+.stern-gantt-name {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: translateY(-50%);
+  font-size: max(13px, calc(var(--ps) * 0.034));
+  font-weight: 700;
+  color: var(--label);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.stern-gantt-name .stern-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.stern-gantt-name .stern-dot {
+  display: none;
+}
+
+.stern-gantt-name small {
+  font-size: 0.86em;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* ── wide: the hero on the left, the rows or the series on the right ── */
+
+.panel.wide[data-widget^="stern_"] .w-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  align-content: center;
+  align-items: center;
+  justify-items: center;
+  column-gap: calc(var(--ps) * 0.12);
+  padding-left: calc(var(--ps) * 0.04);
+  padding-right: calc(var(--ps) * 0.04);
+}
+
+.panel.wide[data-widget^="stern_"] .w-body > * {
+  grid-column: 1;
+  max-width: 100%;
+}
+
+.panel.wide[data-widget^="stern_"] .w-body > :is(.stern-days, .stern-rank, .klist, .stern-meter-wrap) {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  justify-self: stretch;
+  margin-top: 0;
+}
+
+.panel.wide[data-widget^="stern_"] .w-body > :only-child {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+}
+
+/* the program card, wide: who it is on the left, its run and figures right */
+.panel.wide[data-widget="stern_program"] .w-body > .stern-id {
+  grid-row: 1 / span 2;
+}
+
+.panel.wide[data-widget="stern_program"] .w-body > .stern-meter-wrap {
+  grid-row: 1;
+  align-self: end;
+}
+
+.panel.wide[data-widget="stern_program"] .w-body > .krow-strip {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+}
+
+/* money, wide: the hero and its meter left, what's held right */
+.panel.wide[data-widget="stern_money"] .w-body > .stern-meter-wrap {
+  grid-column: 1;
+  grid-row: auto;
+  margin-top: calc(var(--ps) * 0.04);
+}
+
+.stern-lead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.stern-lead .kstat-value {
+  color: var(--c);
+}
+
+/* a phone in portrait: a wide card is tall and narrow, so its two sides
+   stack, the rows under the hero */
+@media (orientation: portrait) {
+  .panel.wide[data-widget^="stern_"] .w-body {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--ps) * 0.05);
+  }
+
+  .panel.wide[data-widget^="stern_"] .w-body > :is(.stern-days, .stern-rank, .klist, .stern-meter-wrap, .krow-strip) {
+    align-self: stretch;
+    margin-top: 0;
+  }
+}

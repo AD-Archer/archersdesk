@@ -44,9 +44,12 @@ export function jumpPast(jump: PageJump, now: Date): boolean {
   return !!jump.date && `${jump.date}T${jump.at}` < `${localDate(now)}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
-/** Widget page `removed` (1-based) is going: its name goes with it, targets
- *  past it move down one, targets at it go to StandBy. */
-export function dropPage(layout: DeviceLayout, removed: number): Pick<DeviceLayout, "names" | "idle" | "schedule"> {
+/** Widget page `removed` (1-based) is going: its name and program go with
+ *  it, targets past it move down one, targets at it go to StandBy. */
+export function dropPage(
+  layout: DeviceLayout,
+  removed: number
+): Pick<DeviceLayout, "names" | "programs" | "idle" | "schedule"> {
   const shift = (to: PageTarget): PageTarget => {
     const n = Number(to);
     if (!Number.isInteger(n)) return to;
@@ -55,6 +58,7 @@ export function dropPage(layout: DeviceLayout, removed: number): Pick<DeviceLayo
   };
   return {
     names: layout.names.filter((_, i) => i !== removed - 1),
+    programs: (layout.programs ?? []).filter((_, i) => i !== removed - 1),
     idle: { ...layout.idle, to: shift(layout.idle.to) },
     schedule: layout.schedule.map((j) => ({ ...j, to: shift(j.to) })),
   };
@@ -66,6 +70,7 @@ export function copyLayout(layout: DeviceLayout): DeviceLayout {
     rows: [...layout.rows],
     pages: layout.pages.map((p) => [...p]),
     names: [...layout.names],
+    programs: [...(layout.programs ?? [])],
     idle: { ...layout.idle },
     schedule: layout.schedule.map((j) => ({ ...j, days: [...j.days] })),
   };

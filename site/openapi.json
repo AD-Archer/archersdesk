@@ -698,6 +698,7 @@
                             "archerhours",
                             "phantom_traffic",
                             "phantom_active",
+                            "phantom_hours",
                             "phantom_people",
                             "phantom_orders",
                             "phantom_projects",
@@ -705,7 +706,22 @@
                             "phantom_ledger",
                             "phantom_money",
                             "phantom_budget",
-                            "phantom_event"
+                            "phantom_event",
+                            "stern_wps",
+                            "stern_top",
+                            "stern_networth",
+                            "stern_fines",
+                            "stern_timeline",
+                            "stern_margin",
+                            "stern_program",
+                            "stern_program_wps",
+                            "stern_people",
+                            "stern_active",
+                            "stern_review",
+                            "stern_hours",
+                            "stern_orders",
+                            "stern_funnel",
+                            "stern_money"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         },
@@ -765,6 +781,7 @@
                             "archerhours",
                             "phantom_traffic",
                             "phantom_active",
+                            "phantom_hours",
                             "phantom_people",
                             "phantom_orders",
                             "phantom_projects",
@@ -772,7 +789,22 @@
                             "phantom_ledger",
                             "phantom_money",
                             "phantom_budget",
-                            "phantom_event"
+                            "phantom_event",
+                            "stern_wps",
+                            "stern_top",
+                            "stern_networth",
+                            "stern_fines",
+                            "stern_timeline",
+                            "stern_margin",
+                            "stern_program",
+                            "stern_program_wps",
+                            "stern_people",
+                            "stern_active",
+                            "stern_review",
+                            "stern_hours",
+                            "stern_orders",
+                            "stern_funnel",
+                            "stern_money"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         },
@@ -832,6 +864,7 @@
                             "archerhours",
                             "phantom_traffic",
                             "phantom_active",
+                            "phantom_hours",
                             "phantom_people",
                             "phantom_orders",
                             "phantom_projects",
@@ -839,7 +872,22 @@
                             "phantom_ledger",
                             "phantom_money",
                             "phantom_budget",
-                            "phantom_event"
+                            "phantom_event",
+                            "stern_wps",
+                            "stern_top",
+                            "stern_networth",
+                            "stern_fines",
+                            "stern_timeline",
+                            "stern_margin",
+                            "stern_program",
+                            "stern_program_wps",
+                            "stern_people",
+                            "stern_active",
+                            "stern_review",
+                            "stern_hours",
+                            "stern_orders",
+                            "stern_funnel",
+                            "stern_money"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         }
@@ -853,6 +901,11 @@
                     "type": "integer",
                     "minimum": 1,
                     "description": "Where it goes among the pages. Defaults to the end."
+                  },
+                  "program": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "The Hack Club program this page shows, for the stern_ program widgets: its Stern slug, or \"unified:<airtable id>\" for one only Unified knows. \"\" for none."
                   }
                 },
                 "additionalProperties": false
@@ -938,7 +991,7 @@
       "post": {
         "operationId": "update_page",
         "summary": "Update a page",
-        "description": "Rename a page, replace all its rows, or move it. Leave out what shouldn't change. To change a single card use set_card.\n\nNeeds the `screens` scope.",
+        "description": "Rename a page, give it a Hack Club program, replace all its rows, or move it. Leave out what shouldn't change. To change a single card use set_card.\n\nNeeds the `screens` scope.",
         "tags": [
           "screens"
         ],
@@ -1027,6 +1080,7 @@
                             "archerhours",
                             "phantom_traffic",
                             "phantom_active",
+                            "phantom_hours",
                             "phantom_people",
                             "phantom_orders",
                             "phantom_projects",
@@ -1034,7 +1088,22 @@
                             "phantom_ledger",
                             "phantom_money",
                             "phantom_budget",
-                            "phantom_event"
+                            "phantom_event",
+                            "stern_wps",
+                            "stern_top",
+                            "stern_networth",
+                            "stern_fines",
+                            "stern_timeline",
+                            "stern_margin",
+                            "stern_program",
+                            "stern_program_wps",
+                            "stern_people",
+                            "stern_active",
+                            "stern_review",
+                            "stern_hours",
+                            "stern_orders",
+                            "stern_funnel",
+                            "stern_money"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         },
@@ -1094,6 +1163,7 @@
                             "archerhours",
                             "phantom_traffic",
                             "phantom_active",
+                            "phantom_hours",
                             "phantom_people",
                             "phantom_orders",
                             "phantom_projects",
@@ -1101,7 +1171,22 @@
                             "phantom_ledger",
                             "phantom_money",
                             "phantom_budget",
-                            "phantom_event"
+                            "phantom_event",
+                            "stern_wps",
+                            "stern_top",
+                            "stern_networth",
+                            "stern_fines",
+                            "stern_timeline",
+                            "stern_margin",
+                            "stern_program",
+                            "stern_program_wps",
+                            "stern_people",
+                            "stern_active",
+                            "stern_review",
+                            "stern_hours",
+                            "stern_orders",
+                            "stern_funnel",
+                            "stern_money"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         },
@@ -1161,6 +1246,7 @@
                             "archerhours",
                             "phantom_traffic",
                             "phantom_active",
+                            "phantom_hours",
                             "phantom_people",
                             "phantom_orders",
                             "phantom_projects",
@@ -1168,7 +1254,22 @@
                             "phantom_ledger",
                             "phantom_money",
                             "phantom_budget",
-                            "phantom_event"
+                            "phantom_event",
+                            "stern_wps",
+                            "stern_top",
+                            "stern_networth",
+                            "stern_fines",
+                            "stern_timeline",
+                            "stern_margin",
+                            "stern_program",
+                            "stern_program_wps",
+                            "stern_people",
+                            "stern_active",
+                            "stern_review",
+                            "stern_hours",
+                            "stern_orders",
+                            "stern_funnel",
+                            "stern_money"
                           ],
                           "description": "A widget; list_widgets describes them all."
                         }
@@ -1183,6 +1284,11 @@
                     "type": "integer",
                     "minimum": 1,
                     "description": "Move the page here among the pages."
+                  },
+                  "program": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "The Hack Club program this page shows, for the stern_ program widgets: its Stern slug, or \"unified:<airtable id>\" for one only Unified knows. \"\" for none."
                   }
                 },
                 "required": [
@@ -1472,6 +1578,7 @@
                       "archerhours",
                       "phantom_traffic",
                       "phantom_active",
+                      "phantom_hours",
                       "phantom_people",
                       "phantom_orders",
                       "phantom_projects",
@@ -1479,7 +1586,22 @@
                       "phantom_ledger",
                       "phantom_money",
                       "phantom_budget",
-                      "phantom_event"
+                      "phantom_event",
+                      "stern_wps",
+                      "stern_top",
+                      "stern_networth",
+                      "stern_fines",
+                      "stern_timeline",
+                      "stern_margin",
+                      "stern_program",
+                      "stern_program_wps",
+                      "stern_people",
+                      "stern_active",
+                      "stern_review",
+                      "stern_hours",
+                      "stern_orders",
+                      "stern_funnel",
+                      "stern_money"
                     ],
                     "description": "A widget; list_widgets describes them all."
                   }
@@ -1655,6 +1777,7 @@
                           "archerhours",
                           "phantom_traffic",
                           "phantom_active",
+                          "phantom_hours",
                           "phantom_people",
                           "phantom_orders",
                           "phantom_projects",
@@ -1662,7 +1785,22 @@
                           "phantom_ledger",
                           "phantom_money",
                           "phantom_budget",
-                          "phantom_event"
+                          "phantom_event",
+                          "stern_wps",
+                          "stern_top",
+                          "stern_networth",
+                          "stern_fines",
+                          "stern_timeline",
+                          "stern_margin",
+                          "stern_program",
+                          "stern_program_wps",
+                          "stern_people",
+                          "stern_active",
+                          "stern_review",
+                          "stern_hours",
+                          "stern_orders",
+                          "stern_funnel",
+                          "stern_money"
                         ],
                         "description": "A widget; list_widgets describes them all."
                       },
@@ -1722,6 +1860,7 @@
                           "archerhours",
                           "phantom_traffic",
                           "phantom_active",
+                          "phantom_hours",
                           "phantom_people",
                           "phantom_orders",
                           "phantom_projects",
@@ -1729,7 +1868,22 @@
                           "phantom_ledger",
                           "phantom_money",
                           "phantom_budget",
-                          "phantom_event"
+                          "phantom_event",
+                          "stern_wps",
+                          "stern_top",
+                          "stern_networth",
+                          "stern_fines",
+                          "stern_timeline",
+                          "stern_margin",
+                          "stern_program",
+                          "stern_program_wps",
+                          "stern_people",
+                          "stern_active",
+                          "stern_review",
+                          "stern_hours",
+                          "stern_orders",
+                          "stern_funnel",
+                          "stern_money"
                         ],
                         "description": "A widget; list_widgets describes them all."
                       },
@@ -1789,6 +1943,7 @@
                           "archerhours",
                           "phantom_traffic",
                           "phantom_active",
+                          "phantom_hours",
                           "phantom_people",
                           "phantom_orders",
                           "phantom_projects",
@@ -1796,7 +1951,22 @@
                           "phantom_ledger",
                           "phantom_money",
                           "phantom_budget",
-                          "phantom_event"
+                          "phantom_event",
+                          "stern_wps",
+                          "stern_top",
+                          "stern_networth",
+                          "stern_fines",
+                          "stern_timeline",
+                          "stern_margin",
+                          "stern_program",
+                          "stern_program_wps",
+                          "stern_people",
+                          "stern_active",
+                          "stern_review",
+                          "stern_hours",
+                          "stern_orders",
+                          "stern_funnel",
+                          "stern_money"
                         ],
                         "description": "A widget; list_widgets describes them all."
                       }

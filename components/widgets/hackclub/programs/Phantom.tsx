@@ -20,7 +20,17 @@ interface PhantomStats {
     visitDuration: number;
     days: Array<{ day: string; n: number }>;
   } | null;
-  active: { today: number; yesterday: number; week: number; month: number; days: number[] };
+  active: {
+    today: number;
+    yesterday: number;
+    week: number;
+    month: number;
+    days: number[];
+    /** Hackatime time across everyone active, in seconds, on the same days
+     *  as the counts (lib/server/activity.ts over there); missing from an
+     *  older phantom. */
+    seconds?: { today: number; yesterday: number; week: number; month: number; days: number[] };
+  };
   people: { total: number; week: number; days: number[] };
   orders: { byState: Record<string, number>; open: number; week: number; days: number[] };
   projects: { all: number; draft: number; review: number; approved: number; rejected: number };
@@ -80,6 +90,12 @@ const usd = (cents: number) => `${cents < 0 ? "-" : ""}$${Math.round(Math.abs(ce
 
 /** Cents as a rate, cents shown only when there are some: $5, $2.50 */
 const rate = (cents: number) => `$${cents % 100 ? (cents / 100).toFixed(2) : cents / 100}`;
+
+/** Seconds as hours, a decimal only while it still matters: 3.5, 412 */
+function hours(seconds: number) {
+  const h = seconds / 3600;
+  return h < 10 ? (Math.round(h * 10) / 10).toString() : n(Math.round(h));
+}
 
 /** seconds as a person says them: 4m 16s */
 function duration(seconds: number) {
@@ -150,6 +166,32 @@ export function PhantomActiveWidget(props: WidgetProps) {
           <DitherBars days={d.active.days} label="Active a day" />
         </>
       )}
+    </PhantomFrame>
+  );
+}
+
+/** The daily active count's other half: how long everyone coding today has
+ *  coded, by Hackatime, and how that splits per person. */
+export function PhantomHoursWidget(props: WidgetProps) {
+  return (
+    <PhantomFrame {...props} widget="phantom_hours" label="Phantom hours coded">
+      {(d) => {
+        const s = d.active.seconds;
+        if (!s) return <Empty>This Phantom doesn&rsquo;t send hours coded yet</Empty>;
+        return (
+          <>
+            <BigStat value={hours(s.today)} unit="hours today" caption={`${hours(s.yesterday)} yesterday`} />
+            <StatRow
+              items={[
+                { label: "This week", value: hours(s.week) },
+                { label: "This month", value: hours(s.month) },
+                { label: "Each, today", value: d.active.today > 0 ? `${hours(s.today / d.active.today)}h` : "–" },
+              ]}
+            />
+            <DitherBars days={s.days.map((x) => Math.round(x / 360) / 10)} label="Hours a day" />
+          </>
+        );
+      }}
     </PhantomFrame>
   );
 }

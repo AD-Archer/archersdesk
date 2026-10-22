@@ -22,20 +22,27 @@ export function MI({ name, className }: { name: string; className?: string }) {
 // the Shell's icon, so an Empty inside it can show the widget's glyph
 const ShellIcon = createContext<string | undefined>(undefined);
 
-/** Tinted heading + centered body — the frame every widget lives in. */
+/** Tinted heading + centered body — the frame every widget lives in. The
+ *  heading is for screen readers unless `show` (when it says something the
+ *  content can't, like whose program this is); `mark` stands in for the
+ *  glyph there, a program's logo say. */
 export function Shell({
   label,
   icon,
+  mark,
+  show = false,
   children,
 }: {
   label: React.ReactNode;
   icon?: string;
+  mark?: React.ReactNode;
+  show?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <ShellIcon.Provider value={icon}>
-      <span className={`w-label${icon ? " has-icon" : ""}`}>
-        {icon && <MI name={icon} />}
+      <span className={`w-label${icon || mark ? " has-icon" : ""}${show ? " show" : ""}`}>
+        {mark ?? (icon && <MI name={icon} />)}
         {label}
       </span>
       <div className="w-body">{children}</div>

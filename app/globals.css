@@ -38,6 +38,8 @@
   --pink: #ff375f;
   --brown: #ac8e68;
   --gray: #8e8e93;
+  /* hack club's own red: the stern widgets that span every program */
+  --hackclub: #ec3750;
 
   /* the current widget's tint; panels override it */
   --tint: var(--blue);

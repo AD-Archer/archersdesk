@@ -55,6 +55,7 @@ export const WIDGETS = [
   "archerhours",
   "phantom_traffic",
   "phantom_active",
+  "phantom_hours",
   "phantom_people",
   "phantom_orders",
   "phantom_projects",
@@ -63,9 +64,39 @@ export const WIDGETS = [
   "phantom_money",
   "phantom_budget",
   "phantom_event",
+  // hack club programs, from stern's platform api: you across every program…
+  "stern_wps",
+  "stern_top",
+  "stern_networth",
+  "stern_fines",
+  "stern_timeline",
+  "stern_margin",
+  // …and the page's own program (settings → layout → program)
+  "stern_program",
+  "stern_program_wps",
+  "stern_people",
+  "stern_active",
+  "stern_review",
+  "stern_hours",
+  "stern_orders",
+  "stern_funnel",
+  "stern_money",
 ] as const;
 
 export type WidgetName = (typeof WIDGETS)[number];
+
+/** Widgets that show the page's program, not every program at once. */
+export const PROGRAM_WIDGETS: readonly WidgetName[] = [
+  "stern_program",
+  "stern_program_wps",
+  "stern_people",
+  "stern_active",
+  "stern_review",
+  "stern_hours",
+  "stern_orders",
+  "stern_funnel",
+  "stern_money",
+];
 
 /** Picker categories, in display order. */
 export const WIDGET_CATEGORIES = [
@@ -75,6 +106,8 @@ export const WIDGET_CATEGORIES = [
   { key: "status", label: "status signs" },
   { key: "accounts", label: "your accounts" },
   { key: "feeds", label: "feeds & fun" },
+  { key: "programs", label: "hack club programs" },
+  { key: "program", label: "this page's program" },
   { key: "archer", label: "archer only" },
 ] as const;
 
@@ -137,6 +170,7 @@ export const WIDGET_INFO: Record<
   archerhours: { label: "archer hours", blurb: "weighted grants + hours shipped", category: "archer", icon: "rocket_launch" },
   phantom_traffic: { label: "phantom visitors", blurb: "people on the site, last 7 days", category: "archer", icon: "visibility" },
   phantom_active: { label: "phantom daily active", blurb: "coding today, by hackatime", category: "archer", icon: "bolt" },
+  phantom_hours: { label: "phantom hours coded", blurb: "hours coded today, by hackatime", category: "archer", icon: "schedule" },
   phantom_people: { label: "phantom people", blurb: "everyone signed up", category: "archer", icon: "group" },
   phantom_orders: { label: "phantom orders", blurb: "shop orders to send", category: "archer", icon: "shopping_cart" },
   phantom_projects: { label: "phantom projects", blurb: "drafts, in review, approved", category: "archer", icon: "folder" },
@@ -145,6 +179,21 @@ export const WIDGET_INFO: Record<
   phantom_money: { label: "phantom money", blurb: "hcb against the fragments owed", category: "archer", icon: "payments" },
   phantom_budget: { label: "phantom budget", blurb: "how much of the event is funded", category: "archer", icon: "attach_money" },
   phantom_event: { label: "phantom event", blurb: "who has the hours for an invite", category: "archer", icon: "event" },
+  stern_wps: { label: "your wps", blurb: "weighted projects, all programs", category: "programs", icon: "rocket_launch" },
+  stern_top: { label: "top programs", blurb: "which give you the most wps", category: "programs", icon: "equalizer" },
+  stern_networth: { label: "net worth", blurb: "your hcb orgs, your share", category: "programs", icon: "savings" },
+  stern_fines: { label: "fines", blurb: "open, fixed, and by program", category: "programs", icon: "flag" },
+  stern_timeline: { label: "program dates", blurb: "what's live, what ends next", category: "programs", icon: "calendar_month" },
+  stern_margin: { label: "earned vs spent", blurb: "each program against its budget", category: "programs", icon: "payments" },
+  stern_program: { label: "program", blurb: "its name, dates and days left", category: "program", icon: "dashboard" },
+  stern_program_wps: { label: "program wps", blurb: "its wps, yours, and its fines", category: "program", icon: "trending_up" },
+  stern_people: { label: "program people", blurb: "who joined, and when", category: "program", icon: "group" },
+  stern_active: { label: "program active", blurb: "builders posting devlogs", category: "program", icon: "bolt" },
+  stern_review: { label: "review queue", blurb: "waiting, oldest, approval rate", category: "program", icon: "hourglass_top" },
+  stern_hours: { label: "program hours", blurb: "shipped, granted, still owed", category: "program", icon: "schedule" },
+  stern_orders: { label: "program orders", blurb: "shop orders to send", category: "program", icon: "shopping_cart" },
+  stern_funnel: { label: "program funnel", blurb: "joined to first prize", category: "program", icon: "checklist" },
+  stern_money: { label: "program money", blurb: "spent against its budget", category: "program", icon: "attach_money" },
 };
 
 export interface Alarm {
@@ -335,6 +384,9 @@ export interface DeviceLayout {
   rows: LayoutRow[]; // legacy page-1 shape
   pages: LayoutRow[][]; // 1..MAX_WIDGET_PAGES widget pages
   names: string[]; // each page's name, by index ("" = "Page 2")
+  /** each page's hack club program, by index: a stern slug, or "unified:rec…"
+   *  for one only unified knows; "" = none. Program widgets show this one. */
+  programs: string[];
   /** after `minutes` untouched (0 = never), back to `to` */
   idle: { minutes: number; to: PageTarget };
   schedule: PageJump[];
@@ -392,6 +444,7 @@ export interface Settings {
     navidrome: { url: string; username: string; password: string };
     macapad: { url: string; token: string };
     phantom: { url: string; token: string; hcb: string }; // phantom's /api/stats + its STATS_TOKEN, and its hcb org
+    stern: { url: string; token: string; hcbUser: string }; // stern's platform api + a stern_admin_ key, and your hcb user (usr_…) for net worth
   };
   embeds: EmbedFeed[]; // top-level, not an "integration" — no server fetch, the widget reads it directly
   macapad: MacapadPads; // owned by /api/macapad; full settings writes never change it

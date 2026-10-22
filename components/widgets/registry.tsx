@@ -25,6 +25,7 @@ import { ArcherHoursWidget } from "./hackclub/ArcherHours";
 import {
   PhantomActiveWidget,
   PhantomFunnelWidget,
+  PhantomHoursWidget,
   PhantomLedgerWidget,
   PhantomMoneyWidget,
   PhantomBudgetWidget,
@@ -34,6 +35,25 @@ import {
   PhantomProjectsWidget,
   PhantomTrafficWidget,
 } from "./hackclub/programs/Phantom";
+import {
+  SternFinesWidget,
+  SternMarginWidget,
+  SternNetWorthWidget,
+  SternTimelineWidget,
+  SternTopWidget,
+  SternWpsWidget,
+} from "./hackclub/stern/You";
+import {
+  SternActiveWidget,
+  SternFunnelWidget,
+  SternHoursWidget,
+  SternMoneyWidget,
+  SternOrdersWidget,
+  SternPeopleWidget,
+  SternProgramWidget,
+  SternProgramWpsWidget,
+  SternReviewWidget,
+} from "./hackclub/stern/Program";
 import {
   AwayUntilWidget,
   DoNotDisturbWidget,
@@ -69,6 +89,8 @@ export interface WidgetProps {
   settings: ViewSettings;
   integrationSettings?: ViewSettings;
   wide?: boolean;
+  /** the page's hack club program (DeviceLayout.programs); program widgets show it */
+  program?: string;
 }
 
 // name → component. to add a widget: entry in lib/types WIDGETS + WIDGET_INFO,
@@ -127,6 +149,7 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   archerhours: ArcherHoursWidget,
   phantom_traffic: PhantomTrafficWidget,
   phantom_active: PhantomActiveWidget,
+  phantom_hours: PhantomHoursWidget,
   phantom_people: PhantomPeopleWidget,
   phantom_orders: PhantomOrdersWidget,
   phantom_projects: PhantomProjectsWidget,
@@ -135,23 +158,40 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   phantom_money: PhantomMoneyWidget,
   phantom_budget: PhantomBudgetWidget,
   phantom_event: PhantomEventWidget,
+  stern_wps: SternWpsWidget,
+  stern_top: SternTopWidget,
+  stern_networth: SternNetWorthWidget,
+  stern_fines: SternFinesWidget,
+  stern_timeline: SternTimelineWidget,
+  stern_margin: SternMarginWidget,
+  stern_program: SternProgramWidget,
+  stern_program_wps: SternProgramWpsWidget,
+  stern_people: SternPeopleWidget,
+  stern_active: SternActiveWidget,
+  stern_review: SternReviewWidget,
+  stern_hours: SternHoursWidget,
+  stern_orders: SternOrdersWidget,
+  stern_funnel: SternFunnelWidget,
+  stern_money: SternMoneyWidget,
 };
 
 export function MainRow({
   row,
   settings,
   integrationSettings,
+  program,
 }: {
   row: LayoutRow;
   settings: ViewSettings;
   integrationSettings?: ViewSettings;
+  program?: string;
 }) {
   if (row.type === "dual") {
     const Widget = REGISTRY[row.widget] ?? ClockWidget;
     return (
       <div className="main-view">
         <section className="panel wide" data-widget={row.widget}>
-          <Widget settings={settings} integrationSettings={integrationSettings} wide />
+          <Widget settings={settings} integrationSettings={integrationSettings} program={program} wide />
         </section>
       </div>
     );
@@ -159,8 +199,8 @@ export function MainRow({
 
   return (
     <div className="main-view">
-      <WidgetPanel widget={row.left} settings={settings} integrationSettings={integrationSettings} slot="left" />
-      <WidgetPanel widget={row.right} settings={settings} integrationSettings={integrationSettings} slot="right" />
+      <WidgetPanel widget={row.left} settings={settings} integrationSettings={integrationSettings} program={program} slot="left" />
+      <WidgetPanel widget={row.right} settings={settings} integrationSettings={integrationSettings} program={program} slot="right" />
     </div>
   );
 }
@@ -169,19 +209,21 @@ export function WidgetPanel({
   widget,
   settings,
   integrationSettings,
+  program,
   slot,
   style,
 }: {
   widget: WidgetName;
   settings: ViewSettings;
   integrationSettings?: ViewSettings;
+  program?: string;
   slot: "left" | "right";
   style?: CSSProperties;
 }) {
   const Widget = REGISTRY[widget] ?? ClockWidget;
   return (
     <section className="panel" data-slot={slot} data-widget={widget} style={style}>
-      <Widget settings={settings} integrationSettings={integrationSettings} />
+      <Widget settings={settings} integrationSettings={integrationSettings} program={program} />
     </section>
   );
 }

@@ -64,6 +64,7 @@ const DEFAULT_LAYOUT: Device["layout"] = {
     ],
   ],
   names: ["", ""],
+  programs: ["", ""],
   idle: { minutes: 0, to: "standby" },
   schedule: [],
 };
@@ -123,6 +124,7 @@ export const DEFAULT_SETTINGS: Settings = {
         rows: [...DEFAULT_LAYOUT.rows],
         pages: DEFAULT_LAYOUT.pages.map((p) => [...p]),
         names: [...DEFAULT_LAYOUT.names],
+        programs: [...DEFAULT_LAYOUT.programs],
       },
       standby: { showTemp: true, showAlarm: true },
       night: { enabled: true, pausedAt: null },
@@ -152,6 +154,7 @@ export const DEFAULT_SETTINGS: Settings = {
     navidrome: { url: "", username: "", password: "" },
     macapad: { url: "", token: "" },
     phantom: { url: "", token: "", hcb: "" },
+    stern: { url: "", token: "", hcbUser: "" },
   },
   embeds: [],
   macapad: {
@@ -549,13 +552,21 @@ function sanitizeSchedule(v: unknown, pageCount: number): PageJump[] {
 function sanitizeLayout(layout: Record<string, unknown>): DeviceLayout {
   const pages = sanitizePages(layout);
   const names = Array.isArray(layout.names) ? layout.names : [];
+  const programs = Array.isArray(layout.programs) ? layout.programs : [];
   return {
     rows: sanitizeRows(layout),
     pages,
     names: pages.map((_, i) => str(names[i], "", 30)),
+    programs: pages.map((_, i) => programKey(programs[i])),
     idle: sanitizeIdle(layout.idle, pages.length),
     schedule: sanitizeSchedule(layout.schedule, pages.length),
   };
+}
+
+/** A page's program: a stern slug, or "unified:rec…" (an airtable id). */
+function programKey(v: unknown): string {
+  const k = str(v, "", 80).trim();
+  return /^(unified:rec[A-Za-z0-9]{14}|[a-z0-9][a-z0-9_-]{0,63})$/.test(k) ? k : "";
 }
 
 function sanitizePresetsValue(v: unknown): LayoutRow[][] {
@@ -622,6 +633,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
   const navidrome = isRecord(s.navidrome) ? s.navidrome : {};
   const macapad = isRecord(s.macapad) ? s.macapad : {};
   const phantom = isRecord(s.phantom) ? s.phantom : {};
+  const stern = isRecord(s.stern) ? s.stern : {};
   const symbols = Array.isArray(stocks.symbols)
     ? stocks.symbols
         .map((x) => String(x).toUpperCase().replace(/[^A-Z0-9.^=-]/g, "").slice(0, 12))
@@ -692,6 +704,12 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
       url: sanitizeUrl(str(phantom.url, "", 200)),
       token: secret(phantom.token, "", 200),
       hcb: str(phantom.hcb, "", 200),
+    },
+    stern: {
+      url: sanitizeUrl(str(stern.url, "", 200)),
+      token: secret(stern.token, "", 200),
+      // a usr_… id, or the share link stern's net worth page gives
+      hcbUser: (str(stern.hcbUser, "", 200).match(/usr_[A-Za-z0-9]+/) ?? [""])[0],
     },
   };
 }
@@ -831,6 +849,10 @@ export function preserveSavedSecrets(current: Settings, incoming: Settings): Set
       phantom: {
         ...next.phantom,
         token: keepWhenStale(next.phantom.token, cur.phantom.token, stale),
+      },
+      stern: {
+        ...next.stern,
+        token: keepWhenStale(next.stern.token, cur.stern.token, stale),
       },
     },
   };
