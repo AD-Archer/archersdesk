@@ -182,17 +182,19 @@ export function MainRow({
   settings,
   integrationSettings,
   program,
+  style,
 }: {
   row: LayoutRow;
   settings: ViewSettings;
   integrationSettings?: ViewSettings;
   program?: string;
+  style?: CSSProperties;
 }) {
   if (row.type === "dual") {
     const Widget = REGISTRY[row.widget] ?? ClockWidget;
     return (
       <div className="main-view">
-        <section className="panel wide" data-widget={row.widget}>
+        <section className="panel wide" data-widget={row.widget} style={style}>
           <Widget settings={settings} integrationSettings={integrationSettings} program={program} wide />
         </section>
       </div>

@@ -89,6 +89,7 @@ export default function Dashboard({
   const start = useRef<{
     x: number;
     y: number;
+    t: number;
     id: number;
     axis: "h" | "v" | null;
     side: PaneSide;
@@ -600,8 +601,15 @@ export default function Dashboard({
     const pageRows = pages[pageIndex] ?? [];
     const current = activeDualRows[pageIndex] ?? (side === "left" ? leftRows[pageIndex] : rightRows[pageIndex]) ?? 0;
     const next = wrapRowIndex(current + delta, pageRows);
+    const leavingDual = activeDualRows[pageIndex] !== null && activeDualRows[pageIndex] !== undefined;
     if (pageRows[next]?.type === "dual") {
       setActiveDualRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
+    } else if (leavingDual) {
+      // off a wide row both halves land on the next row together, rather
+      // than one half moving on and the other showing whatever it had before
+      setActiveDualRows((all) => all.map((v, i) => (i === pageIndex ? null : v)));
+      setLeftRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
+      setRightRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
     } else if (side === "left") {
       setActiveDualRows((all) => all.map((v, i) => (i === pageIndex ? null : v)));
       setLeftRows((all) => all.map((v, i) => (i === pageIndex ? next : v)));
@@ -626,14 +634,24 @@ export default function Dashboard({
     if (control && !control.closest("[data-swipe-through]")) return;
     // swipes starting on a panel steer that panel's stack; swipes starting on
     // the background (screen edges included) steer whichever half they're in
+    // — in portrait the halves stack, so that's the top or bottom half
     const slot = (e.target as HTMLElement).closest<HTMLElement>("[data-slot]")?.dataset.slot;
+    const portrait = window.matchMedia("(orientation: portrait)").matches;
     const side: PaneSide =
       slot === "right" || slot === "left"
         ? (slot as PaneSide)
-        : e.clientX > window.innerWidth / 2
+        : (portrait ? e.clientY > window.innerHeight / 2 : e.clientX > window.innerWidth / 2)
           ? "right"
           : "left";
-    start.current = { x: e.clientX, y: e.clientY, id: e.pointerId, axis: null, side, onControl: Boolean(control) };
+    start.current = {
+      x: e.clientX,
+      y: e.clientY,
+      t: e.timeStamp,
+      id: e.pointerId,
+      axis: null,
+      side,
+      onControl: Boolean(control),
+    };
   }
   function onPointerMove(e: React.PointerEvent) {
     const s = start.current;
@@ -671,12 +689,14 @@ export default function Dashboard({
     start.current = null;
     setDrag(null);
     setDragY(null);
+    // a quick flick counts even when it's short of the distance a slow drag needs
+    const flick = e.timeStamp - s.t < 250 ? 24 : Infinity;
     if (axis === "h") {
-      const threshold = Math.min(80, window.innerWidth * 0.1);
+      const threshold = Math.min(80, window.innerWidth * 0.1, flick);
       if (dx < -threshold) turnPage(1);
       else if (dx > threshold) turnPage(-1);
     } else if (axis === "v" && onWidgetPage) {
-      const threshold = Math.min(70, window.innerHeight * 0.12);
+      const threshold = Math.min(70, window.innerHeight * 0.12, flick);
       if (dy < -threshold) movePaneRow(page - 1, s.side, 1);
       else if (dy > threshold) movePaneRow(page - 1, s.side, -1);
     } else if (!axis && !s.onControl) {
@@ -692,6 +712,12 @@ export default function Dashboard({
 
   function paneStyle(pageIndex: number, side: PaneSide) {
     if (!dragY || dragY.pageIndex !== pageIndex || dragY.side !== side) return undefined;
+    return { transform: `translateY(${dragY.dy}px)` };
+  }
+
+  // a wide row is both halves at once, so it follows a drag from either
+  function dualStyle(pageIndex: number) {
+    if (!dragY || dragY.pageIndex !== pageIndex) return undefined;
     return { transform: `translateY(${dragY.dy}px)` };
   }
 
@@ -734,6 +760,7 @@ export default function Dashboard({
             settings={view}
             integrationSettings={savedView}
             program={view.layout.programs?.[pageIndex] || undefined}
+            style={dualStyle(pageIndex)}
           />
         ) : (
           <div className="main-view">
