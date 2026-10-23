@@ -1,12 +1,12 @@
 "use client";
 
 // You across every hack club program you own: your weighted projects (wps),
-// which programs bring them in, your hcb net worth, your fines, when each
+// this week's against last week's, which programs bring them in, your hcb net worth, your fines, when each
 // program runs, and whether each one has spent more than it earned. Unified
 // (stern's /me) and hcb are the sources; see lib/stern.ts.
 
 import type { CSSProperties } from "react";
-import { programRun, runLine, type DeskProgram, type UnifiedProgram } from "@/lib/stern";
+import { countFines, sharedPrograms, programRun, runLine, wpWeeks, type DeskProgram, type UnifiedProgram } from "@/lib/stern";
 import { BigStat, Empty, StatRow } from "../../kit";
 import type { WidgetProps } from "../../registry";
 import { DayBars, ProgramMark, RankList, SternFrame, cents, n, pct, plural, usd, wp } from "./frame";
@@ -34,6 +34,49 @@ export function SternWpsWidget(props: WidgetProps) {
               ]}
             />
             <DayBars days={d.me!.wpDays} label="your WPs a day" />
+          </>
+        );
+      }}
+    </SternFrame>
+  );
+}
+
+/** Your week: wps in the last seven days against the seven before, and what
+ *  they're worth. Wide, the two weeks side by side. */
+export function SternWeekWidget(props: WidgetProps) {
+  return (
+    <SternFrame {...props} widget="stern_week">
+      {(d) => {
+        if (!d.me?.wps) return <Empty>{d.meReason ?? "Reading Unified…"}</Empty>;
+        const w = wpWeeks(d.me);
+        const most = Math.max(w.thisWeek, w.lastWeek, 0.1);
+        return (
+          <>
+            <BigStat
+              value={wp(w.thisWeek)}
+              unit="WPs"
+              caption={
+                w.change === null
+                  ? w.lastWeek === 0 && w.thisWeek === 0 ? "None this week or last" : "None last week"
+                  : `${w.change >= 0 ? "Up" : "Down"} ${pct(Math.abs(w.change))} on last week`
+              }
+            />
+            <StatRow
+              items={[
+                { label: "Made this week", value: w.thisUsd === null ? "—" : usd(w.thisUsd) },
+                { label: "Last week", value: wp(w.lastWeek) },
+                { label: "Made last week", value: w.lastUsd === null ? "—" : usd(w.lastUsd) },
+              ]}
+            />
+            {props.wide && (
+              <RankList
+                rows={[
+                  { key: "this", label: "This week", share: w.thisWeek / most, value: `${wp(w.thisWeek)}${w.thisUsd === null ? "" : ` · ${usd(w.thisUsd)}`}` },
+                  { key: "last", label: "Last week", share: w.lastWeek / most, value: `${wp(w.lastWeek)}${w.lastUsd === null ? "" : ` · ${usd(w.lastUsd)}`}`, muted: true },
+                ]}
+              />
+            )}
+            <DayBars days={w.days} label="your WPs a day" />
           </>
         );
       }}
@@ -125,32 +168,27 @@ export function SternNetWorthWidget(props: WidgetProps) {
   );
 }
 
-/** Fines on your programs' projects: the open ones are what's owed; fixed
- *  and not-a-fine ones are done with. Wide, which programs they're on. */
+/** Your fines: how many, and what they come to, less those on programs
+ *  you share (settings → accounts → stern).
+ *  Wide, which programs they're on. */
 export function SternFinesWidget(props: WidgetProps) {
   return (
     <SternFrame {...props} widget="stern_fines">
       {(d) => {
         if (!d.me?.author) return <Empty>{d.meReason ?? "Reading Unified…"}</Empty>;
-        const by = (status: string) => d.me!.fines.byStatus.find((s) => s.status === status) ?? { count: 0, amount: 0 };
-        const open = by("Fined");
+        const hidden = sharedPrograms(props.settings.integrations.stern?.shared);
+        const f = countFines(d, hidden);
         const fined = yours(d.programs)
-          .filter((p) => p.unified.fines.count > 0)
-          .sort((a, b) => b.unified.fines.openAmount - a.unified.fines.openAmount || b.unified.fines.count - a.unified.fines.count);
-        const most = Math.max(1, ...fined.map((p) => p.unified.fines.openAmount));
+          .filter((p) => p.unified.fines.count > 0 && !hidden.has(p.key))
+          .sort((a, b) => b.unified.fines.count - a.unified.fines.count || b.unified.fines.amount - a.unified.fines.amount);
+        const most = Math.max(1, ...fined.map((p) => p.unified.fines.count));
         return (
           <>
-            <BigStat
-              className={open.count > 0 ? "warn" : undefined}
-              value={n(open.count)}
-              unit={open.count === 1 ? "open fine" : "open fines"}
-              caption={open.count ? `${usd(open.amount)} owed` : "Nothing to fix"}
-            />
+            <BigStat value={n(f.count)} unit={f.count === 1 ? "fine" : "fines"} caption={f.count ? `${usd(f.amount)} in all` : "None"} />
             <StatRow
               items={[
-                { label: "Fixed", value: n(by("Fixed").count) },
-                { label: "Not a fine", value: n(by("Not Fine").count) },
-                { label: "In all", value: n(d.me.fines.count) },
+                { label: "Programs fined", value: n(fined.length) },
+                ...(f.leftOut ? [{ label: "Left out", value: n(f.leftOut) }] : []),
               ]}
             />
             {props.wide && fined.length > 0 && (
@@ -160,9 +198,8 @@ export function SternFinesWidget(props: WidgetProps) {
                   label: p.name,
                   mark: <ProgramMark p={p} />,
                   color: p.color,
-                  share: p.unified.fines.openAmount / most,
-                  value: p.unified.fines.open ? `${n(p.unified.fines.open)} · ${usd(p.unified.fines.openAmount)}` : `${n(p.unified.fines.count)} done`,
-                  muted: p.unified.fines.open === 0,
+                  share: p.unified.fines.count / most,
+                  value: `${n(p.unified.fines.count)} · ${usd(p.unified.fines.amount)}`,
                 }))}
               />
             )}
@@ -287,7 +324,10 @@ export function SternMarginWidget(props: WidgetProps) {
     <SternFrame {...props} widget="stern_margin">
       {(d) => {
         if (!d.me?.author) return <Empty>{d.meReason ?? "Reading Unified…"}</Empty>;
-        const counted = yours(d.programs).filter((p) => p.unified.money.spent > 0 || p.unified.money.allowance > 0);
+        const shared = sharedPrograms(props.settings.integrations.stern?.shared);
+        const counted = yours(d.programs).filter(
+          (p) => !shared.has(p.key) && (p.unified.money.spent > 0 || p.unified.money.allowance > 0)
+        );
         if (!counted.length) return <Empty>Nothing&rsquo;s been spent on your programs yet</Empty>;
         const spent = counted.reduce((a, p) => a + p.unified.money.spent, 0);
         const budget = counted.reduce((a, p) => a + p.unified.money.allowance, 0);

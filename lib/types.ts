@@ -66,6 +66,7 @@ export const WIDGETS = [
   "phantom_event",
   // hack club programs, from stern's platform api: you across every program…
   "stern_wps",
+  "stern_week",
   "stern_top",
   "stern_networth",
   "stern_fines",
@@ -180,9 +181,10 @@ export const WIDGET_INFO: Record<
   phantom_budget: { label: "phantom budget", blurb: "how much of the event is funded", category: "archer", icon: "attach_money" },
   phantom_event: { label: "phantom event", blurb: "who has the hours for an invite", category: "archer", icon: "event" },
   stern_wps: { label: "your wps", blurb: "weighted projects, all programs", category: "programs", icon: "rocket_launch" },
+  stern_week: { label: "your week", blurb: "wps and money, against last week", category: "programs", icon: "date_range" },
   stern_top: { label: "top programs", blurb: "which give you the most wps", category: "programs", icon: "equalizer" },
   stern_networth: { label: "net worth", blurb: "your hcb orgs, your share", category: "programs", icon: "savings" },
-  stern_fines: { label: "fines", blurb: "open, fixed, and by program", category: "programs", icon: "flag" },
+  stern_fines: { label: "fines", blurb: "how many, and on which programs", category: "programs", icon: "flag" },
   stern_timeline: { label: "program dates", blurb: "what's live, what ends next", category: "programs", icon: "calendar_month" },
   stern_margin: { label: "earned vs spent", blurb: "each program against its budget", category: "programs", icon: "payments" },
   stern_program: { label: "program", blurb: "its name, dates and days left", category: "program", icon: "dashboard" },
@@ -444,7 +446,7 @@ export interface Settings {
     navidrome: { url: string; username: string; password: string };
     macapad: { url: string; token: string };
     phantom: { url: string; token: string; hcb: string }; // phantom's /api/stats + its STATS_TOKEN, and its hcb org
-    stern: { url: string; token: string; hcbUser: string }; // stern's platform api + a stern_admin_ key, and your hcb user (usr_…) for net worth
+    stern: { url: string; token: string; hcbUser: string; shared: string }; // stern's platform api + a stern_admin_ key, your hcb user (usr_…) for net worth, and comma-separated keys of programs you share (left out of fines and budget)
   };
   embeds: EmbedFeed[]; // top-level, not an "integration" — no server fetch, the widget reads it directly
   macapad: MacapadPads; // owned by /api/macapad; full settings writes never change it

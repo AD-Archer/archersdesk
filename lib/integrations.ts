@@ -1548,8 +1548,10 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
         Promise.all(shown.map(async (p) => [p.key, await hcbOrg(p.unified?.hcbUrl ?? null)] as const)),
         hcbUser
           ? lingering(`stern-worth|${base}|${hcbUser}`, 15 * 60 * 1000, async () => {
-              // stern's public api, limited by address rather than by key
-              const res = await sternRead<NetWorth>(base, "", `/api/public/hcb-networth?u=${encodeURIComponent(hcbUser)}`, 0, 60_000);
+              // stern's public api, limited by address rather than by key; the
+              // key rides along only so stern's firewall lets the desk past its
+              // bot challenge (it bypasses /api/ calls that carry one)
+              const res = await sternRead<NetWorth>(base, token, `/api/public/hcb-networth?u=${encodeURIComponent(hcbUser)}`, 0, 60_000);
               if (!res.body) throw new Error(res.status === 429 ? sternRefusal(res) : `error ${res.status ?? "unreachable"}`);
               return res.body;
             })
@@ -1738,7 +1740,10 @@ async function lingering<T>(
     lingerCache.set(key, entry);
   }
   const e = entry;
-  if (!e.pending && Date.now() - e.at > ttl) {
+  // a failure with nothing to show is asked again within the minute, not
+  // kept for the whole ttl
+  const keep = e.value === null && e.error ? Math.min(ttl, 60 * 1000) : ttl;
+  if (!e.pending && Date.now() - e.at > keep) {
     e.pending = read()
       .then((value) => {
         e.value = value;

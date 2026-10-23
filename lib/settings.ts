@@ -154,7 +154,7 @@ export const DEFAULT_SETTINGS: Settings = {
     navidrome: { url: "", username: "", password: "" },
     macapad: { url: "", token: "" },
     phantom: { url: "", token: "", hcb: "" },
-    stern: { url: "", token: "", hcbUser: "" },
+    stern: { url: "", token: "", hcbUser: "", shared: "" },
   },
   embeds: [],
   macapad: {
@@ -710,6 +710,9 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
       token: secret(stern.token, "", 200),
       // a usr_… id, or the share link stern's net worth page gives
       hcbUser: (str(stern.hcbUser, "", 200).match(/usr_[A-Za-z0-9]+/) ?? [""])[0],
+      // keys (stern slugs, "unified:rec…") of programs you share with
+      // others, so their fines and budget aren't counted as yours
+      shared: str(stern.shared, "", 2000),
     },
   };
 }

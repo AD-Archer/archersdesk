@@ -41,6 +41,7 @@ import {
   SternNetWorthWidget,
   SternTimelineWidget,
   SternTopWidget,
+  SternWeekWidget,
   SternWpsWidget,
 } from "./hackclub/stern/You";
 import {
@@ -159,6 +160,7 @@ export const REGISTRY: Record<WidgetName, (p: WidgetProps) => React.ReactNode> =
   phantom_budget: PhantomBudgetWidget,
   phantom_event: PhantomEventWidget,
   stern_wps: SternWpsWidget,
+  stern_week: SternWeekWidget,
   stern_top: SternTopWidget,
   stern_networth: SternNetWorthWidget,
   stern_fines: SternFinesWidget,

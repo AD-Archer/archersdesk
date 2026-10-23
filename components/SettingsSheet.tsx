@@ -7,7 +7,7 @@ import { dayChips, fmt12 } from "./alarmUtil";
 import { copyLayout, dropPage, jumpPast, localDate, pageName, targetLabel } from "./pageJumps";
 import { useIntegration, useIntegrationAction } from "./widgets/kit";
 import { ProgramMark } from "./widgets/hackclub/stern/frame";
-import { runLine, type DeskProgram, type SternDesk } from "@/lib/stern";
+import { runLine, sharedPrograms, type DeskProgram, type SternDesk } from "@/lib/stern";
 import { useWeather } from "./widgets/Weather";
 import { pausedTonight } from "./night";
 import { useNow } from "./hooks";
@@ -273,9 +273,10 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
   },
   {
     name: "hack club",
-    blurb: "your wps, programs, fines, net worth",
+    blurb: "your wps, your week, programs, fines, net worth",
     rows: [
       { type: "split", left: "stern_wps", right: "stern_top" },
+      { type: "dual", widget: "stern_week" },
       { type: "dual", widget: "stern_timeline" },
       { type: "split", left: "stern_networth", right: "stern_fines" },
       { type: "dual", widget: "stern_margin" },
@@ -1597,6 +1598,58 @@ function AccountGroup({
   );
 }
 
+/** Programs that aren't yours alone: ticked ones are left out of the fines
+ *  and earned-vs-spent cards, since their fines and budget aren't yours. */
+function SternSharedPicker({
+  settings,
+  patch,
+}: {
+  settings: ViewSettings;
+  patch: (next: Partial<ViewSettings["integrations"]>) => void;
+}) {
+  const ig = settings.integrations;
+  const linked = Boolean(ig.stern?.token);
+  const stern = useIntegration<SternDesk>("stern", settings, 5 * 60 * 1000, undefined, linked);
+  if (!linked) return null;
+  const hidden = sharedPrograms(ig.stern?.shared);
+  const mine = (stern?.data?.programs ?? []).filter((p) => p.unified);
+  function toggle(key: string) {
+    const next = new Set(hidden);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    patch({ stern: { ...ig.stern, shared: [...next].join(",") } });
+  }
+  return (
+    <div className="stack-field">
+      <span className="stack-label">
+        Programs you share
+        <small>Left out of your fines and earned vs spent</small>
+      </span>
+      {!stern?.data ? (
+        <p className="acct-note">{stern?.reason ?? "Asking Stern for your programs…"}</p>
+      ) : mine.length === 0 ? (
+        <p className="acct-note">Unified doesn&rsquo;t list any programs as yours.</p>
+      ) : (
+        <div className="ha-list">
+          {mine.map((p) => (
+            <label key={p.key} className="check-hit ha-row">
+              <input type="checkbox" className="vh" checked={hidden.has(p.key)} onChange={() => toggle(p.key)} />
+              <span className="tick" aria-hidden />
+              <span className="row-text">
+                <b>{p.name}</b>
+                <small>
+                  {p.unified!.owners > 1 ? `${p.unified!.owners} owners` : "Just you"}, {p.unified!.fines.count}{" "}
+                  {p.unified!.fines.count === 1 ? "fine" : "fines"}
+                </small>
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HomeAssistantEntityPicker({
   settings,
   patch,
@@ -2085,6 +2138,7 @@ function AccountsSection({ settings, onChange }: SectionProps) {
             placeholder="usr_…"
             onValue={(v) => patch({ stern: { ...ig.stern, hcbUser: v } })}
           />
+          <SternSharedPicker settings={settings} patch={patch} />
         </AccountGroup>
 
         <AccountGroup title="Seerr" blurb="Jellyseerr or Overseerr requests" {...w("seerr")} done={!!ig.seerr?.url}>

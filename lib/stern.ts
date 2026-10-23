@@ -169,6 +169,44 @@ export interface SternDesk {
 
 export const unifiedKey = (id: string) => `unified:${id}`;
 
+/** The programs you share with others (settings → accounts → stern), by key:
+ *  their fines and budget aren't yours to count. */
+export const sharedPrograms = (setting: string | undefined) =>
+  new Set((setting ?? "").split(",").map((s) => s.trim()).filter(Boolean));
+
+/** Your fines, less those on programs you share.
+ *  A fine is a fine: its status in unified doesn't change whether it counts. */
+export function countFines(d: Pick<SternDesk, "me" | "programs">, hidden: Set<string>) {
+  const left = d.programs.filter((p) => p.unified && hidden.has(p.key));
+  const less = (pick: (f: UnifiedProgram["fines"]) => number) => left.reduce((a, p) => a + pick(p.unified!.fines), 0);
+  return {
+    count: Math.max(0, (d.me?.fines.count ?? 0) - less((f) => f.count)),
+    amount: Math.max(0, (d.me?.fines.amount ?? 0) - less((f) => f.amount)),
+    leftOut: left.length,
+  };
+}
+
+/** Your last seven days of wps against the seven before, from /me's per-day
+ *  series (today last), each also in dollars at what your wps are worth on
+ *  the whole (unified's wps usd over wps). */
+export function wpWeeks(me: SternMe) {
+  const sum = (from: number, to: number) => me.wpDays.slice(from, to).reduce((a, b) => a + b, 0);
+  const end = me.wpDays.length;
+  const thisWeek = sum(end - 7, end);
+  const lastWeek = sum(end - 14, end - 7);
+  const rate = me.wps && me.wps.total > 0 && me.wps.usd > 0 ? me.wps.usd / me.wps.total : null;
+  return {
+    thisWeek,
+    lastWeek,
+    rate,
+    thisUsd: rate === null ? null : thisWeek * rate,
+    lastUsd: rate === null ? null : lastWeek * rate,
+    /** null when last week had none to compare with */
+    change: lastWeek > 0 ? (thisWeek - lastWeek) / lastWeek : null,
+    days: me.wpDays.slice(-14),
+  };
+}
+
 /** Programs whose colour the desk already wears elsewhere (phantom's own
  *  widgets), so a page of either reads as the same program. */
 const KNOWN_COLORS: Record<string, string> = { phantom: "#966eff" };

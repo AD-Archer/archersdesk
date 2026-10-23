@@ -80,8 +80,8 @@ export function SternProgramWpsWidget(props: WidgetProps) {
                   { key: "shippers", left: "People who shipped", right: <b>{n(u.shippers)}</b> },
                   {
                     key: "fines",
-                    left: "Open fines",
-                    right: <b>{u.fines.open ? `${n(u.fines.open)}, ${usd(u.fines.openAmount)}` : "None"}</b>,
+                    left: "Fines",
+                    right: <b>{u.fines.count ? `${n(u.fines.count)}, ${usd(u.fines.amount)}` : "None"}</b>,
                   },
                   ...(u.nps !== null ? [{ key: "nps", left: "NPS", right: <b>{n(u.nps)}</b> }] : []),
                 ]}
@@ -293,8 +293,8 @@ export function SternMoneyWidget(props: WidgetProps) {
                   ...(stats ? [{ key: "owed", left: "Owed for hours held", right: <b>{usd(stats.hours.outstandingUsd)}</b> }] : []),
                   {
                     key: "fines",
-                    left: "Open fines",
-                    right: <b>{p.unified!.fines.open ? usd(p.unified!.fines.openAmount) : "None"}</b>,
+                    left: "Fines",
+                    right: <b>{p.unified!.fines.count ? usd(p.unified!.fines.amount) : "None"}</b>,
                   },
                 ]}
               />
