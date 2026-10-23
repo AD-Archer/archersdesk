@@ -1500,7 +1500,7 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
       );
       if (list.status === 401) return need("stern didn't accept that platform key");
       if (!list.body) {
-        if (list.status === 429) return need(`stern asked the desk to slow down; trying again ${list.retry}`);
+        if (list.status === 429) return need(`${sternRefusal(list)}; trying again ${list.retry}`);
         return need(list.status ? `stern: error ${list.status}` : "stern can't be reached right now");
       }
       const rows = list.body.programs ?? [];
@@ -1510,7 +1510,7 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
       // should wait, so they answer from the last read while a fresh one runs
       const me = await lingering(`stern-me|${base}|${token}`, 10 * 60 * 1000, async () => {
         const res = await sternRead<SternMe>(base, token, "/api/platform/v1/me?days=30", 0, 30_000);
-        if (res.status === 429) throw new Error("stern asked the desk to slow down");
+        if (res.status === 429) throw new Error(sternRefusal(res));
         if (res.status === 404) return { body: null, reason: "this stern doesn't send /me yet" };
         if (!res.body) return { body: null, reason: `stern couldn't read unified (error ${res.status ?? "unreachable"})` };
         const body = res.body;
@@ -1550,7 +1550,7 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
           ? lingering(`stern-worth|${base}|${hcbUser}`, 15 * 60 * 1000, async () => {
               // stern's public api, limited by address rather than by key
               const res = await sternRead<NetWorth>(base, "", `/api/public/hcb-networth?u=${encodeURIComponent(hcbUser)}`, 0, 60_000);
-              if (!res.body) throw new Error(res.status === 429 ? "stern asked the desk to slow down" : `error ${res.status ?? "unreachable"}`);
+              if (!res.body) throw new Error(res.status === 429 ? sternRefusal(res) : `error ${res.status ?? "unreachable"}`);
               return res.body;
             })
           : null,
@@ -1646,6 +1646,15 @@ interface SternRead<T> {
   status: number | null;
   /** when stern is asked again after a 429: "in 40s" */
   retry: string;
+  /** the 429 was vercel's bot protection in front of stern, not stern's own limit */
+  challenged?: boolean;
+}
+
+/** Why a 429'd read was turned away, for a card to say. */
+function sternRefusal(read: SternRead<unknown>) {
+  return read.challenged
+    ? "stern's vercel firewall is challenging the desk as a bot (it needs a bypass rule for the api)"
+    : "stern asked the desk to slow down";
 }
 
 /** A GET against stern, kept `ttl` (0: every call asks, for reads cached
@@ -1663,10 +1672,10 @@ async function sternRead<T>(
   const key = `${base}|${token}|${path}`;
   const who = `${base}|${token || "public"}`;
   const last = sternCache.get(key) as { at: number; body: T | null; status: number | null } | undefined;
-  const quietUntil = (sternQuiet.get(who) as number | undefined) ?? 0;
-  const retry = () => `in ${Math.max(1, Math.ceil(((sternQuiet.get(who) as number) - Date.now()) / 1000))}s`;
+  const quiet = () => (sternQuiet.get(who) as { until: number; challenged: boolean } | undefined) ?? { until: 0, challenged: false };
+  const retry = () => `in ${Math.max(1, Math.ceil((quiet().until - Date.now()) / 1000))}s`;
   if (last && ttl > 0 && Date.now() - last.at < ttl) return { body: last.body, status: last.status, retry: "" };
-  if (Date.now() < quietUntil) return { body: last?.body ?? null, status: 429, retry: retry() };
+  if (Date.now() < quiet().until) return { body: last?.body ?? null, status: 429, retry: retry(), challenged: quiet().challenged };
 
   const pending = sternInflight.get(key) as Promise<SternRead<T>> | undefined;
   if (pending) return pending;
@@ -1678,9 +1687,11 @@ async function sternRead<T>(
       return { body: last?.body ?? null, status: null, retry: "" };
     }
     if (res.status === 429) {
+      // vercel's challenge page is a 429 too, marked x-vercel-mitigated, with no Retry-After
+      const challenged = res.headers.get("x-vercel-mitigated") === "challenge";
       const after = Number(res.headers.get("retry-after"));
-      sternQuiet.set(who, Date.now() + (Number.isFinite(after) && after > 0 ? after : 60) * 1000);
-      return { body: last?.body ?? null, status: 429, retry: retry() };
+      sternQuiet.set(who, { until: Date.now() + (Number.isFinite(after) && after > 0 ? after : 60) * 1000, challenged });
+      return { body: last?.body ?? null, status: 429, retry: retry(), challenged };
     }
     if (!res.ok) {
       // a refusal stands for the ttl too, so a wrong key isn't asked again every poll
