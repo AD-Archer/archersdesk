@@ -154,6 +154,7 @@ export const DEFAULT_SETTINGS: Settings = {
     navidrome: { url: "", username: "", password: "" },
     macapad: { url: "", token: "" },
     phantom: { url: "", token: "", hcb: "" },
+    contd: { url: "", token: "" },
     stern: { url: "", token: "", hcbUser: "", shared: "" },
   },
   embeds: [],
@@ -633,6 +634,7 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
   const navidrome = isRecord(s.navidrome) ? s.navidrome : {};
   const macapad = isRecord(s.macapad) ? s.macapad : {};
   const phantom = isRecord(s.phantom) ? s.phantom : {};
+  const contd = isRecord(s.contd) ? s.contd : {};
   const stern = isRecord(s.stern) ? s.stern : {};
   const symbols = Array.isArray(stocks.symbols)
     ? stocks.symbols
@@ -704,6 +706,10 @@ function sanitizeIntegrations(v: unknown): Settings["integrations"] {
       url: sanitizeUrl(str(phantom.url, "", 200)),
       token: secret(phantom.token, "", 200),
       hcb: str(phantom.hcb, "", 200),
+    },
+    contd: {
+      url: sanitizeUrl(str(contd.url, "", 200)),
+      token: secret(contd.token, "", 200),
     },
     stern: {
       url: sanitizeUrl(str(stern.url, "", 200)),
@@ -852,6 +858,10 @@ export function preserveSavedSecrets(current: Settings, incoming: Settings): Set
       phantom: {
         ...next.phantom,
         token: keepWhenStale(next.phantom.token, cur.phantom.token, stale),
+      },
+      contd: {
+        ...next.contd,
+        token: keepWhenStale(next.contd.token, cur.contd.token, stale),
       },
       stern: {
         ...next.stern,

@@ -1472,6 +1472,28 @@ const INTEGRATIONS: Record<IntegrationService, Fetcher> = {
     },
   },
 
+  // cont.d's own figures, from its /api/v1/stats with a key from its admin
+  // (analytics → API keys). Three reads, one per range it answers (7d, 30d,
+  // all), so the widgets can say today, this week, this month and in all the
+  // way phantom's do. Counts only: cont.d keeps names and ids out of it.
+  contd: {
+    ttl: 60 * 1000, // cont.d keeps each answer for a minute too
+    async fetch(settings) {
+      const { url, token } = settings.integrations.contd;
+      if (!token) return need("add a cont.d API key in settings → accounts");
+      // no address means hack club's own cont.d
+      const base = (url || "https://contd.hackclub.com").replace(/\/api\/v1\/stats.*$/, "").replace(/\/+$/, "");
+      const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+      const [week, month, all] = await Promise.all(
+        ["7d", "30d", "all"].map((range) => grab(`${base}/api/v1/stats?range=${range}`, headers))
+      );
+      const bad = [week, month, all].find((r) => !r.ok);
+      if (bad?.status === 401) return need("cont.d didn't accept that API key");
+      if (bad) return need(`cont.d: error ${bad.status}`);
+      return { configured: true, data: { week: await week.json(), month: await month.json(), all: await all.json() } };
+    },
+  },
+
   // hack club programs, from stern's platform api (a stern_admin_ key minted
   // on stern's /admin/api-keys). One read feeds every stern widget: the
   // program list, you across unified (/me), stern's figures for each program

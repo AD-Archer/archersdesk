@@ -17,6 +17,44 @@
   --face: var(--font-pixel), ui-monospace, monospace;
 }
 
+/* cont.d: its landing page's story in its colours (a project tossed in is
+   cyan, picked up and remade yellow, shipped green, and the people doing it
+   the wordmark's red), Geist from its hero, and the field of mixed shapes the
+   hero draws "cont.d" out of. Each widget wears its stage: ShapeFigure draws
+   its big figure in that stage's shape, ShapeColumns lights it in the chart. */
+.panel[data-widget^="contd_"] {
+  --contd-red: #ec3750;
+  --contd-yellow: #f1c40f;
+  --contd-green: #33d6a6;
+  --contd-cyan: #5bc0de;
+  --tint: var(--contd-red);
+  --face: var(--font-geist), system-ui, sans-serif;
+}
+
+.panel:is([data-widget="contd_active"], [data-widget="contd_hours"], [data-widget="contd_remakes"]) {
+  --tint: var(--contd-yellow);
+}
+
+.panel:is([data-widget="contd_shipped"], [data-widget="contd_approved"], [data-widget="contd_reviews"], [data-widget="contd_funnel"]) {
+  --tint: var(--contd-green);
+}
+
+.panel[data-widget="contd_pool"] {
+  --tint: var(--contd-cyan);
+}
+
+/* a big figure drawn in shapes (ShapeFigure): sits on the baseline like the
+   text it stands in for, in the panel's tint */
+.shape-figure {
+  display: inline-block;
+  line-height: 0;
+  color: var(--tint);
+}
+
+.shape-figure canvas {
+  display: block;
+}
+
 :root {
   --dither: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'%3E%3Crect x='0' y='0' width='2' height='2' fill-opacity='0.02'/%3E%3Crect x='2' y='0' width='2' height='2' fill-opacity='0.29'/%3E%3Crect x='4' y='0' width='2' height='2' fill-opacity='0.09'/%3E%3Crect x='6' y='0' width='2' height='2' fill-opacity='0.36'/%3E%3Crect x='0' y='2' width='2' height='2' fill-opacity='0.43'/%3E%3Crect x='2' y='2' width='2' height='2' fill-opacity='0.15'/%3E%3Crect x='4' y='2' width='2' height='2' fill-opacity='0.50'/%3E%3Crect x='6' y='2' width='2' height='2' fill-opacity='0.22'/%3E%3Crect x='0' y='4' width='2' height='2' fill-opacity='0.12'/%3E%3Crect x='2' y='4' width='2' height='2' fill-opacity='0.40'/%3E%3Crect x='4' y='4' width='2' height='2' fill-opacity='0.05'/%3E%3Crect x='6' y='4' width='2' height='2' fill-opacity='0.33'/%3E%3Crect x='0' y='6' width='2' height='2' fill-opacity='0.53'/%3E%3Crect x='2' y='6' width='2' height='2' fill-opacity='0.26'/%3E%3Crect x='4' y='6' width='2' height='2' fill-opacity='0.46'/%3E%3Crect x='6' y='6' width='2' height='2' fill-opacity='0.19'/%3E%3C/svg%3E");
 }
@@ -28,6 +66,49 @@
   font-weight: 400;
   font-synthesis: none;
   letter-spacing: 0;
+}
+
+/* cont.d's figures: Geist heavy and tight, the way its admin sets numbers */
+.panel[data-widget^="contd_"] :is(.kstat-value, .krow-item b, .klist-right b, .phantom-funnel b) {
+  font-family: var(--face);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* a figure decrypting into place (Decrypt): the digits still flickering are
+   dimmed, the way cont.d's admin titles scramble before they settle */
+.decrypt-on {
+  opacity: 0.4;
+}
+
+/* one column of cells a day (ShapeColumns paints it in the panel's tint) */
+.shape-columns {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  margin: calc(var(--ps) * 0.04) calc(var(--ps) * 0.03) 0;
+  min-width: 0;
+}
+
+.shape-columns-plot {
+  height: calc(var(--ps) * 0.16);
+}
+
+.shape-columns-plot canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--tint);
+}
+
+.shape-columns-x {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-3);
 }
 
 /* one dithered column a day (DitherBars paints it in the panel's tint) */
@@ -110,6 +191,11 @@
   height: 100%;
   border-radius: 999px;
   background: var(--dither) 0 0 / 8px 8px, var(--tint);
+}
+
+/* cont.d's bars are solid: the dither is phantom's texture, not cont.d's */
+.panel[data-widget^="contd_"] .phantom-funnel-fill {
+  background: var(--tint);
 }
 
 .phantom-funnel b {
@@ -230,7 +316,7 @@
 }
 
 /* wide: the hero on the left, the series or the steps on the right */
-.panel.wide[data-widget^="phantom_"] .w-body {
+.panel.wide:is([data-widget^="phantom_"], [data-widget^="contd_"]) .w-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   align-content: center;
@@ -241,22 +327,19 @@
   padding-right: calc(var(--ps) * 0.04);
 }
 
-.panel.wide[data-widget^="phantom_"] .w-body > * {
+.panel.wide:is([data-widget^="phantom_"], [data-widget^="contd_"]) .w-body > * {
   grid-column: 1;
   max-width: 100%;
 }
 
-.panel.wide[data-widget^="phantom_"] .w-body > .dither-bars,
-.panel.wide[data-widget^="phantom_"] .w-body > .klist,
-.panel.wide[data-widget^="phantom_"] .w-body > .phantom-funnel,
-.panel.wide[data-widget^="phantom_"] .w-body > .phantom-money-side {
+.panel.wide:is([data-widget^="phantom_"], [data-widget^="contd_"]) .w-body > :is(.dither-bars, .shape-columns, .klist, .phantom-funnel, .phantom-money-side) {
   grid-column: 2;
   grid-row: 1 / span 4;
   justify-self: stretch;
   margin-top: 0;
 }
 
-.panel.wide[data-widget^="phantom_"] .w-body > :only-child {
+.panel.wide:is([data-widget^="phantom_"], [data-widget^="contd_"]) .w-body > :only-child {
   grid-column: 1 / -1;
 }
 

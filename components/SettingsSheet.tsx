@@ -40,13 +40,17 @@ const TAB_INFO: Record<Tab, { label: string; icon: string; color: string }> = {
 
 /* each widget's tint, the same one it wears on the board (board.css) */
 const TINTS: Record<string, WidgetName[]> = {
-  green: ["clock", "please_disturb", "github", "stocks", "citybikes", "adguard", "chess"],
+  green: ["clock", "please_disturb", "github", "stocks", "citybikes", "adguard", "chess", "contd_shipped", "contd_approved", "contd_reviews", "contd_funnel"],
   orange: [
     "analog", "worldclock", "alarms", "timer", "archerhours", "plex", "fox", "shibe",
   ],
-  red: ["date", "datetime", "calendar", "agenda", "f1", "pihole", "transmission", "embed"],
-  cyan: ["weather", "forecast", "homeassistant"],
-  yellow: ["sun", "quote", "away_until", "monkeytype", "catfact", "dogfact", "duck"],
+  red: [
+    "date", "datetime", "calendar", "agenda", "f1", "pihole", "transmission", "embed",
+    // cont.d's people, in its wordmark's red; its other stages below (hackclub.css)
+    "contd_traffic", "contd_signups",
+  ],
+  cyan: ["weather", "forecast", "homeassistant", "contd_pool"],
+  yellow: ["sun", "quote", "away_until", "monkeytype", "catfact", "dogfact", "duck", "contd_active", "contd_hours", "contd_remakes"],
   indigo: ["moon", "dnd", "seerr"],
   pink: ["nowplaying", "navidrome", "vibe"],
   purple: [
@@ -152,11 +156,27 @@ const PROGRAM_PAGE: LayoutRow[] = [
   { type: "split", left: "stern_orders", right: "stern_program" },
 ];
 
+/** cont.d's own widgets, for its program page and its preset: people on the
+ *  site and signing up, who's coding, remakes and approved hours, the review
+ *  queue and the funnel. The pool comes last, in its own widget. */
+const CONTD_ROWS: LayoutRow[] = [
+  { type: "split", left: "contd_traffic", right: "contd_signups" },
+  { type: "split", left: "contd_active", right: "contd_remakes" },
+  { type: "dual", widget: "contd_approved" },
+  { type: "dual", widget: "contd_hours" },
+  { type: "split", left: "contd_shipped", right: "contd_reviews" },
+  { type: "dual", widget: "contd_funnel" },
+  { type: "dual", widget: "contd_pool" },
+];
+
+/** cont.d goes by a few names across stern and unified. */
+const isContd = (name: string) => /^(cont\.?d|continued)$/i.test(name.trim());
+
 /** The page a program gets: everything for one on stern; for one only
  *  unified knows, its card, wps and money (stern's cards would be empty),
- *  and phantom's own widgets for phantom. */
+ *  and phantom's or cont.d's own widgets for those two. */
 function programTemplate(p: DeskProgram): LayoutRow[] {
-  if (p.slug) return PROGRAM_PAGE;
+  if (p.slug) return isContd(p.name) ? [...PROGRAM_PAGE, ...CONTD_ROWS] : PROGRAM_PAGE;
   return [
     { type: "dual", widget: "stern_program" },
     { type: "split", left: "stern_program_wps", right: "stern_money" },
@@ -167,6 +187,7 @@ function programTemplate(p: DeskProgram): LayoutRow[] {
           { type: "split", left: "phantom_orders", right: "phantom_ledger" },
         ] as LayoutRow[])
       : []),
+    ...(isContd(p.name) ? CONTD_ROWS : []),
     { type: "dual", widget: "stern_program_wps" },
     { type: "dual", widget: "stern_money" },
   ];
@@ -270,6 +291,11 @@ const LAYOUT_PRESETS: { name: string; blurb: string; rows: LayoutRow[] }[] = [
       { type: "dual", widget: "phantom_budget" },
       { type: "dual", widget: "phantom_event" },
     ],
+  },
+  {
+    name: "cont.d",
+    blurb: "visitors, sign-ups, daily active, remakes, approved hours, reviews",
+    rows: CONTD_ROWS,
   },
   {
     name: "hack club",
@@ -2111,6 +2137,21 @@ function AccountsSection({ settings, onChange }: SectionProps) {
             value={ig.phantom?.hcb}
             placeholder="https://hcb.hackclub.com/phantom"
             onValue={(v) => patch({ phantom: { ...ig.phantom, hcb: v } })}
+          />
+        </AccountGroup>
+
+        <AccountGroup title="cont.d" blurb="Visitors, sign-ups, daily active, remakes, approved hours and reviews" {...w("contd_active")} done={!!ig.contd?.token}>
+          <AccountField
+            label="cont.d address (optional)"
+            value={ig.contd?.url}
+            placeholder="https://contd.hackclub.com"
+            onValue={(v) => patch({ contd: { ...ig.contd, url: v } })}
+          />
+          <AccountField
+            label="API key (cont.d admin → Analytics → API keys)"
+            value={ig.contd?.token}
+            secret
+            onValue={(v) => patch({ contd: { ...ig.contd, token: v } })}
           />
         </AccountGroup>
 

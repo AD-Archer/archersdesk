@@ -64,6 +64,17 @@ export const WIDGETS = [
   "phantom_money",
   "phantom_budget",
   "phantom_event",
+  // cont.d's own figures, from its /api/v1/stats
+  "contd_traffic",
+  "contd_active",
+  "contd_hours",
+  "contd_signups",
+  "contd_remakes",
+  "contd_shipped",
+  "contd_approved",
+  "contd_reviews",
+  "contd_funnel",
+  "contd_pool",
   // hack club programs, from stern's platform api: you across every program…
   "stern_wps",
   "stern_week",
@@ -180,6 +191,16 @@ export const WIDGET_INFO: Record<
   phantom_money: { label: "phantom money", blurb: "hcb against the fragments owed", category: "archer", icon: "payments" },
   phantom_budget: { label: "phantom budget", blurb: "how much of the event is funded", category: "archer", icon: "attach_money" },
   phantom_event: { label: "phantom event", blurb: "who has the hours for an invite", category: "archer", icon: "event" },
+  contd_traffic: { label: "cont.d visitors", blurb: "people on the site, by plausible", category: "archer", icon: "visibility" },
+  contd_active: { label: "cont.d daily active", blurb: "working on their remake today, by hackatime", category: "archer", icon: "bolt" },
+  contd_hours: { label: "cont.d hours coded", blurb: "hours on remakes today, by hackatime", category: "archer", icon: "schedule" },
+  contd_signups: { label: "cont.d sign-ups", blurb: "everyone signed up, and this week", category: "archer", icon: "group" },
+  contd_remakes: { label: "cont.d remakes", blurb: "remakes started, drafts to approved", category: "archer", icon: "call_split" },
+  contd_shipped: { label: "cont.d shipped", blurb: "remakes shipped and approved", category: "archer", icon: "rocket_launch" },
+  contd_approved: { label: "cont.d approved hours", blurb: "hours approved, and waiting on review", category: "archer", icon: "task_alt" },
+  contd_reviews: { label: "cont.d reviews", blurb: "the review queue and decisions", category: "archer", icon: "checklist" },
+  contd_funnel: { label: "cont.d funnel", blurb: "sign-up to an approved remake", category: "archer", icon: "equalizer" },
+  contd_pool: { label: "cont.d pool", blurb: "projects to remake, and forks", category: "archer", icon: "pool" },
   stern_wps: { label: "your wps", blurb: "weighted projects, all programs", category: "programs", icon: "rocket_launch" },
   stern_week: { label: "your week", blurb: "wps and money, against last week", category: "programs", icon: "date_range" },
   stern_top: { label: "top programs", blurb: "which give you the most wps", category: "programs", icon: "equalizer" },
@@ -446,6 +467,7 @@ export interface Settings {
     navidrome: { url: string; username: string; password: string };
     macapad: { url: string; token: string };
     phantom: { url: string; token: string; hcb: string }; // phantom's /api/stats + its STATS_TOKEN, and its hcb org
+    contd: { url: string; token: string }; // cont.d's /api/v1/stats + a key from its admin (analytics → API keys)
     stern: { url: string; token: string; hcbUser: string; shared: string }; // stern's platform api + a stern_admin_ key, your hcb user (usr_…) for net worth, and comma-separated keys of programs you share (left out of fines and budget)
   };
   embeds: EmbedFeed[]; // top-level, not an "integration" — no server fetch, the widget reads it directly

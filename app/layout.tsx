@@ -29,6 +29,14 @@ const pixel = localFont({
   preload: false,
 });
 
+// Geist (Latin) — cont.d's face, for its widgets' figures (hackclub.css)
+const geist = localFont({
+  src: [{ path: "./fonts/geist.woff2", weight: "100 900", style: "normal" }],
+  variable: "--font-geist",
+  display: "swap",
+  preload: false,
+});
+
 // Material Symbols subset — add names in tools/make-icon-font.mjs, then `pnpm icon-font`
 const icons = localFont({
   src: [{ path: "./fonts/material-symbols.woff2", weight: "400", style: "normal" }],
@@ -53,7 +61,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${round.variable} ${icons.variable} ${pixel.variable}`}>
+    <html lang="en" className={`${round.variable} ${icons.variable} ${pixel.variable} ${geist.variable}`}>
       <body>
         {children}
         {/* night mode: brightness → red, used by html.night (globals.css) */}
