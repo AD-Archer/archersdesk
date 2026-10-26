@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Alarm, Device, GeocodeResult, LayoutRow, PageJump, PageTarget, ViewSettings, WidgetName } from "@/lib/types";
 import { MAX_ROWS, MAX_WIDGET_PAGES, WIDGET_CATEGORIES, WIDGET_INFO, WIDGETS } from "@/lib/types";
 import { dayChips, fmt12 } from "./alarmUtil";
-import { copyLayout, dropPage, jumpPast, localDate, pageName, targetLabel } from "./pageJumps";
+import { copyLayout, dropPage, jumpPast, localDate, movePage, pageName, targetLabel } from "./pageJumps";
 import { useIntegration, useIntegrationAction } from "./widgets/kit";
 import { ProgramMark } from "./widgets/hackclub/stern/frame";
 import { runLine, sharedPrograms, type DeskProgram, type SternDesk } from "@/lib/stern";
@@ -505,6 +505,150 @@ type SectionProps = { settings: ViewSettings; onChange: (next: ViewSettings) => 
 
 const SLOT_NAME = { left: "Left side", right: "Right side", widget: "Whole row" } as const;
 
+/** Where index `i` ends up once the item at `from` moves to `to`. */
+function movedIndex(i: number, from: number, to: number) {
+  if (i === from) return to;
+  if (from < to && i > from && i <= to) return i - 1;
+  if (from > to && i >= to && i < from) return i + 1;
+  return i;
+}
+
+const DRAG_START = 6; // px a press travels before it's a drag, not a tap
+
+/** The page pills. Tap one to edit it; drag one to move it. While dragging,
+ *  the pill rides under the finger and the rest reflow around the spot it
+ *  would drop into; letting go moves the page there. */
+function PageChips({
+  names,
+  current,
+  onPick,
+  onMove,
+  onAdd,
+}: {
+  names: string[];
+  current: number;
+  onPick: (i: number) => void;
+  onMove: (from: number, to: number) => void;
+  onAdd?: () => void;
+}) {
+  const [drag, setDrag] = useState<{ from: number; to: number } | null>(null);
+  const chips = useRef(new Map<number, HTMLButtonElement>());
+  // the press under way: where it started, and the pill's slot then
+  const press = useRef<{
+    i: number;
+    x: number;
+    y: number;
+    left: number;
+    top: number;
+    moved: boolean;
+    at: { x: number; y: number };
+  } | null>(null);
+  const dragged = useRef(false);
+
+  // follow the finger from wherever the reflow has put the pill's slot, lifted a little
+  const place = () => {
+    const p = press.current;
+    const el = p && chips.current.get(p.i);
+    if (!p || !el) return;
+    const dx = p.at.x - p.x - (el.offsetLeft - p.left);
+    const dy = p.at.y - p.y - (el.offsetTop - p.top);
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(1.06)`;
+  };
+
+  // the others just reflowed around a new drop spot: keep the pill under the finger
+  useLayoutEffect(place, [drag?.to]);
+
+  const order = names.map((_, i) => i);
+  if (drag) order.splice(drag.to, 0, ...order.splice(drag.from, 1));
+
+  function down(e: React.PointerEvent<HTMLButtonElement>, i: number) {
+    if (e.button !== 0) return;
+    const el = e.currentTarget;
+    press.current = { i, x: e.clientX, y: e.clientY, left: el.offsetLeft, top: el.offsetTop, moved: false, at: { x: e.clientX, y: e.clientY } };
+  }
+
+  function move(e: React.PointerEvent<HTMLButtonElement>) {
+    const p = press.current;
+    if (!p) return;
+    const el = e.currentTarget;
+    p.at = { x: e.clientX, y: e.clientY };
+    if (!p.moved) {
+      if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < DRAG_START) return;
+      p.moved = true;
+      el.setPointerCapture(e.pointerId);
+      setDrag({ from: p.i, to: p.i });
+    }
+    place();
+    // the slot it would drop into: the pill whose centre is nearest, its own slot included
+    let best = -1;
+    let bestD = Infinity;
+    order.forEach((page, slot) => {
+      const c = chips.current.get(page);
+      if (!c) return;
+      const box = c.offsetParent?.getBoundingClientRect();
+      const cx = (box?.left ?? 0) + c.offsetLeft + c.offsetWidth / 2;
+      const cy = (box?.top ?? 0) + c.offsetTop + c.offsetHeight / 2;
+      const d = Math.hypot(e.clientX - cx, (e.clientY - cy) * 2);
+      if (d < bestD) {
+        bestD = d;
+        best = slot;
+      }
+    });
+    if (best >= 0) setDrag((d) => (d && d.to !== best ? { ...d, to: best } : d));
+  }
+
+  function up(e: React.PointerEvent<HTMLButtonElement>) {
+    const p = press.current;
+    press.current = null;
+    e.currentTarget.style.transform = "";
+    if (!p?.moved) return;
+    dragged.current = true;
+    if (drag && drag.to !== drag.from) onMove(drag.from, drag.to);
+    setDrag(null);
+  }
+
+  function cancel(e: React.PointerEvent<HTMLButtonElement>) {
+    press.current = null;
+    e.currentTarget.style.transform = "";
+    setDrag(null);
+  }
+
+  return (
+    <div className="chips page-chips" role="group" aria-label="Pages">
+      {/* drawn in page order and placed with css `order`: moving the pill in
+          the dom would drop the pointer it has captured */}
+      {names.map((name, i) => (
+        <button
+          key={i}
+          style={{ order: order.indexOf(i) }}
+          ref={(el) => {
+            if (el) chips.current.set(i, el);
+            else chips.current.delete(i);
+          }}
+          className={`chip${i === current ? " on" : ""}${drag?.from === i ? " dragging" : ""}`}
+          aria-pressed={i === current}
+          onPointerDown={(e) => down(e, i)}
+          onPointerMove={move}
+          onPointerUp={up}
+          onPointerCancel={cancel}
+          onClick={() => {
+            // a drag ends in a click on the pill; that isn't a tap
+            if (dragged.current) dragged.current = false;
+            else onPick(i);
+          }}
+        >
+          {name}
+        </button>
+      ))}
+      {onAdd && (
+        <button className="chip page-add" style={{ order: names.length }} onClick={onAdd} aria-label="Add a page">
+          <MI name="add" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 function LayoutSection({
   settings,
   onChange,
@@ -572,6 +716,13 @@ function LayoutSection({
       layout: { ...settings.layout, ...dropPage(settings.layout, pageIndex + 1), rows: nextPages[0], pages: nextPages },
     });
     setPageIndex(Math.max(0, pageIndex - 1));
+  }
+
+  // the page keeps its name, program and the jumps to it; the editor stays on
+  // whichever page it was on, wherever that page lands
+  function reorderPage(from: number, to: number) {
+    onChange({ ...settings, layout: { ...settings.layout, ...movePage({ ...settings.layout, pages }, from + 1, to + 1) } });
+    setPageIndex(movedIndex(pageIndex, from, to));
   }
 
   function applyPreset(nextRows: LayoutRow[]) {
@@ -737,26 +888,16 @@ function LayoutSection({
 
   return (
     <div ref={topRef}>
-      <div className="chips page-chips" role="group" aria-label="Page">
-        {pages.map((_, i) => (
-          <button
-            key={i}
-            className={`chip${i === pageIndex ? " on" : ""}`}
-            aria-pressed={i === pageIndex}
-            onClick={() => setPageIndex(i)}
-          >
-            {pageName(names, i + 1)}
-          </button>
-        ))}
-        {pages.length < MAX_WIDGET_PAGES && (
-          <button className="chip page-add" onClick={addPage} aria-label="Add a page">
-            <MI name="add" />
-          </button>
-        )}
-      </div>
+      <PageChips
+        names={pages.map((_, i) => pageName(names, i + 1))}
+        current={pageIndex}
+        onPick={setPageIndex}
+        onMove={reorderPage}
+        onAdd={pages.length < MAX_WIDGET_PAGES ? addPage : undefined}
+      />
       <p className="group-foot set-lead">
-        Standby comes first, then these pages in order. Swipe sideways between them, and up or down through a
-        page&rsquo;s rows.
+        Standby comes first, then these pages in order. Drag a page to move it. Swipe sideways between them, and
+        up or down through a page&rsquo;s rows.
       </p>
 
       <div className="group set-gap">

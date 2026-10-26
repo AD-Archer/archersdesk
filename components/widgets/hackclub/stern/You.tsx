@@ -25,12 +25,12 @@ export function SternWpsWidget(props: WidgetProps) {
         const change = w.lastMonth > 0 ? (w.thisMonth - w.lastMonth) / w.lastMonth : null;
         return (
           <>
-            <BigStat value={fx(wp(w.total))} unit="WPs" caption={`${n(w.total * 10)} hours shipped`} />
+            <BigStat value={fx(wp(w.total))} unit="WPs" caption={`in all, ${n(w.total * 10)} hours shipped`} />
             <StatRow
               items={[
+                { label: "This week", value: fx(wp(wpWeeks(d.me!).thisWeek)) },
                 { label: "This month", value: fx(wp(w.thisMonth)) },
                 { label: change === null ? "Last month" : `${change >= 0 ? "Up" : "Down"} on last month`, value: fx(change === null ? wp(w.lastMonth) : pct(Math.abs(change))) },
-                { label: "This year", value: fx(wp(w.year)) },
               ]}
             />
             <DayBars days={d.me!.wpDays} label="your WPs a day" />

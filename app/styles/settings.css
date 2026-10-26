@@ -360,6 +360,26 @@
 }
 
 /* a new page: a round + at the end of the page chips, like a browser's new tab */
+/* the page pills drag to reorder (PageChips): a press that travels is a
+   drag, so the pills don't scroll the sheet, and the one in hand lifts
+   over the rest */
+.page-chips {
+  position: relative;
+}
+
+.page-chips .chip:not(.page-add) {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.page-chips .chip.dragging {
+  z-index: 1;
+  cursor: grabbing;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
 .chips .chip.page-add {
   display: grid;
   place-items: center;

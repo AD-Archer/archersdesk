@@ -64,6 +64,32 @@ export function dropPage(
   };
 }
 
+/** Widget page `from` moves to `to` (both 1-based), the pages between
+ *  shuffling over: names and programs go with their pages, and targets
+ *  follow the page they named to wherever it ends up. */
+export function movePage(
+  layout: DeviceLayout,
+  from: number,
+  to: number
+): Pick<DeviceLayout, "rows" | "pages" | "names" | "programs" | "idle" | "schedule"> {
+  // order[k] is the page (old number) that ends up at k + 1
+  const order = layout.pages.map((_, i) => i + 1);
+  order.splice(to - 1, 0, ...order.splice(from - 1, 1));
+  const shift = (target: PageTarget): PageTarget => {
+    const at = order.indexOf(Number(target));
+    return at < 0 ? target : (`${at + 1}` as PageTarget);
+  };
+  const pages = order.map((o) => layout.pages[o - 1]);
+  return {
+    rows: pages[0],
+    pages,
+    names: order.map((o) => layout.names[o - 1] ?? ""),
+    programs: order.map((o) => layout.programs?.[o - 1] ?? ""),
+    idle: { ...layout.idle, to: shift(layout.idle.to) },
+    schedule: layout.schedule.map((j) => ({ ...j, to: shift(j.to) })),
+  };
+}
+
 /** A deep copy, for a new screen starting from another's layout. */
 export function copyLayout(layout: DeviceLayout): DeviceLayout {
   return {
