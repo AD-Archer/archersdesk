@@ -3,11 +3,15 @@
 // Archer-only: phantom's program figures, from its /api/stats. One fetch feeds
 // every phantom widget (the server caches it for a minute); each shows one
 // part. Phantom sends counts only, so nothing here names a person.
+//
+// Every figure dithers into place (DitherFigure) when it shows or changes,
+// in the same ordered dither the charts are drawn in.
 
 import { WIDGET_INFO, type WidgetName } from "@/lib/types";
 import { BigStat, Empty, MiniList, Shell, StatRow, integrationGate, useIntegration } from "../../kit";
 import type { WidgetProps } from "../../registry";
 import { DitherBars } from "../DitherBars";
+import { DitherFigure } from "../DitherFigure";
 
 /** The shape of phantom's /api/stats (lib/server/stats.ts over there). */
 interface PhantomStats {
@@ -104,6 +108,9 @@ function duration(seconds: number) {
   return m > 0 ? `${m}m ${String(s).padStart(2, "0")}s` : `${s}s`;
 }
 
+/** A figure that dithers into place when it shows or changes. */
+const fx = (text: string) => <DitherFigure text={text} />;
+
 /** The common frame: one shared fetch, the account check, the loading gate. */
 function PhantomFrame({
   widget,
@@ -135,12 +142,12 @@ export function PhantomTrafficWidget(props: WidgetProps) {
           <Empty>Phantom can&rsquo;t read Plausible right now</Empty>
         ) : (
           <>
-            <BigStat value={n(d.traffic.visitors)} unit="people" caption="in the last 7 days" />
+            <BigStat value={fx(n(d.traffic.visitors))} unit="people" caption="in the last 7 days" />
             <StatRow
               items={[
-                { label: "Visits", value: n(d.traffic.visits) },
-                { label: "Average visit", value: duration(d.traffic.visitDuration) },
-                { label: "Left after one page", value: `${Math.round(d.traffic.bounceRate)}%` },
+                { label: "Visits", value: fx(n(d.traffic.visits)) },
+                { label: "Average visit", value: fx(duration(d.traffic.visitDuration)) },
+                { label: "Left after one page", value: fx(`${Math.round(d.traffic.bounceRate)}%`) },
               ]}
             />
             {props.wide && <DitherBars days={d.traffic.days.map((day) => day.n)} label="People a day" />}
@@ -156,11 +163,11 @@ export function PhantomActiveWidget(props: WidgetProps) {
     <PhantomFrame {...props} widget="phantom_active" label="Phantom daily active">
       {(d) => (
         <>
-          <BigStat value={n(d.active.today)} unit="coding today" caption={`${n(d.active.yesterday)} yesterday`} />
+          <BigStat value={fx(n(d.active.today))} unit="coding today" caption={`${n(d.active.yesterday)} yesterday`} />
           <StatRow
             items={[
-              { label: "This week", value: n(d.active.week) },
-              { label: "This month", value: n(d.active.month) },
+              { label: "This week", value: fx(n(d.active.week)) },
+              { label: "This month", value: fx(n(d.active.month)) },
             ]}
           />
           <DitherBars days={d.active.days} label="Active a day" />
@@ -180,12 +187,12 @@ export function PhantomHoursWidget(props: WidgetProps) {
         if (!s) return <Empty>This Phantom doesn&rsquo;t send hours coded yet</Empty>;
         return (
           <>
-            <BigStat value={hours(s.today)} unit="hours today" caption={`${hours(s.yesterday)} yesterday`} />
+            <BigStat value={fx(hours(s.today))} unit="hours today" caption={`${hours(s.yesterday)} yesterday`} />
             <StatRow
               items={[
-                { label: "This week", value: hours(s.week) },
-                { label: "This month", value: hours(s.month) },
-                { label: "Each, today", value: d.active.today > 0 ? `${hours(s.today / d.active.today)}h` : "–" },
+                { label: "This week", value: fx(hours(s.week)) },
+                { label: "This month", value: fx(hours(s.month)) },
+                { label: "Each, today", value: fx(d.active.today > 0 ? `${hours(s.today / d.active.today)}h` : "–") },
               ]}
             />
             <DitherBars days={s.days.map((x) => Math.round(x / 360) / 10)} label="Hours a day" />
@@ -201,7 +208,7 @@ export function PhantomPeopleWidget(props: WidgetProps) {
     <PhantomFrame {...props} widget="phantom_people" label="Phantom people">
       {(d) => (
         <>
-          <BigStat value={n(d.people.total)} unit="people" caption={`${n(d.people.week)} joined this week`} />
+          <BigStat value={fx(n(d.people.total))} unit="people" caption={`${n(d.people.week)} joined this week`} />
           <DitherBars days={d.people.days} label="Sign-ups a day" />
         </>
       )}
@@ -216,17 +223,17 @@ export function PhantomOrdersWidget(props: WidgetProps) {
         const s = d.orders.byState;
         return (
           <>
-            <BigStat value={n(d.orders.open)} unit="to send" caption={`${n(d.orders.week)} placed this week`} />
+            <BigStat value={fx(n(d.orders.open))} unit="to send" caption={`${n(d.orders.week)} placed this week`} />
             <MiniList
               rows={[
-                { key: "placed", left: "Placed", right: <b>{n(s.placed ?? 0)}</b> },
-                { key: "hold", left: "On hold", right: <b>{n(s.on_hold ?? 0)}</b> },
+                { key: "placed", left: "Placed", right: <b>{fx(n(s.placed ?? 0))}</b> },
+                { key: "hold", left: "On hold", right: <b>{fx(n(s.on_hold ?? 0))}</b> },
                 ...((s.unfulfilled ?? 0) > 0
-                  ? [{ key: "back", left: "Came back", right: <b>{n(s.unfulfilled)}</b> }]
+                  ? [{ key: "back", left: "Came back", right: <b>{fx(n(s.unfulfilled))}</b> }]
                   : []),
-                { key: "sent", left: "Fulfilled", right: <b>{n(s.fulfilled ?? 0)}</b> },
+                { key: "sent", left: "Fulfilled", right: <b>{fx(n(s.fulfilled ?? 0))}</b> },
                 ...(props.wide
-                  ? [{ key: "no", left: "Rejected or cancelled", right: <b>{n((s.rejected ?? 0) + (s.cancelled ?? 0))}</b> }]
+                  ? [{ key: "no", left: "Rejected or cancelled", right: <b>{fx(n((s.rejected ?? 0) + (s.cancelled ?? 0)))}</b> }]
                   : []),
               ]}
             />
@@ -242,12 +249,12 @@ export function PhantomProjectsWidget(props: WidgetProps) {
     <PhantomFrame {...props} widget="phantom_projects" label="Phantom projects">
       {(d) => (
         <>
-          <BigStat value={n(d.projects.review)} unit="in review" caption={`${n(d.projects.all)} projects in all`} />
+          <BigStat value={fx(n(d.projects.review))} unit="in review" caption={`${n(d.projects.all)} projects in all`} />
           <MiniList
             rows={[
-              { key: "draft", left: "Never shipped", right: <b>{n(d.projects.draft)}</b> },
-              { key: "approved", left: "Approved", right: <b>{n(d.projects.approved)}</b> },
-              { key: "rejected", left: "Rejected", right: <b>{n(d.projects.rejected)}</b> },
+              { key: "draft", left: "Never shipped", right: <b>{fx(n(d.projects.draft))}</b> },
+              { key: "approved", left: "Approved", right: <b>{fx(n(d.projects.approved))}</b> },
+              { key: "rejected", left: "Rejected", right: <b>{fx(n(d.projects.rejected))}</b> },
             ]}
           />
         </>
@@ -268,7 +275,7 @@ export function PhantomFunnelWidget(props: WidgetProps) {
           <>
             {props.wide && last && (
               <BigStat
-                value={`${Math.round((last.n / first) * 100)}%`}
+                value={fx(`${Math.round((last.n / first) * 100)}%`)}
                 unit={last.label}
                 caption={`of ${n(d.funnel[0].n)} who signed up`}
               />
@@ -280,7 +287,7 @@ export function PhantomFunnelWidget(props: WidgetProps) {
                   <span className="phantom-funnel-track" aria-hidden>
                     <span className="phantom-funnel-fill" style={{ width: `${(step.n / first) * 100}%` }} />
                   </span>
-                  <b>{n(step.n)}</b>
+                  <b>{fx(n(step.n))}</b>
                 </li>
               ))}
             </ol>
@@ -299,14 +306,14 @@ export function PhantomLedgerWidget(props: WidgetProps) {
         return (
           <>
             <BigStat
-              value={f(d.ledger.outstanding)}
+              value={fx(f(d.ledger.outstanding))}
               unit="fragments"
               caption={`held by participants, ${usd(owedFor(d.ledger.outstanding))} to cash in`}
             />
             <StatRow
               items={[
-                { label: "Awarded", value: f(d.ledger.awarded) },
-                { label: "Spent", value: f(d.ledger.spent) },
+                { label: "Awarded", value: fx(f(d.ledger.awarded)) },
+                { label: "Spent", value: fx(f(d.ledger.spent)) },
               ]}
             />
             {props.wide && <DitherBars days={d.ledger.days} label="Ledger entries a day" />}
@@ -338,7 +345,7 @@ export function PhantomMoneyWidget(props: WidgetProps) {
           <>
             <BigStat
               className={spare < 0 ? "short" : undefined}
-              value={usd(Math.abs(spare))}
+              value={fx(usd(Math.abs(spare)))}
               unit={spare < 0 ? "short" : "spare"}
               caption={
                 pm
@@ -352,9 +359,9 @@ export function PhantomMoneyWidget(props: WidgetProps) {
             />
             <StatRow
               items={[
-                { label: "On HCB", value: usd(held) },
-                { label: pm ? "Shop owes" : "Fragments owed", value: usd(owed) },
-                { label: "Covered", value: owed > 0 ? `${(held / owed).toFixed(1)}×` : "All" },
+                { label: "On HCB", value: fx(usd(held)) },
+                { label: pm ? "Shop owes" : "Fragments owed", value: fx(usd(owed)) },
+                { label: "Covered", value: fx(owed > 0 ? `${(held / owed).toFixed(1)}×` : "All") },
               ]}
             />
             {props.wide && (
@@ -362,9 +369,9 @@ export function PhantomMoneyWidget(props: WidgetProps) {
                 <HourSplit />
                 <MiniList
                   rows={[
-                    { key: "earned", left: `Earned at ${rate(HOUR.income)}/h`, right: <b>{usd(hours * HOUR.income)}</b> },
-                    ...(raised !== null ? [{ key: "raised", left: "Raised on HCB", right: <b>{usd(raised)}</b> }] : []),
-                    { key: "running", left: `Kept to run it, ${rate(RUNNING)}/h`, right: <b>{usd(hours * RUNNING)}</b> },
+                    { key: "earned", left: `Earned at ${rate(HOUR.income)}/h`, right: <b>{fx(usd(hours * HOUR.income))}</b> },
+                    ...(raised !== null ? [{ key: "raised", left: "Raised on HCB", right: <b>{fx(usd(raised))}</b> }] : []),
+                    { key: "running", left: `Kept to run it, ${rate(RUNNING)}/h`, right: <b>{fx(usd(hours * RUNNING))}</b> },
                   ]}
                 />
               </div>
@@ -423,11 +430,11 @@ export function PhantomBudgetWidget(props: WidgetProps) {
         return (
           <>
             {m.funded === null ? (
-              <BigStat value={usd(m.needed)} unit="needed" caption="HCB can't be read right now" />
+              <BigStat value={fx(usd(m.needed))} unit="needed" caption="HCB can't be read right now" />
             ) : (
               <BigStat
                 className={m.available !== null && m.available < 0 ? "short" : undefined}
-                value={`${Math.round(m.funded * 100)}%`}
+                value={fx(`${Math.round(m.funded * 100)}%`)}
                 unit="funded"
                 caption={m.toRaise ? `${usd(m.toRaise)} still to raise` : "Everything the event needs is there"}
               />
@@ -439,9 +446,9 @@ export function PhantomBudgetWidget(props: WidgetProps) {
             )}
             <StatRow
               items={[
-                { label: "Needed", value: usd(m.needed) },
-                { label: "After the shop", value: m.available === null ? "?" : usd(m.available) },
-                { label: `For ${b.days} days`, value: `${n(b.people)} people` },
+                { label: "Needed", value: fx(usd(m.needed)) },
+                { label: "After the shop", value: fx(m.available === null ? "?" : usd(m.available)) },
+                { label: `For ${b.days} days`, value: fx(`${n(b.people)} people`) },
               ]}
             />
             {props.wide && (
@@ -457,7 +464,7 @@ export function PhantomBudgetWidget(props: WidgetProps) {
                           style={{ width: `${Math.min(1, c.planned / of) * 100}%` }}
                         />
                       </span>
-                      <b>{c.status === "uncapped" ? `${usd(c.planned)}, no cap` : `${usd(c.planned)} / ${usd(c.cap)}`}</b>
+                      <b>{fx(c.status === "uncapped" ? `${usd(c.planned)}, no cap` : `${usd(c.planned)} / ${usd(c.cap)}`)}</b>
                     </li>
                   );
                 })}
@@ -482,15 +489,15 @@ export function PhantomEventWidget(props: WidgetProps) {
         return (
           <>
             <BigStat
-              value={n(e.qualified)}
+              value={fx(n(e.qualified))}
               unit="qualified"
               caption={`at ${e.qualifyHours}h approved, ${n(e.almost)} more once reviewed`}
             />
             <StatRow
               items={[
-                { label: "Shipped", value: n(e.shipped) },
-                { label: "Hours approved", value: n(Math.round(e.approvedHours)) },
-                { label: "Invites bought", value: n(e.invites) },
+                { label: "Shipped", value: fx(n(e.shipped)) },
+                { label: "Hours approved", value: fx(n(Math.round(e.approvedHours))) },
+                { label: "Invites bought", value: fx(n(e.invites)) },
               ]}
             />
             {props.wide && (
@@ -501,7 +508,7 @@ export function PhantomEventWidget(props: WidgetProps) {
                     <span className="phantom-funnel-track" aria-hidden>
                       <span className="phantom-funnel-fill" style={{ width: `${(x.n / most) * 100}%` }} />
                     </span>
-                    <b>{n(x.n)}</b>
+                    <b>{fx(n(x.n))}</b>
                   </li>
                 ))}
               </ol>

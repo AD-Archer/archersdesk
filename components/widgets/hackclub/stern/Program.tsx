@@ -8,7 +8,7 @@
 import { programRun, runLine, shortDate } from "@/lib/stern";
 import { BigStat, Empty, MiniList, StatRow } from "../../kit";
 import type { WidgetProps } from "../../registry";
-import { DayBars, Meter, ProgramFrame, ProgramMark, RankList, cents, n, pct, usd, wp } from "./frame";
+import { DayBars, Meter, ProgramFrame, ProgramMark, RankList, cents, fx, n, pct, usd, wp } from "./frame";
 
 /** Which program this page is: its logo and name, big in its colour, where
  *  it is in its run, and the line it runs along. */
@@ -20,13 +20,13 @@ export function SternProgramWidget(props: WidgetProps) {
         const r = programRun(p, now);
         const u = p.unified;
         const items = [
-          ...(u ? [{ label: "WPs", value: wp(u.wps.total) }, { label: "Yours", value: wp(u.mine) }] : []),
+          ...(u ? [{ label: "WPs", value: fx(wp(u.wps.total)) }, { label: "Yours", value: fx(wp(u.mine)) }] : []),
           ...(stats
-            ? [{ label: "People", value: n(stats.people.total) }]
+            ? [{ label: "People", value: fx(n(stats.people.total)) }]
             : u
-              ? [{ label: "Shippers", value: n(u.shippers) }]
+              ? [{ label: "Shippers", value: fx(n(u.shippers)) }]
               : p.stern
-                ? [{ label: "People", value: n(p.stern.people) }]
+                ? [{ label: "People", value: fx(n(p.stern.people)) }]
                 : []),
         ];
         return (
@@ -62,28 +62,28 @@ export function SternProgramWpsWidget(props: WidgetProps) {
         return (
           <>
             <BigStat
-              value={wp(u.mine)}
+              value={fx(wp(u.mine))}
               unit="yours"
               caption={`of ${wp(u.wps.total)} WPs${others > 0 ? `, shared with ${others} ${others === 1 ? "other" : "others"}` : ""}`}
             />
             <StatRow
               items={[
-                { label: "This month", value: wp(u.wps.month) },
-                { label: "Last 7 days", value: wp(u.wps.week) },
-                { label: "Projects", value: n(u.projects) },
+                { label: "This month", value: fx(wp(u.wps.month)) },
+                { label: "Last 7 days", value: fx(wp(u.wps.week)) },
+                { label: "Projects", value: fx(n(u.projects)) },
               ]}
             />
             {props.wide && (
               <MiniList
                 rows={[
-                  { key: "mine", left: "Yours this month", right: <b>{wp(u.mineMonth)}</b> },
-                  { key: "shippers", left: "People who shipped", right: <b>{n(u.shippers)}</b> },
+                  { key: "mine", left: "Yours this month", right: <b>{fx(wp(u.mineMonth))}</b> },
+                  { key: "shippers", left: "People who shipped", right: <b>{fx(n(u.shippers))}</b> },
                   {
                     key: "fines",
                     left: "Fines",
-                    right: <b>{u.fines.count ? `${n(u.fines.count)}, ${usd(u.fines.amount)}` : "None"}</b>,
+                    right: <b>{fx(u.fines.count ? `${n(u.fines.count)}, ${usd(u.fines.amount)}` : "None")}</b>,
                   },
-                  ...(u.nps !== null ? [{ key: "nps", left: "NPS", right: <b>{n(u.nps)}</b> }] : []),
+                  ...(u.nps !== null ? [{ key: "nps", left: "NPS", right: <b>{fx(n(u.nps))}</b> }] : []),
                 ]}
               />
             )}
@@ -102,11 +102,11 @@ export function SternPeopleWidget(props: WidgetProps) {
         const started = stats!.funnel.find((f) => f.key === "started")?.n;
         return (
           <>
-            <BigStat value={n(s.total)} unit="people" caption={`${n(s.week)} joined this week`} />
+            <BigStat value={fx(n(s.total))} unit="people" caption={`${n(s.week)} joined this week`} />
             <StatRow
               items={[
-                { label: "On Hackatime", value: s.total ? pct(s.hackatimeLinked / s.total) : "—" },
-                ...(started !== undefined ? [{ label: "Started a project", value: n(started) }] : []),
+                { label: "On Hackatime", value: fx(s.total ? pct(s.hackatimeLinked / s.total) : "—") },
+                ...(started !== undefined ? [{ label: "Started a project", value: fx(n(started)) }] : []),
               ]}
             />
             <DayBars days={s.days} label="joined a day" />
@@ -126,11 +126,11 @@ export function SternActiveWidget(props: WidgetProps) {
         const a = stats!.active;
         return (
           <>
-            <BigStat value={n(a.today)} unit="posting today" caption={`${n(a.yesterday)} yesterday`} />
+            <BigStat value={fx(n(a.today))} unit="posting today" caption={`${n(a.yesterday)} yesterday`} />
             <StatRow
               items={[
-                { label: "This week", value: n(a.week) },
-                { label: "This month", value: n(a.month) },
+                { label: "This week", value: fx(n(a.week)) },
+                { label: "This month", value: fx(n(a.month)) },
               ]}
             />
             <DayBars days={a.days} label="posting a day" />
@@ -153,15 +153,15 @@ export function SternReviewWidget(props: WidgetProps) {
           <>
             <BigStat
               className={old >= 7 ? "warn" : undefined}
-              value={n(r.waiting)}
+              value={fx(n(r.waiting))}
               unit="waiting"
               caption={r.waiting ? `oldest has waited ${old} day${old === 1 ? "" : "s"}` : "The queue is clear"}
             />
             <StatRow
               items={[
-                { label: "Hours waiting", value: n(r.hoursWaiting) },
-                { label: "Final checks", value: n(stats!.projects.finalChecks) },
-                { label: "Approved", value: r.approvalRate === null ? "—" : pct(r.approvalRate) },
+                { label: "Hours waiting", value: fx(n(r.hoursWaiting)) },
+                { label: "Final checks", value: fx(n(stats!.projects.finalChecks)) },
+                { label: "Approved", value: fx(r.approvalRate === null ? "—" : pct(r.approvalRate)) },
               ]}
             />
             <DayBars days={r.days} label="reviewed a day" />
@@ -183,15 +183,15 @@ export function SternHoursWidget(props: WidgetProps) {
         return (
           <>
             <BigStat
-              value={n(h.shipped)}
+              value={fx(n(h.shipped))}
               unit="hours shipped"
               caption={h.outstanding ? `${n(h.outstanding)}h still held, ${usd(h.outstandingUsd)} to cash in` : "Nothing left unspent"}
             />
             <StatRow
               items={[
-                { label: "Granted", value: n(h.granted) },
-                { label: "Spent", value: n(h.spent) },
-                ...(c ? [{ label: `${c.name} held`, value: n(c.outstanding) }] : []),
+                { label: "Granted", value: fx(n(h.granted)) },
+                { label: "Spent", value: fx(n(h.spent)) },
+                ...(c ? [{ label: `${c.name} held`, value: fx(n(c.outstanding)) }] : []),
               ]}
             />
             <DayBars days={h.days} label="hours granted a day" />
@@ -211,17 +211,17 @@ export function SternOrdersWidget(props: WidgetProps) {
         return (
           <>
             <BigStat
-              value={n(o.toShip)}
+              value={fx(n(o.toShip))}
               unit="to send"
               caption={`${n(o.toShipUnits)} item${o.toShipUnits === 1 ? "" : "s"}, ${n(o.week)} placed this week`}
             />
             <MiniList
               rows={[
-                { key: "pending", left: "Placed", right: <b>{n(s.pending ?? 0)}</b> },
-                { key: "processing", left: "Being packed", right: <b>{n(s.processing ?? 0)}</b> },
-                { key: "shipped", left: "On the way", right: <b>{n(o.inTransit)}</b> },
-                { key: "fulfilled", left: "Delivered", right: <b>{n(s.fulfilled ?? 0)}</b> },
-                ...(props.wide ? [{ key: "cancelled", left: "Cancelled", right: <b>{n(s.cancelled ?? 0)}</b> }] : []),
+                { key: "pending", left: "Placed", right: <b>{fx(n(s.pending ?? 0))}</b> },
+                { key: "processing", left: "Being packed", right: <b>{fx(n(s.processing ?? 0))}</b> },
+                { key: "shipped", left: "On the way", right: <b>{fx(n(o.inTransit))}</b> },
+                { key: "fulfilled", left: "Delivered", right: <b>{fx(n(s.fulfilled ?? 0))}</b> },
+                ...(props.wide ? [{ key: "cancelled", left: "Cancelled", right: <b>{fx(n(s.cancelled ?? 0))}</b> }] : []),
               ]}
             />
           </>
@@ -243,7 +243,7 @@ export function SternFunnelWidget(props: WidgetProps) {
         return (
           <>
             {props.wide && last && (
-              <BigStat value={pct(last.n / first)} unit={last.label.toLowerCase()} caption={`of ${n(f[0].n)} who joined`} />
+              <BigStat value={fx(pct(last.n / first))} unit={last.label.toLowerCase()} caption={`of ${n(f[0].n)} who joined`} />
             )}
             <RankList rows={f.map((step) => ({ key: step.key, label: step.label, share: step.n / first, value: n(step.n) }))} />
           </>
@@ -268,7 +268,7 @@ export function SternMoneyWidget(props: WidgetProps) {
           <>
             <BigStat
               className={m.margin < 0 ? "short" : undefined}
-              value={usd(Math.abs(m.margin))}
+              value={fx(usd(Math.abs(m.margin)))}
               unit={m.margin < 0 ? "over" : "under"}
               caption={
                 m.costPerHour === null
@@ -286,15 +286,15 @@ export function SternMoneyWidget(props: WidgetProps) {
                 rows={[
                   ...(hcb
                     ? [
-                        { key: "hcb", left: "On HCB", right: <b>{cents(hcb.balance + hcb.incoming)}</b> },
-                        { key: "raised", left: "Raised on HCB", right: <b>{cents(hcb.raised)}</b> },
+                        { key: "hcb", left: "On HCB", right: <b>{fx(cents(hcb.balance + hcb.incoming))}</b> },
+                        { key: "raised", left: "Raised on HCB", right: <b>{fx(cents(hcb.raised))}</b> },
                       ]
                     : []),
-                  ...(stats ? [{ key: "owed", left: "Owed for hours held", right: <b>{usd(stats.hours.outstandingUsd)}</b> }] : []),
+                  ...(stats ? [{ key: "owed", left: "Owed for hours held", right: <b>{fx(usd(stats.hours.outstandingUsd))}</b> }] : []),
                   {
                     key: "fines",
                     left: "Fines",
-                    right: <b>{p.unified!.fines.count ? usd(p.unified!.fines.amount) : "None"}</b>,
+                    right: <b>{fx(p.unified!.fines.count ? usd(p.unified!.fines.amount) : "None")}</b>,
                   },
                 ]}
               />

@@ -8,6 +8,18 @@
         "value": "mps-jiggle",
         "createdAt": "2026-10-22T15:43:19.435Z",
         "reason": "Claude triage: iOS-style edit-mode wiggle (rotate ±1.6deg, ease-in-out alternate), not bounce/elastic easing; pre-existing intentional design"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.3, 1.3, 0.6, 1)",
+        "createdAt": "2026-10-26T18:53:47.266Z",
+        "reason": "Claude's design choice: Roll's odometer wheel overshooting one digit and settling is literal mechanical motion, not decorative bounce"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.3, 1.25, 0.6, 1)",
+        "createdAt": "2026-10-26T18:53:47.297Z",
+        "reason": "Claude's design choice: Roll's odometer wheel overshooting one digit and settling is literal mechanical motion, not decorative bounce"
       }
     ]
   }

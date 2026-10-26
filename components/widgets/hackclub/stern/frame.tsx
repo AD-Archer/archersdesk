@@ -8,12 +8,18 @@
 // ProgramFrame is the page's own program (settings → layout → program): it
 // wears that program's colour and shows its logo and name over the card, so a
 // page reads as that program from across the room.
+//
+// Every figure rolls into place on its wheels (Roll) when it shows or changes.
 
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { WIDGET_INFO, type WidgetName } from "@/lib/types";
 import type { DeskProgram, HcbBalances, SternDesk, SternProgramStats } from "@/lib/stern";
 import { Empty, Shell, integrationGate, useIntegration } from "../../kit";
 import type { WidgetProps } from "../../registry";
+import { Roll } from "../Roll";
+
+/** A figure that rolls into place when it shows or changes. */
+export const fx = (text: string) => <Roll text={text} />;
 
 export const n = (v: number) => Math.round(v).toLocaleString("en-US");
 
@@ -200,7 +206,7 @@ export function RankList({ rows, className }: { rows: RankRow[]; className?: str
               style={{ width: `${Math.min(1, Math.max(0, r.share)) * 100}%` }}
             />
           </span>
-          <b>{r.value}</b>
+          <b>{typeof r.value === "string" ? fx(r.value) : r.value}</b>
         </li>
       ))}
     </ol>

@@ -9,7 +9,7 @@ import type { CSSProperties } from "react";
 import { countFines, sharedPrograms, programRun, runLine, wpWeeks, type DeskProgram, type UnifiedProgram } from "@/lib/stern";
 import { BigStat, Empty, StatRow } from "../../kit";
 import type { WidgetProps } from "../../registry";
-import { DayBars, ProgramMark, RankList, SternFrame, cents, n, pct, plural, usd, wp } from "./frame";
+import { DayBars, ProgramMark, RankList, SternFrame, cents, fx, n, pct, plural, usd, wp } from "./frame";
 
 /** Your programs as unified has them, each with its desk colour and logo. */
 function yours(programs: DeskProgram[]): Array<DeskProgram & { unified: UnifiedProgram }> {
@@ -25,12 +25,12 @@ export function SternWpsWidget(props: WidgetProps) {
         const change = w.lastMonth > 0 ? (w.thisMonth - w.lastMonth) / w.lastMonth : null;
         return (
           <>
-            <BigStat value={wp(w.total)} unit="WPs" caption={`${n(w.total * 10)} hours shipped`} />
+            <BigStat value={fx(wp(w.total))} unit="WPs" caption={`${n(w.total * 10)} hours shipped`} />
             <StatRow
               items={[
-                { label: "This month", value: wp(w.thisMonth) },
-                { label: change === null ? "Last month" : `${change >= 0 ? "Up" : "Down"} on last month`, value: change === null ? wp(w.lastMonth) : pct(Math.abs(change)) },
-                { label: "This year", value: wp(w.year) },
+                { label: "This month", value: fx(wp(w.thisMonth)) },
+                { label: change === null ? "Last month" : `${change >= 0 ? "Up" : "Down"} on last month`, value: fx(change === null ? wp(w.lastMonth) : pct(Math.abs(change))) },
+                { label: "This year", value: fx(wp(w.year)) },
               ]}
             />
             <DayBars days={d.me!.wpDays} label="your WPs a day" />
@@ -53,7 +53,7 @@ export function SternWeekWidget(props: WidgetProps) {
         return (
           <>
             <BigStat
-              value={wp(w.thisWeek)}
+              value={fx(wp(w.thisWeek))}
               unit="WPs"
               caption={
                 w.change === null
@@ -63,9 +63,9 @@ export function SternWeekWidget(props: WidgetProps) {
             />
             <StatRow
               items={[
-                { label: "Made this week", value: w.thisUsd === null ? "—" : usd(w.thisUsd) },
-                { label: "Last week", value: wp(w.lastWeek) },
-                { label: "Made last week", value: w.lastUsd === null ? "—" : usd(w.lastUsd) },
+                { label: "Made this week", value: fx(w.thisUsd === null ? "—" : usd(w.thisUsd)) },
+                { label: "Last week", value: fx(wp(w.lastWeek)) },
+                { label: "Made last week", value: fx(w.lastUsd === null ? "—" : usd(w.lastUsd)) },
               ]}
             />
             {props.wide && (
@@ -100,12 +100,12 @@ export function SternTopWidget(props: WidgetProps) {
           <>
             {props.wide && (
               <div className="stern-lead" style={{ "--c": top.color } as CSSProperties}>
-                <BigStat value={wp(top.unified.mine)} unit="WPs" caption={`from ${top.name}, ${pct(top.unified.mine / total)} of yours`} />
+                <BigStat value={fx(wp(top.unified.mine))} unit="WPs" caption={`from ${top.name}, ${pct(top.unified.mine / total)} of yours`} />
                 <StatRow
                   items={[
-                    { label: "This month", value: wp(top.unified.mineMonth) },
-                    { label: "Programs", value: n(mine.length) },
-                    { label: "All of yours", value: wp(total) },
+                    { label: "This month", value: fx(wp(top.unified.mineMonth)) },
+                    { label: "Programs", value: fx(n(mine.length)) },
+                    { label: "All of yours", value: fx(wp(total)) },
                   ]}
                 />
               </div>
@@ -141,14 +141,14 @@ export function SternNetWorthWidget(props: WidgetProps) {
         return (
           <>
             <BigStat
-              value={cents(w.trueNetWorth.balanceCents)}
+              value={fx(cents(w.trueNetWorth.balanceCents))}
               unit="yours"
               caption={`${cents(w.groupNetWorth.balanceCents)} across every org you're on`}
             />
             <StatRow
               items={[
-                { label: "Raised, your share", value: cents(w.trueNetWorth.totalRaisedCents) },
-                { label: "Orgs", value: n(w.orgs.length) },
+                { label: "Raised, your share", value: fx(cents(w.trueNetWorth.totalRaisedCents)) },
+                { label: "Orgs", value: fx(n(w.orgs.length)) },
               ]}
             />
             {props.wide && orgs.length > 0 && (
@@ -184,11 +184,11 @@ export function SternFinesWidget(props: WidgetProps) {
         const most = Math.max(1, ...fined.map((p) => p.unified.fines.count));
         return (
           <>
-            <BigStat value={n(f.count)} unit={f.count === 1 ? "fine" : "fines"} caption={f.count ? `${usd(f.amount)} in all` : "None"} />
+            <BigStat value={fx(n(f.count))} unit={f.count === 1 ? "fine" : "fines"} caption={f.count ? `${usd(f.amount)} in all` : "None"} />
             <StatRow
               items={[
-                { label: "Programs fined", value: n(fined.length) },
-                ...(f.leftOut ? [{ label: "Left out", value: n(f.leftOut) }] : []),
+                { label: "Programs fined", value: fx(n(fined.length)) },
+                ...(f.leftOut ? [{ label: "Left out", value: fx(n(f.leftOut)) }] : []),
               ]}
             />
             {props.wide && fined.length > 0 && (
@@ -278,10 +278,10 @@ export function SternTimelineWidget(props: WidgetProps) {
         return (
           <div className="stern-gantt" role="img" aria-label={`${plural(live, "program")} live, ${n(upcoming)} to come`}>
             <div className="stern-gantt-head">
-              <b>{n(live)}</b> live
+              <b>{fx(n(live))}</b> live
               {upcoming > 0 && (
                 <>
-                  , <b>{n(upcoming)}</b> to come
+                  , <b>{fx(n(upcoming))}</b> to come
                 </>
               )}
             </div>
@@ -339,15 +339,15 @@ export function SternMarginWidget(props: WidgetProps) {
           <>
             <BigStat
               className={margin < 0 ? "short" : undefined}
-              value={usd(Math.abs(margin))}
+              value={fx(usd(Math.abs(margin)))}
               unit={margin < 0 ? "over" : "under"}
               caption={`${n(within)} of ${plural(counted.length, "program")} within budget`}
             />
             <StatRow
               items={[
-                { label: "Spent", value: usd(spent) },
-                { label: "Earned", value: usd(budget) },
-                { label: "Per hour", value: hours > 0 ? `$${(spent / hours).toFixed(2)}` : "—" },
+                { label: "Spent", value: fx(usd(spent)) },
+                { label: "Earned", value: fx(usd(budget)) },
+                { label: "Per hour", value: fx(hours > 0 ? `$${(spent / hours).toFixed(2)}` : "—") },
               ]}
             />
             {props.wide && (
